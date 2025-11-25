@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚗 Autolavado Digital
 
-## Getting Started
+Sistema monolítico de reservas para autolavado con gestión integral de operaciones.
 
-First, run the development server:
+## Stack Tecnológico
+
+- **Framework:** Next.js 16 (App Router con SSR)
+- **ORM:** Prisma 6.19
+- **Base de datos:** PostgreSQL
+- **WebSockets:** Socket.io
+- **Autenticación:** NextAuth.js
+- **Lenguaje:** TypeScript
+- **Estilos:** Tailwind CSS
+
+## Requisitos Previos
+
+- Node.js 18+
+- Docker (para PostgreSQL) o PostgreSQL instalado localmente
+
+## Instalación
 
 ```bash
+# 1. Clonar el repositorio
+git clone <repo-url>
+cd autolavado-app
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus valores
+
+# 4. Levantar PostgreSQL con Docker
+docker-compose up -d
+
+# 5. Generar cliente Prisma y ejecutar migraciones
+npx prisma generate
+npx prisma migrate dev
+
+# 6. Iniciar servidor de desarrollo
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Variables de Entorno
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/autolavado?schema=public"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="tu-secreto-aqui"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Docker Compose
 
-## Learn More
+Para iniciar solo la base de datos:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+docker-compose up -d
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Para detenerla:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker-compose down
+```
 
-## Deploy on Vercel
+## Estructura del Proyecto
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── login/              # Página de login
+│   ├── register/           # Página de registro
+│   ├── reset-password/     # Recuperar contraseña
+│   ├── dashboard/          # Panel principal (protegido)
+│   │   ├── chat/           # Chat en tiempo real
+│   │   └── productos/      # CRUD de productos
+│   └── api/                # API Routes
+│       ├── auth/           # NextAuth endpoints
+│       ├── productos/      # CRUD API
+│       └── socket/         # WebSocket
+├── components/             # Componentes reutilizables
+├── lib/                    # Utilidades y configuración
+├── services/               # Capa de servicios (lógica de negocio)
+└── middleware.ts           # Protección de rutas
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Pantallas Implementadas
+
+| Ruta | Descripción |
+|------|-------------|
+| `/login` | Inicio de sesión |
+| `/register` | Registro de usuario |
+| `/reset-password` | Recuperar contraseña |
+| `/dashboard` | Panel principal |
+| `/dashboard/chat` | Chat en tiempo real |
+| `/dashboard/productos` | Lista de productos |
+| `/dashboard/productos/nuevo` | Crear producto |
+| `/dashboard/productos/[id]` | Ver detalle |
+| `/dashboard/productos/[id]/editar` | Editar producto |
+
+## Comandos Útiles
+
+```bash
+# Desarrollo
+npm run dev
+
+# Build de producción
+npm run build
+npm start
+
+# Prisma
+npx prisma studio    # GUI para ver la BD
+npx prisma migrate dev --name <nombre>  # Nueva migración
+npx prisma db push   # Sincronizar schema sin migración
+```
+
+## Licencia
+
+MIT
