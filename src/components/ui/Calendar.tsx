@@ -110,6 +110,7 @@ export default function Calendar({
 
       days.push(
         <button
+          type="button"
           key={day}
           onClick={() => handleDateClick(day)}
           disabled={disabled}
@@ -152,6 +153,7 @@ export default function Calendar({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <button
+          type="button"
           onClick={handlePreviousMonth}
           className="p-2 rounded-lg hover:bg-cyan-50 dark:hover:bg-slate-700 text-cyan-600 dark:text-cyan-400 transition-colors"
           aria-label="Mes anterior"
@@ -164,6 +166,7 @@ export default function Calendar({
         </h2>
 
         <button
+          type="button"
           onClick={handleNextMonth}
           className="p-2 rounded-lg hover:bg-cyan-50 dark:hover:bg-slate-700 text-cyan-600 dark:text-cyan-400 transition-colors"
           aria-label="Mes siguiente"
