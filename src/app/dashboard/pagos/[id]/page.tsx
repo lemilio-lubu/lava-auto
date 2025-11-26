@@ -144,8 +144,8 @@ export default function RegistrarPagoPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-cyan-200 border-t-cyan-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando información del pago...</p>
+          <div className="w-16 h-16 border-4 border-cyan-200 dark:border-slate-600 border-t-cyan-600 dark:border-t-cyan-400 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Cargando información del pago...</p>
         </div>
       </div>
     );
@@ -156,9 +156,9 @@ export default function RegistrarPagoPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="max-w-md">
           <CardContent className="text-center py-12">
-            <DollarSign className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-900 font-semibold text-lg">Reserva no encontrada</p>
-            <p className="text-slate-600 mt-2 mb-6">No pudimos encontrar la reserva solicitada</p>
+            <DollarSign className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-900 dark:text-white font-semibold text-lg">Reserva no encontrada</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-2 mb-6">No pudimos encontrar la reserva solicitada</p>
             <Button onClick={() => router.push('/dashboard')}>Volver al Dashboard</Button>
           </CardContent>
         </Card>
@@ -179,12 +179,12 @@ export default function RegistrarPagoPage() {
         </Button>
         
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-emerald-100 rounded-lg">
-            <DollarSign className="w-8 h-8 text-emerald-600" />
+          <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+            <DollarSign className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Registrar Pago</h1>
-            <p className="text-slate-600 mt-1">Complete el formulario para registrar un pago de la reserva</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Registrar Pago</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Complete el formulario para registrar un pago de la reserva</p>
           </div>
         </div>
       </div>
@@ -194,8 +194,8 @@ export default function RegistrarPagoPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-cyan-100 rounded-lg">
-                <Calendar className="w-5 h-5 text-cyan-600" />
+              <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                <Calendar className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
               </div>
               <div>
                 <CardTitle>Información de la Reserva</CardTitle>
@@ -206,22 +206,22 @@ export default function RegistrarPagoPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                  <User className="w-4 h-4 text-slate-600" />
+                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                  <User className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase">Cliente</p>
-                  <p className="font-medium text-slate-900">{reservation.vehicle.ownerName}</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Cliente</p>
+                  <p className="font-medium text-slate-900 dark:text-white">{reservation.vehicle.ownerName}</p>
                 </div>
               </div>
               
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                  <CarIcon className="w-4 h-4 text-slate-600" />
+                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                  <CarIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase">Vehículo</p>
-                  <p className="font-medium text-slate-900">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Vehículo</p>
+                  <p className="font-medium text-slate-900 dark:text-white">
                     {reservation.vehicle.brand} {reservation.vehicle.model}
                   </p>
                   <Badge variant="neutral" size="sm" className="mt-1">{reservation.vehicle.plate}</Badge>
@@ -229,50 +229,50 @@ export default function RegistrarPagoPage() {
               </div>
               
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                  <Sparkles className="w-4 h-4 text-slate-600" />
+                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                  <Sparkles className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase">Servicio</p>
-                  <p className="font-medium text-slate-900">{reservation.service.name}</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Servicio</p>
+                  <p className="font-medium text-slate-900 dark:text-white">{reservation.service.name}</p>
                 </div>
               </div>
               
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                  <Calendar className="w-4 h-4 text-slate-600" />
+                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                  <Calendar className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase">Fecha/Hora</p>
-                  <p className="font-medium text-slate-900">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Fecha/Hora</p>
+                  <p className="font-medium text-slate-900 dark:text-white">
                     {new Date(reservation.scheduledDate).toLocaleDateString('es-ES', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',
                     })}
                   </p>
-                  <p className="text-sm text-slate-600">{reservation.scheduledTime}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{reservation.scheduledTime}</p>
                 </div>
               </div>
               
-              <div className="pt-4 border-t border-cyan-100">
+              <div className="pt-4 border-t border-cyan-100 dark:border-slate-600">
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Total:</span>
-                    <span className="font-semibold text-slate-900 text-lg">${reservation.totalAmount.toFixed(2)}</span>
+                    <span className="text-slate-600 dark:text-slate-400">Total:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white text-lg">${reservation.totalAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">Pagado:</span>
-                    <span className="font-semibold text-emerald-600 text-lg">${totalPaid.toFixed(2)}</span>
+                    <span className="text-slate-600 dark:text-slate-400">Pagado:</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-lg">${totalPaid.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center pt-3 border-t border-cyan-100">
-                    <span className="font-bold text-slate-900">Saldo Pendiente:</span>
-                    <span className="font-bold text-red-600 text-2xl">${balance.toFixed(2)}</span>
+                  <div className="flex justify-between items-center pt-3 border-t border-cyan-100 dark:border-slate-600">
+                    <span className="font-bold text-slate-900 dark:text-white">Saldo Pendiente:</span>
+                    <span className="font-bold text-red-600 dark:text-red-400 text-2xl">${balance.toFixed(2)}</span>
                   </div>
                   {balance === 0 && (
-                    <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-emerald-600" />
-                      <p className="text-sm font-medium text-emerald-900">Pago completado</p>
+                    <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      <p className="text-sm font-medium text-emerald-900 dark:text-emerald-300">Pago completado</p>
                     </div>
                   )}
                 </div>
@@ -285,8 +285,8 @@ export default function RegistrarPagoPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <CreditCard className="w-5 h-5 text-emerald-600" />
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <CreditCard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <CardTitle>Registrar Pago</CardTitle>
@@ -297,7 +297,7 @@ export default function RegistrarPagoPage() {
           <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Monto a Pagar</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto a Pagar</label>
               <input
                 type="number"
                 required
@@ -306,19 +306,19 @@ export default function RegistrarPagoPage() {
                 step="0.01"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                 placeholder="0.00"
                 disabled={balance <= 0}
               />
-              <p className="text-xs text-slate-500 mt-1">Saldo disponible: ${balance.toFixed(2)}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Saldo disponible: ${balance.toFixed(2)}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Método de Pago</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Método de Pago</label>
               <select
                 value={formData.paymentMethod}
                 onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                 disabled={balance <= 0}
               >
                 <option value="CASH">💵 Efectivo</option>
@@ -329,23 +329,23 @@ export default function RegistrarPagoPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ID de Transacción (opcional)</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ID de Transacción (opcional)</label>
               <input
                 type="text"
                 value={formData.transactionId}
                 onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                 placeholder="REF-12345"
                 disabled={balance <= 0}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Notas Adicionales (opcional)</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notas Adicionales (opcional)</label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all resize-none"
+                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all resize-none"
                 placeholder="Notas adicionales sobre el pago..."
                 rows={3}
                 disabled={balance <= 0}
@@ -382,8 +382,8 @@ export default function RegistrarPagoPage() {
         <Card className="mt-6">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-blue-600" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <CardTitle>Historial de Pagos</CardTitle>
@@ -393,36 +393,36 @@ export default function RegistrarPagoPage() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-800">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Monto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Método</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID Transacción</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Monto</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Método</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">ID Transacción</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                   {payments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-cyan-50/50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                    <tr key={payment.id} className="hover:bg-cyan-50/50 dark:hover:bg-slate-700 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">
                         {new Date(payment.createdAt).toLocaleDateString('es-ES', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         ${payment.amount.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">
                         {payment.paymentMethod === 'CASH' && '💵 Efectivo'}
                         {payment.paymentMethod === 'CARD' && '💳 Tarjeta'}
                         {payment.paymentMethod === 'TRANSFER' && '🏦 Transferencia'}
                         {payment.paymentMethod === 'OTHER' && '📝 Otro'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
                         {payment.transactionId || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">

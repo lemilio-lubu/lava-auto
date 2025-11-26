@@ -184,8 +184,8 @@ export default function ServiciosPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-cyan-200 border-t-cyan-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando servicios...</p>
+          <div className="w-16 h-16 border-4 border-cyan-200 dark:border-cyan-700 border-t-cyan-600 dark:border-t-cyan-400 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Cargando servicios...</p>
         </div>
       </div>
     );
@@ -195,8 +195,8 @@ export default function ServiciosPage() {
     <section>
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Servicios</h1>
-          <p className="text-slate-600 mt-1">Gestiona los servicios de lavado disponibles</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Servicios</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">Gestiona los servicios de lavado disponibles</p>
         </div>
         <Button
           onClick={() => {
@@ -220,8 +220,8 @@ export default function ServiciosPage() {
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <Sparkles className="w-5 h-5 text-emerald-600" />
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <CardTitle>{editingId ? 'Editar Servicio' : 'Nuevo Servicio'}</CardTitle>
@@ -234,23 +234,23 @@ export default function ServiciosPage() {
           <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Servicio</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Servicio</label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                 placeholder="Lavado completo"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all resize-none"
+                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all resize-none"
                 placeholder="Descripción del servicio..."
                 rows={3}
               />
@@ -258,20 +258,20 @@ export default function ServiciosPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Duración (minutos)</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Duración (minutos)</label>
                 <input
                   type="number"
                   required
                   min="1"
                   value={formData.duration}
                   onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                  className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                   placeholder="30"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Precio ($)</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Precio ($)</label>
                 <input
                   type="number"
                   required
@@ -279,18 +279,18 @@ export default function ServiciosPage() {
                   step="0.01"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                  className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                   placeholder="25.00"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Vehículo</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Vehículo</label>
               <select
                 value={formData.vehicleType}
                 onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
               >
                 <option value="SEDAN">Sedán</option>
                 <option value="SUV">SUV</option>
@@ -326,49 +326,49 @@ export default function ServiciosPage() {
 
       <Card>
         <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-800/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Descripción</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tipo Vehículo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Duración</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Precio</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Descripción</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tipo Vehículo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Duración</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Precio</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
             {services.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center justify-center">
-                    <Sparkles className="w-12 h-12 text-slate-300 mb-3" />
-                    <p className="text-slate-500 font-medium">No hay servicios registrados</p>
-                    <p className="text-sm text-slate-400 mt-1">Crea tu primer servicio usando el botón superior</p>
+                    <Sparkles className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">No hay servicios registrados</p>
+                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Crea tu primer servicio usando el botón superior</p>
                   </div>
                 </td>
               </tr>
             ) : (
               services.map((service) => (
-                <tr key={service.id} className="hover:bg-cyan-50/50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{service.name}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{service.description || '-'}</td>
+                <tr key={service.id} className="hover:bg-cyan-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white">{service.name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{service.description || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <Badge variant="neutral" size="sm">{service.vehicleType}</Badge>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{service.duration} min</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">${service.price.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">{service.duration} min</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600 dark:text-emerald-400">${service.price.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(service)}
-                        className="text-cyan-600 hover:text-cyan-800 font-medium transition-colors"
+                        className="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 font-medium transition-colors"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => handleDeleteClick(service.id, service.name)}
-                        className="text-red-600 hover:text-red-800 font-medium transition-colors"
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors"
                       >
                         Eliminar
                       </button>

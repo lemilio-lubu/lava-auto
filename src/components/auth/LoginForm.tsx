@@ -98,16 +98,16 @@ export function LoginForm() {
   return (
     <>
       <div className="w-full max-w-md mx-auto p-6 animate-fadeIn">
-        <div className="glass-effect rounded-2xl shadow-xl p-8">
+        <div className="glass-effect dark:bg-slate-800/90 rounded-2xl shadow-xl dark:shadow-slate-900/50 p-8">
           {/* Nielsen: Diseño estético y minimalista - Logo + Identidad visual */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-2xl mb-4 shadow-lg">
               <Droplets className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
               Bienvenido
             </h1>
-            <p className="text-slate-600">
+            <p className="text-slate-600 dark:text-slate-400">
               Sistema de Reservas de Autolavado
             </p>
           </div>
@@ -117,12 +117,12 @@ export function LoginForm() {
             <div>
               <label 
                 htmlFor="email" 
-                className="block text-sm font-semibold text-slate-700 mb-2"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
               >
                 Correo electrónico
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
                 <input
                   id="email"
                   type="email"
@@ -134,13 +134,13 @@ export function LoginForm() {
                   onBlur={() => setFieldErrors({ ...fieldErrors, email: validateEmail(email) })}
                   className={`
                     w-full pl-11 pr-4 py-3 rounded-lg 
-                    bg-white border-2 
-                    ${fieldErrors.email ? 'border-red-400 focus:border-red-500' : 'border-cyan-200 focus:border-cyan-500'}
-                    text-slate-900 
+                    bg-white dark:bg-slate-700 border-2 
+                    ${fieldErrors.email ? 'border-red-400 focus:border-red-500' : 'border-cyan-200 dark:border-slate-600 focus:border-cyan-500 dark:focus:border-cyan-400'}
+                    text-slate-900 dark:text-white 
                     focus:outline-none focus:ring-2 
-                    ${fieldErrors.email ? 'focus:ring-red-200' : 'focus:ring-cyan-200'}
+                    ${fieldErrors.email ? 'focus:ring-red-200' : 'focus:ring-cyan-200 dark:focus:ring-cyan-800'}
                     transition-all
-                    disabled:bg-slate-50 disabled:cursor-not-allowed
+                    disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed
                   `}
                   placeholder="tu@email.com"
                   required
@@ -160,12 +160,12 @@ export function LoginForm() {
             <div>
               <label 
                 htmlFor="password" 
-                className="block text-sm font-semibold text-slate-700 mb-2"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
               >
                 Contraseña
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -177,13 +177,13 @@ export function LoginForm() {
                   onBlur={() => setFieldErrors({ ...fieldErrors, password: validatePassword(password) })}
                   className={`
                     w-full pl-11 pr-12 py-3 rounded-lg 
-                    bg-white border-2
-                    ${fieldErrors.password ? 'border-red-400 focus:border-red-500' : 'border-cyan-200 focus:border-cyan-500'}
-                    text-slate-900 
+                    bg-white dark:bg-slate-700 border-2
+                    ${fieldErrors.password ? 'border-red-400 focus:border-red-500' : 'border-cyan-200 dark:border-slate-600 focus:border-cyan-500 dark:focus:border-cyan-400'}
+                    text-slate-900 dark:text-white 
                     focus:outline-none focus:ring-2 
-                    ${fieldErrors.password ? 'focus:ring-red-200' : 'focus:ring-cyan-200'}
+                    ${fieldErrors.password ? 'focus:ring-red-200' : 'focus:ring-cyan-200 dark:focus:ring-cyan-800'}
                     transition-all
-                    disabled:bg-slate-50 disabled:cursor-not-allowed
+                    disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed
                   `}
                   placeholder="••••••••"
                   required
@@ -194,7 +194,7 @@ export function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   tabIndex={-1}
                 >
@@ -246,12 +246,12 @@ export function LoginForm() {
           </form>
 
           {/* Nielsen: Relación con el mundo real - Lenguaje familiar */}
-          <div className="mt-6 pt-6 border-t border-cyan-100 text-center">
-            <p className="text-sm text-slate-600">
+          <div className="mt-6 pt-6 border-t border-cyan-100 dark:border-slate-700 text-center">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               ¿No tienes cuenta?{' '}
               <Link
                 href="/register"
-                className="font-semibold text-cyan-600 hover:text-cyan-700 transition-colors"
+                className="font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
               >
                 Regístrate aquí
               </Link>
@@ -260,7 +260,7 @@ export function LoginForm() {
         </div>
 
         {/* Nielsen: Ayuda contextual */}
-        <div className="mt-6 text-center text-xs text-slate-500">
+        <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
           <p>¿Necesitas ayuda? Contacta a soporte técnico</p>
         </div>
       </div>

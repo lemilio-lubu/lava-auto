@@ -17,31 +17,31 @@ interface ToastProps {
 const toastConfig = {
   success: {
     icon: CheckCircle,
-    bgColor: 'bg-emerald-50',
-    borderColor: 'border-emerald-500',
-    iconColor: 'text-emerald-600',
-    titleColor: 'text-emerald-900',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+    borderColor: 'border-emerald-500 dark:border-emerald-400',
+    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    titleColor: 'text-emerald-900 dark:text-emerald-100',
   },
   error: {
     icon: AlertCircle,
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-500',
-    iconColor: 'text-red-600',
-    titleColor: 'text-red-900',
+    bgColor: 'bg-red-50 dark:bg-red-900/20',
+    borderColor: 'border-red-500 dark:border-red-400',
+    iconColor: 'text-red-600 dark:text-red-400',
+    titleColor: 'text-red-900 dark:text-red-100',
   },
   warning: {
     icon: AlertTriangle,
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-500',
-    iconColor: 'text-amber-600',
-    titleColor: 'text-amber-900',
+    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+    borderColor: 'border-amber-500 dark:border-amber-400',
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    titleColor: 'text-amber-900 dark:text-amber-100',
   },
   info: {
     icon: Info,
-    bgColor: 'bg-cyan-50',
-    borderColor: 'border-cyan-500',
-    iconColor: 'text-cyan-600',
-    titleColor: 'text-cyan-900',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
+    borderColor: 'border-cyan-500 dark:border-cyan-400',
+    iconColor: 'text-cyan-600 dark:text-cyan-400',
+    titleColor: 'text-cyan-900 dark:text-cyan-100',
   },
 };
 
@@ -82,14 +82,14 @@ export default function Toast({
             <h3 className={`${config.titleColor} font-semibold text-sm mb-1`}>
               {title}
             </h3>
-            <p className="text-slate-700 text-sm leading-relaxed">
+            <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
               {message}
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0"
+            className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors flex-shrink-0"
             aria-label="Cerrar notificación"
           >
             <X className="w-4 h-4" />

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useModal } from '@/hooks/useModal';
 import Modal from '@/components/ui/Modal';
+import { Droplets, Mail, Key, Lock, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 export function ResetPasswordForm() {
   const [email, setEmail] = useState('');
@@ -83,39 +84,42 @@ export function ResetPasswordForm() {
 
   if (step === 'success') {
     return (
-      <div className="w-full max-w-md mx-auto p-6">
-        <div className="bg-surface-muted rounded-lg shadow-xl p-8 text-center">
+      <div className="w-full max-w-md mx-auto p-6 animate-fadeIn">
+        <div className="glass-effect dark:bg-slate-800/90 rounded-2xl shadow-xl dark:shadow-slate-900/50 p-8 text-center">
           <div className="mb-4">
-            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-2xl shadow-lg animate-bounce-slow">
+              <CheckCircle2 className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-on-surface mb-2">¡Contraseña restablecida!</h2>
-          <p className="text-on-surface-muted mb-4">Tu contraseña ha sido actualizada exitosamente.</p>
-          <p className="text-sm text-on-surface-muted">Redirigiendo al inicio de sesión...</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">¡Contraseña restablecida!</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-4">Tu contraseña ha sido actualizada exitosamente.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-500">Redirigiendo al inicio de sesión...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md mx-auto p-6">
-      <div className="bg-surface-muted rounded-lg shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-on-surface mb-2">
-            {step === 'request' ? 'Recuperar contraseña' : 'Restablecer contraseña'}
-          </h1>
-          <p className="text-on-surface-muted">
-            {step === 'request'
-              ? 'Ingresa tu correo para recibir un token de recuperación'
-              : 'Ingresa el token y tu nueva contraseña'}
-          </p>
-        </div>
+    <>
+      <div className="w-full max-w-md mx-auto p-6 animate-fadeIn">
+        <div className="glass-effect dark:bg-slate-800/90 rounded-2xl shadow-xl dark:shadow-slate-900/50 p-8">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-2xl mb-4 shadow-lg">
+              <ShieldCheck className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+              {step === 'request' ? 'Recuperar contraseña' : 'Restablecer contraseña'}
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              {step === 'request'
+                ? 'Ingresa tu correo para recibir un token de recuperación'
+                : 'Ingresa el token y tu nueva contraseña'}
+            </p>
+          </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-500/10 border-2 border-red-400 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+            <span className="font-medium">⚠</span>
             {error}
           </div>
         )}
@@ -123,33 +127,44 @@ export function ResetPasswordForm() {
         {step === 'request' ? (
           <form onSubmit={requestReset} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-on-surface mb-2">
+              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Correo electrónico
               </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                placeholder="tu@email.com"
-                required
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-lg bg-white dark:bg-slate-700 border-2 border-cyan-200 dark:border-slate-600 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 focus:border-cyan-500 dark:focus:border-cyan-400 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
+                  placeholder="tu@email.com"
+                  required
+                  disabled={isLoading}
+                  autoComplete="email"
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-contrast font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 flex items-center justify-center gap-2"
             >
-              {isLoading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Enviar enlace de recuperación'
+              )}
             </button>
 
             <div className="text-center">
               <Link
                 href="/login"
-                className="text-sm text-primary hover:text-primary/80 transition"
+                className="text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
               >
                 Volver al inicio de sesión
               </Link>
@@ -158,12 +173,12 @@ export function ResetPasswordForm() {
         ) : (
           <form onSubmit={submitReset} className="space-y-6">
             {generatedToken ? (
-              <div className="bg-green-500/10 border border-green-500 rounded-lg p-4 space-y-2">
-                <p className="text-sm text-green-400 font-semibold">🔐 Token generado (Modo Desarrollo)</p>
-                <div className="bg-surface rounded p-3">
-                  <code className="text-green-400 font-mono text-sm break-all">{generatedToken}</code>
+              <div className="bg-emerald-500/10 border-2 border-emerald-500 dark:border-emerald-400 rounded-lg p-4 space-y-2">
+                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold">🔐 Token generado (Modo Desarrollo)</p>
+                <div className="bg-white dark:bg-slate-700 rounded p-3">
+                  <code className="text-emerald-600 dark:text-emerald-400 font-mono text-sm break-all">{generatedToken}</code>
                 </div>
-                <p className="text-xs text-on-surface-muted">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   📧 En producción, este token se enviaría a: <strong>{email}</strong>
                 </p>
                 <button
@@ -171,57 +186,71 @@ export function ResetPasswordForm() {
                   onClick={() => {
                     setToken(generatedToken);
                   }}
-                  className="text-xs text-green-400 hover:text-green-300 underline"
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline"
                 >
                   Copiar al campo de abajo
                 </button>
               </div>
             ) : (
-              <div className="bg-blue-500/10 border border-blue-500 text-blue-400 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-cyan-500/10 border-2 border-cyan-500 dark:border-cyan-400 text-cyan-700 dark:text-cyan-400 px-4 py-3 rounded-lg text-sm">
                 Revisa tu correo electrónico (<strong>{email}</strong>) para obtener el token de recuperación.
               </div>
             )}
 
             <div>
-              <label htmlFor="token" className="block text-sm font-medium text-on-surface mb-2">
+              <label htmlFor="token" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Token de recuperación
               </label>
-              <input
-                id="token"
-                type="text"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition font-mono"
-                placeholder="ABC123XYZ"
-                required
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+                <input
+                  id="token"
+                  type="text"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-lg bg-white dark:bg-slate-700 border-2 border-cyan-200 dark:border-slate-600 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 focus:border-cyan-500 dark:focus:border-cyan-400 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed font-mono"
+                  placeholder="ABC123XYZ"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-on-surface mb-2">
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Nueva contraseña
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                placeholder="••••••••"
-                required
-                disabled={isLoading}
-                minLength={6}
-              />
-              <p className="text-xs text-on-surface-muted mt-1">Mínimo 6 caracteres</p>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-lg bg-white dark:bg-slate-700 border-2 border-cyan-200 dark:border-slate-600 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 focus:border-cyan-500 dark:focus:border-cyan-400 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                  minLength={6}
+                  autoComplete="new-password"
+                />
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1.5">Mínimo 6 caracteres</p>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-contrast font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 flex items-center justify-center gap-2"
             >
-              {isLoading ? 'Restableciendo...' : 'Restablecer contraseña'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Restableciendo...
+                </>
+              ) : (
+                'Restablecer contraseña'
+              )}
             </button>
 
             <div className="text-center space-y-2">
@@ -233,14 +262,14 @@ export function ResetPasswordForm() {
                   setToken('');
                   setPassword('');
                 }}
-                className="text-sm text-on-surface-muted hover:text-on-surface transition"
+                className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
               >
                 Solicitar nuevo token
               </button>
-              <span className="text-on-surface-muted mx-2">•</span>
+              <span className="text-slate-400 dark:text-slate-600 mx-2">•</span>
               <Link
                 href="/login"
-                className="text-sm text-primary hover:text-primary/80 transition"
+                className="text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
               >
                 Volver al inicio de sesión
               </Link>
@@ -249,12 +278,12 @@ export function ResetPasswordForm() {
         )}
 
         {step === 'request' && (
-          <div className="mt-6 text-center">
-            <p className="text-sm text-on-surface-muted">
+          <div className="mt-6 pt-6 border-t border-cyan-100 dark:border-slate-700 text-center">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               ¿No tienes cuenta?{' '}
               <Link
                 href="/register"
-                className="text-primary hover:text-primary/80 font-medium transition"
+                className="font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
               >
                 Regístrate aquí
               </Link>
@@ -263,6 +292,11 @@ export function ResetPasswordForm() {
         )}
       </div>
 
+      <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+        <p>¿Necesitas ayuda? Contacta a soporte técnico</p>
+      </div>
+    </div>
+
       <Modal
         isOpen={modalState.isOpen}
         onClose={closeModal}
@@ -270,6 +304,6 @@ export function ResetPasswordForm() {
         message={modalState.message}
         type={modalState.type}
       />
-    </div>
+    </>
   );
 }

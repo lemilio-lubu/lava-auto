@@ -142,8 +142,8 @@ export default function ReservationsTable({ initialReservations }: { initialRese
       {/* Header con acción principal */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Mis Reservas</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Mis Reservas</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Gestiona y consulta todas tus reservas de autolavado
           </p>
         </div>
@@ -163,24 +163,24 @@ export default function ReservationsTable({ initialReservations }: { initialRese
           {/* Búsqueda */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 placeholder="Buscar por cliente, placa o servicio..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 rounded-lg border-2 border-cyan-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                className="w-full pl-11 pr-4 py-2.5 rounded-lg border-2 border-cyan-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
               />
             </div>
           </div>
 
           {/* Filtro por estado */}
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-slate-600" />
+            <Filter className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2.5 rounded-lg border-2 border-cyan-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all bg-white"
+              className="px-4 py-2.5 rounded-lg border-2 border-cyan-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
             >
               <option value="ALL">Todos los estados</option>
               <option value="PENDING">Pendientes</option>
@@ -193,9 +193,9 @@ export default function ReservationsTable({ initialReservations }: { initialRese
         </div>
         
         {/* Nielsen: Visibilidad del estado - Contador de resultados */}
-        <div className="mt-4 pt-4 border-t border-cyan-100">
-          <p className="text-sm text-slate-600">
-            Mostrando <span className="font-semibold text-cyan-600">{filteredReservations.length}</span> de {reservations.length} reservas
+        <div className="mt-4 pt-4 border-t border-cyan-100 dark:border-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Mostrando <span className="font-semibold text-cyan-600 dark:text-cyan-400">{filteredReservations.length}</span> de {reservations.length} reservas
           </p>
         </div>
       </Card>
@@ -203,13 +203,13 @@ export default function ReservationsTable({ initialReservations }: { initialRese
       {/* Nielsen: Diseño estético y minimalista - Vista de tarjetas en lugar de tabla */}
       {filteredReservations.length === 0 ? (
         <Card className="text-center py-12">
-          <Calendar className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
+          <Calendar className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
             {searchTerm || filterStatus !== 'ALL' 
               ? 'No se encontraron reservas'
               : 'No tienes reservas registradas'}
           </h3>
-          <p className="text-slate-600 mb-6">
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
             {searchTerm || filterStatus !== 'ALL'
               ? 'Intenta con otros criterios de búsqueda'
               : 'Crea tu primera reserva para comenzar'}
@@ -235,33 +235,33 @@ export default function ReservationsTable({ initialReservations }: { initialRese
                       <Badge variant={config.variant} size="md">
                         {config.label}
                       </Badge>
-                      <span className="text-xs text-slate-500">{config.description}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{config.description}</span>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                       {reservation.service.name}
                     </h3>
                   </div>
                   
                   {/* Nielsen: Diseño estético - Monto destacado */}
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-cyan-600">
+                    <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
                       ${reservation.totalAmount.toFixed(2)}
                     </p>
                   </div>
                 </div>
 
                 {/* Información del vehículo y cliente */}
-                <div className="space-y-3 mb-4 bg-slate-50 rounded-lg p-4">
+                <div className="space-y-3 mb-4 bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
                   <div className="flex items-center gap-3 text-sm">
-                    <User className="w-4 h-4 text-slate-400" />
-                    <span className="font-medium text-slate-700">
+                    <User className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <span className="font-medium text-slate-700 dark:text-slate-300">
                       {reservation.vehicle.ownerName}
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-3 text-sm">
-                    <Car className="w-4 h-4 text-slate-400" />
-                    <span className="text-slate-600">
+                    <Car className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <span className="text-slate-600 dark:text-slate-400">
                       {reservation.vehicle.brand} {reservation.vehicle.model}
                     </span>
                     <Badge variant="neutral" size="sm">
@@ -271,8 +271,8 @@ export default function ReservationsTable({ initialReservations }: { initialRese
 
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-600">
+                      <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                      <span className="text-slate-600 dark:text-slate-400">
                         {new Date(reservation.scheduledDate).toLocaleDateString('es-ES', {
                           day: 'numeric',
                           month: 'long',
@@ -282,8 +282,8 @@ export default function ReservationsTable({ initialReservations }: { initialRese
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-600 font-medium">
+                      <Clock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                      <span className="text-slate-600 dark:text-slate-400 font-medium">
                         {reservation.scheduledTime}
                       </span>
                     </div>
@@ -291,7 +291,7 @@ export default function ReservationsTable({ initialReservations }: { initialRese
                 </div>
 
                 {/* Nielsen: Control y libertad - Acciones claramente visibles */}
-                <div className="flex gap-2 pt-4 border-t border-cyan-100">
+                <div className="flex gap-2 pt-4 border-t border-cyan-100 dark:border-slate-600">
                   <Link href={`/dashboard/pagos/${reservation.id}`} className="flex-1">
                     <Button variant="secondary" fullWidth size="sm">
                       <DollarSign className="w-4 h-4" />

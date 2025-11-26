@@ -6,6 +6,7 @@ import { registerSchema } from '@/lib/validations/auth.schema';
 import Link from 'next/link';
 import { useModal } from '@/hooks/useModal';
 import Modal from '@/components/ui/Modal';
+import { Droplets, Mail, Lock, User, Phone, Loader2, CheckCircle2 } from 'lucide-react';
 
 export function RegisterForm() {
   const [name, setName] = useState('');
@@ -56,131 +57,162 @@ export function RegisterForm() {
 
   if (success) {
     return (
-      <div className="w-full max-w-md mx-auto p-6">
-        <div className="bg-surface-muted rounded-lg shadow-xl p-8 text-center">
+      <div className="w-full max-w-md mx-auto p-6 animate-fadeIn">
+        <div className="glass-effect dark:bg-slate-800/90 rounded-2xl shadow-xl dark:shadow-slate-900/50 p-8 text-center">
           <div className="mb-4">
-            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-2xl shadow-lg animate-bounce-slow">
+              <CheckCircle2 className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-on-surface mb-2">¡Cuenta creada!</h2>
-          <p className="text-on-surface-muted mb-4">Tu cuenta ha sido creada exitosamente.</p>
-          <p className="text-sm text-on-surface-muted">Redirigiendo al inicio de sesión...</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">¡Cuenta creada!</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-4">Tu cuenta ha sido creada exitosamente.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-500">Redirigiendo al inicio de sesión...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md mx-auto p-6">
-      <div className="bg-surface-muted rounded-lg shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-on-surface mb-2">Crear cuenta</h1>
-          <p className="text-on-surface-muted">Únete a Autolavado Digital</p>
-        </div>
+    <>
+      <div className="w-full max-w-md mx-auto p-6 animate-fadeIn">
+        <div className="glass-effect dark:bg-slate-800/90 rounded-2xl shadow-xl dark:shadow-slate-900/50 p-8">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-2xl mb-4 shadow-lg">
+              <Droplets className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Crear cuenta</h1>
+            <p className="text-slate-600 dark:text-slate-400">Únete a Autolavado Digital</p>
+          </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg">
+            <div className="bg-red-500/10 border-2 border-red-400 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg flex items-center gap-2">
+              <span className="font-medium">⚠</span>
               {error}
             </div>
           )}
 
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-on-surface mb-2">
+            <label htmlFor="name" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Nombre completo
             </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-              placeholder="Juan Pérez"
-              required
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-lg bg-white dark:bg-slate-700 border-2 border-cyan-200 dark:border-slate-600 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 focus:border-cyan-500 dark:focus:border-cyan-400 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
+                placeholder="Juan Pérez"
+                required
+                disabled={isLoading}
+                autoComplete="name"
+              />
+            </div>
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-on-surface mb-2">
+            <label htmlFor="email" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Correo electrónico
             </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-              placeholder="tu@email.com"
-              required
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-lg bg-white dark:bg-slate-700 border-2 border-cyan-200 dark:border-slate-600 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 focus:border-cyan-500 dark:focus:border-cyan-400 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
+                placeholder="tu@email.com"
+                required
+                disabled={isLoading}
+                autoComplete="email"
+              />
+            </div>
           </div>
 
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-on-surface mb-2">
+            <label htmlFor="phone" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Teléfono
             </label>
-            <input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => {
-                // Solo permitir números
-                const value = e.target.value.replace(/[^0-9]/g, '');
-                setPhone(value);
-              }}
-              className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-              placeholder="0991234567"
-              required
-              disabled={isLoading}
-              maxLength={10}
-            />
-            <p className="text-xs text-on-surface-muted mt-1">Formato: 10 dígitos iniciando con 0 (Ej: 0991234567)</p>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  // Solo permitir números
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setPhone(value);
+                }}
+                className="w-full pl-11 pr-4 py-3 rounded-lg bg-white dark:bg-slate-700 border-2 border-cyan-200 dark:border-slate-600 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 focus:border-cyan-500 dark:focus:border-cyan-400 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
+                placeholder="0991234567"
+                required
+                disabled={isLoading}
+                maxLength={10}
+                autoComplete="tel"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1.5">Formato: 10 dígitos iniciando con 0 (Ej: 0991234567)</p>
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-on-surface mb-2">
+            <label htmlFor="password" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Contraseña
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-              placeholder="••••••••"
-              required
-              disabled={isLoading}
-              minLength={6}
-            />
-            <p className="text-xs text-on-surface-muted mt-1">Mínimo 6 caracteres</p>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-lg bg-white dark:bg-slate-700 border-2 border-cyan-200 dark:border-slate-600 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 focus:border-cyan-500 dark:focus:border-cyan-400 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
+                placeholder="••••••••"
+                required
+                disabled={isLoading}
+                minLength={6}
+                autoComplete="new-password"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1.5">Mínimo 6 caracteres</p>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-contrast font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+            className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 flex items-center justify-center gap-2 mt-6"
           >
-            {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Creando cuenta...
+              </>
+            ) : (
+              'Crear cuenta'
+            )}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-on-surface-muted">
+        <div className="mt-6 pt-6 border-t border-cyan-100 dark:border-slate-700 text-center">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             ¿Ya tienes cuenta?{' '}
             <Link
               href="/login"
-              className="text-primary hover:text-primary/80 font-medium transition"
+              className="font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
             >
               Inicia sesión
             </Link>
           </p>
         </div>
       </div>
+
+      <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+        <p>¿Necesitas ayuda? Contacta a soporte técnico</p>
+      </div>
+    </div>
 
       <Modal
         isOpen={modalState.isOpen}
@@ -189,6 +221,6 @@ export function RegisterForm() {
         message={modalState.message}
         type={modalState.type}
       />
-    </div>
+    </>
   );
 }

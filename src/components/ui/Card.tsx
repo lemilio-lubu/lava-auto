@@ -23,8 +23,8 @@ export default function Card({
   return (
     <div
       className={`
-        bg-white rounded-xl border border-cyan-100
-        shadow-md
+        bg-white dark:bg-slate-800 rounded-xl border border-cyan-100 dark:border-slate-700
+        shadow-md dark:shadow-slate-900/50
         ${hover ? 'card-hover cursor-pointer' : ''}
         ${paddingStyles[padding]}
         ${className}
@@ -57,7 +57,7 @@ export function CardTitle({
   className?: string;
 }) {
   return (
-    <h3 className={`text-xl font-bold text-slate-900 ${className}`}>
+    <h3 className={`text-xl font-bold text-slate-900 dark:text-white ${className}`}>
       {children}
     </h3>
   );
@@ -71,7 +71,7 @@ export function CardDescription({
   className?: string;
 }) {
   return (
-    <p className={`text-sm text-slate-600 mt-1 ${className}`}>
+    <p className={`text-sm text-slate-600 dark:text-slate-400 mt-1 ${className}`}>
       {children}
     </p>
   );
@@ -99,7 +99,7 @@ export function CardFooter({
   className?: string;
 }) {
   return (
-    <div className={`mt-6 pt-4 border-t border-cyan-100 ${className}`}>
+    <div className={`mt-6 pt-4 border-t border-cyan-100 dark:border-slate-700 ${className}`}>
       {children}
     </div>
   );

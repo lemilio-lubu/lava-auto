@@ -163,8 +163,8 @@ export default function NuevaReservaPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-cyan-200 border-t-cyan-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando información...</p>
+          <div className="w-16 h-16 border-4 border-cyan-200 dark:border-slate-600 border-t-cyan-600 dark:border-t-cyan-400 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Cargando información...</p>
         </div>
       </div>
     );
@@ -197,18 +197,18 @@ export default function NuevaReservaPage() {
         
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Nueva Reserva</h1>
-            <p className="text-slate-600 mt-1">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Nueva Reserva</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">
               Completa los datos para agendar tu servicio de autolavado
             </p>
           </div>
           
           {/* Nielsen: Visibilidad del estado - Progreso */}
           <div className="text-right">
-            <p className="text-sm font-medium text-slate-700">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Progreso: {completedSteps}/{totalSteps}
             </p>
-            <div className="w-32 h-2 bg-slate-200 rounded-full mt-2 overflow-hidden">
+            <div className="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full mt-2 overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-300"
                 style={{ width: `${(completedSteps / totalSteps) * 100}%` }}
@@ -226,15 +226,15 @@ export default function NuevaReservaPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-cyan-100 rounded-lg">
-                    <Car className="w-5 h-5 text-cyan-600" />
+                  <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                    <Car className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                   </div>
                   <div className="flex-1">
                     <CardTitle>1. Selecciona tu Vehículo</CardTitle>
                     <CardDescription>Elige el vehículo a lavar</CardDescription>
                   </div>
                   {formData.vehicleId && (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
                   )}
                 </div>
               </CardHeader>
@@ -243,7 +243,7 @@ export default function NuevaReservaPage() {
                   required
                   value={formData.vehicleId}
                   onChange={(e) => handleVehicleChange(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                  className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                 >
                   <option value="">Seleccionar vehículo...</option>
                   {vehicles.map((vehicle) => (
@@ -254,8 +254,8 @@ export default function NuevaReservaPage() {
                 </select>
                 
                 {selectedVehicle && (
-                  <div className="mt-4 p-3 bg-cyan-50 rounded-lg">
-                    <p className="text-sm font-medium text-cyan-900">
+                  <div className="mt-4 p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg">
+                    <p className="text-sm font-medium text-cyan-900 dark:text-cyan-100">
                       {selectedVehicle.brand} {selectedVehicle.model}
                     </p>
                     <div className="flex gap-2 mt-2">
@@ -271,27 +271,27 @@ export default function NuevaReservaPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <Sparkles className="w-5 h-5 text-emerald-600" />
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                    <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div className="flex-1">
                     <CardTitle>2. Elige el Servicio</CardTitle>
                     <CardDescription>Selecciona el tipo de lavado</CardDescription>
                   </div>
                   {formData.serviceId && (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
                   )}
                 </div>
               </CardHeader>
               <CardContent>
                 {!formData.vehicleId ? (
-                  <div className="flex items-center gap-2 text-sm text-slate-500 py-4">
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 py-4">
                     <AlertCircle className="w-4 h-4" />
                     <span>Primero selecciona un vehículo</span>
                   </div>
                 ) : filteredServices.length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-sm text-amber-600">
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
                       No hay servicios disponibles para este tipo de vehículo
                     </p>
                   </div>
@@ -305,18 +305,18 @@ export default function NuevaReservaPage() {
                         className={`
                           w-full text-left p-4 rounded-lg border-2 transition-all
                           ${formData.serviceId === service.id
-                            ? 'border-emerald-500 bg-emerald-50'
-                            : 'border-slate-200 hover:border-emerald-300 bg-white'
+                            ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 bg-white dark:bg-slate-800/50'
                           }
                         `}
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <p className="font-semibold text-slate-900">{service.name}</p>
-                          <p className="text-xl font-bold text-emerald-600">
+                          <p className="font-semibold text-slate-900 dark:text-white">{service.name}</p>
+                          <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                             ${service.price.toFixed(2)}
                           </p>
                         </div>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
                           Duración: {service.duration} minutos
                         </p>
                       </button>
@@ -330,15 +330,15 @@ export default function NuevaReservaPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Clock className="w-5 h-5 text-blue-600" />
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="flex-1">
                     <CardTitle>3. Selecciona la Hora</CardTitle>
                     <CardDescription>Horario de atención: 8:00 AM - 6:00 PM</CardDescription>
                   </div>
                   {formData.scheduledTime && (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
                   )}
                 </div>
               </CardHeader>
@@ -350,7 +350,7 @@ export default function NuevaReservaPage() {
                   onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
                   min="08:00"
                   max="18:00"
-                  className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                  className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                 />
               </CardContent>
             </Card>
@@ -359,8 +359,8 @@ export default function NuevaReservaPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-slate-100 rounded-lg">
-                    <FileText className="w-5 h-5 text-slate-600" />
+                  <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                    <FileText className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                   </div>
                   <div>
                     <CardTitle>Notas Adicionales (Opcional)</CardTitle>
@@ -372,7 +372,7 @@ export default function NuevaReservaPage() {
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all resize-none"
                   placeholder="Ejemplo: El auto tiene detalles especiales, manchas difíciles, etc."
                   rows={3}
                 />
@@ -385,15 +385,15 @@ export default function NuevaReservaPage() {
             {/* Calendario */}
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-cyan-100 rounded-lg">
-                  <CalendarIcon className="w-5 h-5 text-cyan-600" />
+                <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                  <CalendarIcon className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900">4. Selecciona la Fecha</h3>
-                  <p className="text-sm text-slate-600">Elige el día de tu servicio</p>
+                  <h3 className="font-bold text-slate-900 dark:text-white">4. Selecciona la Fecha</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Elige el día de tu servicio</p>
                 </div>
                 {formData.scheduledDate && (
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500 ml-auto" />
+                  <CheckCircle2 className="w-6 h-6 text-emerald-500 dark:text-emerald-400 ml-auto" />
                 )}
               </div>
               
@@ -416,26 +416,26 @@ export default function NuevaReservaPage() {
                   <div className="space-y-4">
                     {selectedVehicle && (
                       <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Vehículo</p>
-                        <p className="text-sm font-medium text-slate-900">
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Vehículo</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
                           {selectedVehicle.brand} {selectedVehicle.model}
                         </p>
-                        <p className="text-sm text-slate-600">{selectedVehicle.plate}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{selectedVehicle.plate}</p>
                       </div>
                     )}
                     
                     {selectedService && (
-                      <div className="pt-4 border-t border-cyan-100">
-                        <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Servicio</p>
-                        <p className="text-sm font-medium text-slate-900">{selectedService.name}</p>
-                        <p className="text-sm text-slate-600">{selectedService.duration} minutos</p>
+                      <div className="pt-4 border-t border-cyan-100 dark:border-slate-700">
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Servicio</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedService.name}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{selectedService.duration} minutos</p>
                       </div>
                     )}
                     
                     {formData.scheduledDate && (
-                      <div className="pt-4 border-t border-cyan-100">
-                        <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Fecha y Hora</p>
-                        <p className="text-sm font-medium text-slate-900">
+                      <div className="pt-4 border-t border-cyan-100 dark:border-slate-700">
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Fecha y Hora</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
                           {new Date(formData.scheduledDate).toLocaleDateString('es-ES', {
                             weekday: 'long',
                             day: 'numeric',
@@ -444,16 +444,16 @@ export default function NuevaReservaPage() {
                           })}
                         </p>
                         {formData.scheduledTime && (
-                          <p className="text-sm text-slate-600">{formData.scheduledTime}</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">{formData.scheduledTime}</p>
                         )}
                       </div>
                     )}
                     
                     {selectedService && (
-                      <div className="pt-4 border-t border-cyan-100">
+                      <div className="pt-4 border-t border-cyan-100 dark:border-slate-700">
                         <div className="flex justify-between items-center">
-                          <p className="text-sm font-semibold text-slate-700">Total a Pagar</p>
-                          <p className="text-2xl font-bold text-cyan-600">
+                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Total a Pagar</p>
+                          <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
                             ${selectedService.price.toFixed(2)}
                           </p>
                         </div>
