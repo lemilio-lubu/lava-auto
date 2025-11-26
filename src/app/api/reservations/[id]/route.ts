@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,6 +13,7 @@ export async function PUT(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const params = await context.params;
     const body = await request.json();
     const { vehicleId, serviceId, scheduledDate, scheduledTime, status, notes } = body;
 
@@ -58,7 +59,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -66,9 +67,29 @@ export async function DELETE(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Eliminar pagos asociados primero
+    const params = await context.params;
+
+    // Verificar si la reserva tiene pagos completados
+    const paymentsCount = await prisma.payment.count({
+      where: {
+        reservationId: params.id,
+        status: 'COMPLETED',
+      },
+    });
+
+    if (paymentsCount > 0) {
+      return NextResponse.json(
+        { error: 'No se puede eliminar una reserva que tiene pagos registrados' },
+        { status: 400 }
+      );
+    }
+
+    // Eliminar pagos pendientes si existen
     await prisma.payment.deleteMany({
-      where: { reservationId: params.id },
+      where: {
+        reservationId: params.id,
+        status: 'PENDING',
+      },
     });
 
     await prisma.reservation.delete({
