@@ -17,6 +17,7 @@ export default function VehiculosPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     ownerName: '',
     ownerPhone: '',
@@ -46,14 +47,18 @@ export default function VehiculosPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/vehicles', {
-        method: 'POST',
+      const url = editingId ? `/api/vehicles/${editingId}` : '/api/vehicles';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
       if (res.ok) {
         setShowForm(false);
+        setEditingId(null);
         setFormData({
           ownerName: '',
           ownerPhone: '',
@@ -66,12 +71,60 @@ export default function VehiculosPage() {
         fetchVehicles();
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al crear vehículo');
+        alert(error.error || 'Error al guardar vehículo');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al crear vehículo');
+      alert('Error al guardar vehículo');
     }
+  };
+
+  const handleEdit = (vehicle: Vehicle) => {
+    setEditingId(vehicle.id);
+    setFormData({
+      ownerName: vehicle.ownerName,
+      ownerPhone: vehicle.ownerPhone || '',
+      brand: vehicle.brand,
+      model: vehicle.model,
+      plate: vehicle.plate,
+      vehicleType: vehicle.vehicleType,
+      color: vehicle.color || '',
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Está seguro de eliminar este vehículo?')) return;
+
+    try {
+      const res = await fetch(`/api/vehicles/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        fetchVehicles();
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Error al eliminar vehículo');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al eliminar vehículo');
+    }
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormData({
+      ownerName: '',
+      ownerPhone: '',
+      brand: '',
+      model: '',
+      plate: '',
+      vehicleType: 'SEDAN',
+      color: '',
+    });
   };
 
   if (loading) {
@@ -81,18 +134,26 @@ export default function VehiculosPage() {
   return (
     <section>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Vehículos</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Vehículos</h1>
         <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+          onClick={() => {
+            if (showForm && !editingId) {
+              handleCancel();
+            } else {
+              setShowForm(!showForm);
+            }
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
-          {showForm ? 'Cancelar' : '+ Nuevo Vehículo'}
+          {showForm && !editingId ? 'Cancelar' : '+ Nuevo Vehículo'}
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Nuevo Vehículo</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-900">
+            {editingId ? 'Editar Vehículo' : 'Nuevo Vehículo'}
+          </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -185,12 +246,23 @@ export default function VehiculosPage() {
               />
             </div>
 
-            <button
-              type="submit"
-              className="w-full px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-            >
-              Crear Vehículo
-            </button>
+            <div className="flex gap-4">
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                {editingId ? 'Actualizar Vehículo' : 'Crear Vehículo'}
+              </button>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
           </form>
         </div>
       )}
@@ -205,24 +277,41 @@ export default function VehiculosPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dueño</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {vehicles.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                   No hay vehículos registrados
                 </td>
               </tr>
             ) : (
               vehicles.map((vehicle) => (
                 <tr key={vehicle.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{vehicle.plate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{vehicle.brand} {vehicle.model}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{vehicle.vehicleType}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{vehicle.color || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{vehicle.ownerName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{vehicle.ownerPhone || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{vehicle.plate}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{vehicle.brand} {vehicle.model}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{vehicle.vehicleType}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{vehicle.color || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{vehicle.ownerName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{vehicle.ownerPhone || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(vehicle)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(vehicle.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
