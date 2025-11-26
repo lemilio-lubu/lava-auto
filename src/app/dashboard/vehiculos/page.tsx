@@ -244,14 +244,19 @@ export default function VehiculosPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Dueño</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del propietario</label>
                 <input
                   type="text"
                   required
                   value={formData.ownerName}
-                  onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                  onChange={(e) => {
+                    // Permitir solo letras, espacios y acentos
+                    const value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+                    setFormData({ ...formData, ownerName: value });
+                  }}
                   className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                   placeholder="Juan Pérez"
+                  maxLength={100}
                 />
               </div>
 
@@ -260,10 +265,16 @@ export default function VehiculosPage() {
                 <input
                   type="tel"
                   value={formData.ownerPhone}
-                  onChange={(e) => setFormData({ ...formData, ownerPhone: e.target.value })}
+                  onChange={(e) => {
+                    // Solo permitir números, espacios, guiones y paréntesis
+                    const value = e.target.value.replace(/[^0-9\s\-()]/g, '');
+                    setFormData({ ...formData, ownerPhone: value });
+                  }}
                   className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
-                  placeholder="555-1234"
+                  placeholder="0991234567"
+                  maxLength={15}
                 />
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Solo números (ej: 0991234567)</p>
               </div>
             </div>
 
@@ -274,9 +285,14 @@ export default function VehiculosPage() {
                   type="text"
                   required
                   value={formData.brand}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  onChange={(e) => {
+                    // Capitalizar primera letra y permitir solo letras, espacios y guiones
+                    const value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s\-]/g, '');
+                    setFormData({ ...formData, brand: value });
+                  }}
                   className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                   placeholder="Toyota"
+                  maxLength={50}
                 />
               </div>
 
@@ -286,9 +302,14 @@ export default function VehiculosPage() {
                   type="text"
                   required
                   value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                  onChange={(e) => {
+                    // Permitir letras, números, espacios y guiones
+                    const value = e.target.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-]/g, '');
+                    setFormData({ ...formData, model: value });
+                  }}
                   className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                   placeholder="Corolla"
+                  maxLength={50}
                 />
               </div>
             </div>
@@ -300,10 +321,16 @@ export default function VehiculosPage() {
                   type="text"
                   required
                   value={formData.plate}
-                  onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
+                  onChange={(e) => {
+                    // Convertir a mayúsculas y permitir solo letras, números y guiones
+                    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+                    setFormData({ ...formData, plate: value });
+                  }}
                   className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
-                  placeholder="ABC123"
+                  placeholder="ABC-123"
+                  maxLength={10}
                 />
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Formato: letras y números (ej: ABC-123)</p>
               </div>
 
               <div>
@@ -327,9 +354,14 @@ export default function VehiculosPage() {
               <input
                 type="text"
                 value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                onChange={(e) => {
+                  // Permitir solo letras y espacios
+                  const value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+                  setFormData({ ...formData, color: value });
+                }}
                 className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                 placeholder="Blanco"
+                maxLength={30}
               />
             </div>
 

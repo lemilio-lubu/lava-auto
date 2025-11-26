@@ -253,7 +253,9 @@ export default function ServiciosPage() {
                 className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all resize-none"
                 placeholder="Descripción del servicio..."
                 rows={3}
+                maxLength={500}
               />
+              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">{formData.description.length}/500 caracteres</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -263,11 +265,16 @@ export default function ServiciosPage() {
                   type="number"
                   required
                   min="1"
+                  max="1440"
                   value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setFormData({ ...formData, duration: value });
+                  }}
                   className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                   placeholder="30"
                 />
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Mínimo 1 minuto, máximo 1440 (24 horas)</p>
               </div>
 
               <div>
@@ -277,11 +284,19 @@ export default function ServiciosPage() {
                   required
                   min="0"
                   step="0.01"
+                  max="99999.99"
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Permitir números y un punto decimal
+                    if (/^\d*\.?\d{0,2}$/.test(value) || value === '') {
+                      setFormData({ ...formData, price: value });
+                    }
+                  }}
                   className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
                   placeholder="25.00"
                 />
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Formato: hasta 2 decimales (ej: 25.00)</p>
               </div>
             </div>
 

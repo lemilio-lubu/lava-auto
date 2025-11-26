@@ -22,7 +22,8 @@ model User {
 
   // Relaciones
   reservations      Reservation[]
-  messages          Message[]
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages  Message[] @relation("ReceivedMessages")
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -32,17 +33,20 @@ model User {
 
 // ============ CHAT (WEBSOCKET REQUERIDO) ============
 model Message {
-  id        String   @id @default(cuid())
-  content   String
-  userId    String
-  roomId    String   @default("general")
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  receiverId String
+  read       Boolean  @default(false)
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   @@map("messages")
-  @@index([roomId, createdAt])
+  @@index([senderId, receiverId])
+  @@index([createdAt])
 }
 
 // ============ NEGOCIO: AUTOLAVADO ============

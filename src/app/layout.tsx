@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import SessionProvider from "@/components/auth/SessionProvider";
 
 export const metadata: Metadata = {
   title: "Autolavado Digital",
@@ -32,7 +33,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-surface dark:bg-slate-900 text-on-surface dark:text-slate-100 antialiased">
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

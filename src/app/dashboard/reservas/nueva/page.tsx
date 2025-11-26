@@ -375,7 +375,9 @@ export default function NuevaReservaPage() {
                   className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all resize-none"
                   placeholder="Ejemplo: El auto tiene detalles especiales, manchas difíciles, etc."
                   rows={3}
+                  maxLength={500}
                 />
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">{formData.notes.length}/500 caracteres</p>
               </CardContent>
             </Card>
           </div>

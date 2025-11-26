@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Calendar, Car, Sparkles, LogOut, Droplets, User } from 'lucide-react';
+import { Calendar, Car, Sparkles, LogOut, Droplets, User, MessageCircle } from 'lucide-react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 
@@ -31,6 +31,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       label: 'Servicios',
       href: '/dashboard/servicios',
       description: 'Ver servicios disponibles',
+    },
+    {
+      icon: MessageCircle,
+      label: 'Chat',
+      href: '/dashboard/chat',
+      description: 'Mensajes en tiempo real',
     },
   ];
 
