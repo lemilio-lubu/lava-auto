@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useModal } from '@/hooks/useModal';
+import Modal from '@/components/ui/Modal';
 
 type Reservation = {
   id: string;
@@ -32,6 +34,7 @@ export default function RegistrarPagoPage() {
   const router = useRouter();
   const params = useParams();
   const reservationId = params.id as string;
+  const { modalState, showSuccess, showError, closeModal } = useModal();
 
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -77,7 +80,7 @@ export default function RegistrarPagoPage() {
     e.preventDefault();
 
     if (parseFloat(formData.amount) > balance) {
-      alert('El monto no puede ser mayor al saldo pendiente');
+      showError('Error', 'El monto no puede ser mayor al saldo pendiente');
       return;
     }
 
@@ -92,15 +95,15 @@ export default function RegistrarPagoPage() {
       });
 
       if (res.ok) {
-        alert('Pago registrado exitosamente');
-        router.push('/dashboard');
+        showSuccess('¡Éxito!', 'Pago registrado exitosamente');
+        setTimeout(() => router.push('/dashboard'), 1500);
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al registrar pago');
+        showError('Error', error.error || 'Error al registrar pago');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al registrar pago');
+      showError('Error', 'Error al registrar pago');
     }
   };
 
@@ -269,10 +272,18 @@ export default function RegistrarPagoPage() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    <Modal
+      isOpen={modalState.isOpen}
+      onClose={closeModal}
+      title={modalState.title}
+      message={modalState.message}
+      type={modalState.type}
+    />
+  </section>
   );
 }

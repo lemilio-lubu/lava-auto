@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useModal } from '@/hooks/useModal';
+import Modal from '@/components/ui/Modal';
 
 type Vehicle = {
   id: string;
@@ -22,6 +24,7 @@ type Service = {
 
 export default function NuevaReservaPage() {
   const router = useRouter();
+  const { modalState, showSuccess, showError, closeModal } = useModal();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
@@ -76,15 +79,15 @@ export default function NuevaReservaPage() {
       });
 
       if (res.ok) {
-        alert('Reserva creada exitosamente');
-        router.push('/dashboard');
+        showSuccess('¡Éxito!', 'Reserva creada exitosamente');
+        setTimeout(() => router.push('/dashboard'), 1500);
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al crear reserva');
+        showError('Error', error.error || 'Error al crear reserva');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al crear reserva');
+      showError('Error', 'Error al crear reserva');
     }
   };
 
@@ -205,6 +208,14 @@ export default function NuevaReservaPage() {
           </div>
         </form>
       </div>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </section>
   );
 }

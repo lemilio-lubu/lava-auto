@@ -4,12 +4,15 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { loginSchema } from '@/lib/validations/auth.schema';
 import Link from 'next/link';
+import { useModal } from '@/hooks/useModal';
+import Modal from '@/components/ui/Modal';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { modalState, showError, closeModal } = useModal();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,12 +30,12 @@ export function LoginForm() {
       const res = await signIn('credentials', { redirect: false, email, password });
       // @ts-ignore
       if (res?.error) {
-        setError('Credenciales inválidas. Por favor, intenta de nuevo.');
+        showError('Error de autenticación', 'Credenciales inválidas. Por favor, intenta de nuevo.');
       } else {
         window.location.href = '/dashboard';
       }
     } catch (err) {
-      setError('Ocurrió un error. Por favor, intenta más tarde.');
+      showError('Error', 'Ocurrió un error. Por favor, intenta más tarde.');
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +118,14 @@ export function LoginForm() {
           </p>
         </div>
       </div>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </div>
   );
 }

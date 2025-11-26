@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useModal } from '@/hooks/useModal';
+import Modal from '@/components/ui/Modal';
 
 type Service = {
   id: string;
@@ -17,6 +19,7 @@ export default function ServiciosPage() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { modalState, showSuccess, showError, closeModal } = useModal();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -63,14 +66,15 @@ export default function ServiciosPage() {
           price: '',
           vehicleType: 'SEDAN',
         });
+        showSuccess('¡Éxito!', `Servicio ${editingId ? 'actualizado' : 'creado'} correctamente.`);
         fetchServices();
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al guardar servicio');
+        showError('Error', error.error || 'Error al guardar servicio');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al guardar servicio');
+      showError('Error', 'Error al guardar servicio');
     }
   };
 
@@ -95,14 +99,15 @@ export default function ServiciosPage() {
       });
 
       if (res.ok) {
+        showSuccess('¡Eliminado!', 'El servicio ha sido eliminado correctamente.');
         fetchServices();
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al eliminar servicio');
+        showError('Error', error.error || 'Error al eliminar servicio');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al eliminar servicio');
+      showError('Error', 'Error al eliminar servicio');
     }
   };
 
@@ -283,6 +288,14 @@ export default function ServiciosPage() {
           </tbody>
         </table>
       </div>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </section>
   );
 }

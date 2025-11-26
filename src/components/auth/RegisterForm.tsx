@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { registerSchema } from '@/lib/validations/auth.schema';
 import Link from 'next/link';
+import { useModal } from '@/hooks/useModal';
+import Modal from '@/components/ui/Modal';
 
 export function RegisterForm() {
   const [name, setName] = useState('');
@@ -14,6 +16,7 @@ export function RegisterForm() {
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { modalState, showError, closeModal } = useModal();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,7 +39,7 @@ export function RegisterForm() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || 'No se pudo crear la cuenta. El email podría estar en uso.');
+        showError('Error al registrar', data.error || 'No se pudo crear la cuenta. El email podría estar en uso.');
         setIsLoading(false);
         return;
       }
@@ -46,7 +49,7 @@ export function RegisterForm() {
         router.push('/login');
       }, 2000);
     } catch (err) {
-      setError('Ocurrió un error. Por favor, intenta más tarde.');
+      showError('Error', 'Ocurrió un error. Por favor, intenta más tarde.');
       setIsLoading(false);
     }
   }
@@ -178,6 +181,14 @@ export function RegisterForm() {
           </p>
         </div>
       </div>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </div>
   );
 }

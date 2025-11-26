@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { productoSchema } from '@/lib/validations/producto.schema';
 import { useRouter } from 'next/navigation';
+import { useModal } from '@/hooks/useModal';
+import Modal from '@/components/ui/Modal';
 
 export default function ProductoForm({ initial }: { initial?: any } = {}) {
   const [nombre, setNombre] = useState(initial?.nombre || '');
@@ -13,12 +15,13 @@ export default function ProductoForm({ initial }: { initial?: any } = {}) {
   const [imagen, setImagen] = useState(initial?.imagen || '');
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { modalState, showSuccess, showError, closeModal } = useModal();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const parsed = productoSchema.safeParse({ nombre, descripcion, precio: Number(precio), stock: Number(stock), categoria, imagen });
     if (!parsed.success) {
-      setError('Datos inválidos');
+      showError('Datos inválidos', 'Por favor verifica que todos los campos estén correctos.');
       return;
     }
 
@@ -26,10 +29,11 @@ export default function ProductoForm({ initial }: { initial?: any } = {}) {
     const url = initial?.id ? `/api/productos/${initial.id}` : '/api/productos';
     const res = await fetch(url, { method, body: JSON.stringify(parsed.data), headers: { 'Content-Type': 'application/json' } });
     if (!res.ok) {
-      setError('Error guardando');
+      showError('Error', 'No se pudo guardar el producto. Intenta de nuevo.');
       return;
     }
-    router.push('/dashboard/productos');
+    showSuccess('¡Éxito!', `Producto ${initial?.id ? 'actualizado' : 'creado'} correctamente.`);
+    setTimeout(() => router.push('/dashboard/productos'), 1500);
   }
 
   return (
@@ -48,6 +52,14 @@ export default function ProductoForm({ initial }: { initial?: any } = {}) {
       <label className="block mb-2">Imagen (URL)</label>
       <input value={imagen} onChange={(e) => setImagen(e.target.value)} className="w-full p-2 rounded mb-4" />
       <button className="px-4 py-2 bg-primary rounded text-primary-contrast">Guardar</button>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </form>
   );
 }

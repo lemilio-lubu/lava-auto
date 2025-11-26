@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useModal } from '@/hooks/useModal';
+import Modal from '@/components/ui/Modal';
 
 type Vehicle = {
   id: string;
@@ -18,6 +20,7 @@ export default function VehiculosPage() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { modalState, showSuccess, showError, closeModal } = useModal();
   const [formData, setFormData] = useState({
     ownerName: '',
     ownerPhone: '',
@@ -68,14 +71,15 @@ export default function VehiculosPage() {
           vehicleType: 'SEDAN',
           color: '',
         });
+        showSuccess('¡Éxito!', `Vehículo ${editingId ? 'actualizado' : 'creado'} correctamente.`);
         fetchVehicles();
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al guardar vehículo');
+        showError('Error', error.error || 'Error al guardar vehículo');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al guardar vehículo');
+      showError('Error', 'Error al guardar vehículo');
     }
   };
 
@@ -102,14 +106,15 @@ export default function VehiculosPage() {
       });
 
       if (res.ok) {
+        showSuccess('¡Eliminado!', 'El vehículo ha sido eliminado correctamente.');
         fetchVehicles();
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al eliminar vehículo');
+        showError('Error', error.error || 'Error al eliminar vehículo');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al eliminar vehículo');
+      showError('Error', 'Error al eliminar vehículo');
     }
   };
 
@@ -318,6 +323,14 @@ export default function VehiculosPage() {
           </tbody>
         </table>
       </div>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </section>
   );
 }

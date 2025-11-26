@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { resetPasswordSchema } from '@/lib/validations/auth.schema';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useModal } from '@/hooks/useModal';
+import Modal from '@/components/ui/Modal';
 
 export function ResetPasswordForm() {
   const [email, setEmail] = useState('');
@@ -14,6 +16,7 @@ export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { modalState, showError, closeModal } = useModal();
 
   async function requestReset(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +31,7 @@ export function ResetPasswordForm() {
       });
 
       if (!res.ok) {
-        setError('No se pudo iniciar el proceso. Verifica tu correo electrónico.');
+        showError('Error', 'No se pudo iniciar el proceso. Verifica tu correo electrónico.');
       } else {
         const data = await res.json();
         // Guardar el token para mostrarlo en modo desarrollo
@@ -38,7 +41,7 @@ export function ResetPasswordForm() {
         setStep('reset');
       }
     } catch (err) {
-      setError('Ocurrió un error. Por favor, intenta más tarde.');
+      showError('Error', 'Ocurrió un error. Por favor, intenta más tarde.');
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +67,7 @@ export function ResetPasswordForm() {
       });
 
       if (!res.ok) {
-        setError('Token inválido o expirado. Solicita un nuevo enlace.');
+        showError('Error', 'Token inválido o expirado. Solicita un nuevo enlace.');
       } else {
         setStep('success');
         setTimeout(() => {
@@ -259,6 +262,14 @@ export function ResetPasswordForm() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </div>
   );
 }
