@@ -6,6 +6,7 @@ import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import Badge from '@/components/ui/Badge';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 type Service = {
   id: string;
@@ -35,6 +36,12 @@ export default function ServiciosPage() {
     message: '',
     type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    serviceId: '',
+    serviceName: '',
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchServices();
@@ -113,8 +120,17 @@ export default function ServiciosPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este servicio?')) return;
+  const handleDeleteClick = (id: string, name: string) => {
+    setConfirmModal({
+      isOpen: true,
+      serviceId: id,
+      serviceName: name,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    const { serviceId: id } = confirmModal;
 
     try {
       const res = await fetch(`/api/services/${id}`, {
@@ -146,6 +162,9 @@ export default function ServiciosPage() {
         message: 'Error al eliminar servicio',
         type: 'error',
       });
+    } finally {
+      setIsDeleting(false);
+      setConfirmModal({ isOpen: false, serviceId: '', serviceName: '' });
     }
   };
 
@@ -348,7 +367,7 @@ export default function ServiciosPage() {
                         Editar
                       </button>
                       <button
-                        onClick={() => handleDelete(service.id)}
+                        onClick={() => handleDeleteClick(service.id, service.name)}
                         className="text-red-600 hover:text-red-800 font-medium transition-colors"
                       >
                         Eliminar
@@ -362,6 +381,17 @@ export default function ServiciosPage() {
         </table>
         </div>
       </Card>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, serviceId: '', serviceName: '' })}
+        onConfirm={handleDeleteConfirm}
+        title="¿Eliminar servicio?"
+        message={`¿Estás seguro de eliminar el servicio "${confirmModal.serviceName}"? Esta acción no se puede deshacer.`}
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        isLoading={isDeleting}
+      />
 
       <Toast
         isOpen={toast.isOpen}

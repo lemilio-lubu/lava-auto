@@ -6,6 +6,7 @@ import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import Badge from '@/components/ui/Badge';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 type Vehicle = {
   id: string;
@@ -38,6 +39,12 @@ export default function VehiculosPage() {
     message: '',
     type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    vehicleId: '',
+    vehicleInfo: '',
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchVehicles();
@@ -120,8 +127,17 @@ export default function VehiculosPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este vehículo?')) return;
+  const handleDeleteClick = (id: string, vehicleInfo: string) => {
+    setConfirmModal({
+      isOpen: true,
+      vehicleId: id,
+      vehicleInfo,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    const { vehicleId: id } = confirmModal;
 
     try {
       const res = await fetch(`/api/vehicles/${id}`, {
@@ -153,6 +169,9 @@ export default function VehiculosPage() {
         message: 'Error al eliminar vehículo',
         type: 'error',
       });
+    } finally {
+      setIsDeleting(false);
+      setConfirmModal({ isOpen: false, vehicleId: '', vehicleInfo: '' });
     }
   };
 
@@ -383,7 +402,7 @@ export default function VehiculosPage() {
                         Editar
                       </button>
                       <button
-                        onClick={() => handleDelete(vehicle.id)}
+                        onClick={() => handleDeleteClick(vehicle.id, `${vehicle.brand} ${vehicle.model} - ${vehicle.plate}`)}
                         className="text-red-600 hover:text-red-800 font-medium transition-colors"
                       >
                         Eliminar
@@ -397,6 +416,17 @@ export default function VehiculosPage() {
         </table>
         </div>
       </Card>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, vehicleId: '', vehicleInfo: '' })}
+        onConfirm={handleDeleteConfirm}
+        title="¿Eliminar vehículo?"
+        message={`¿Estás seguro de eliminar el vehículo ${confirmModal.vehicleInfo}? Esta acción no se puede deshacer.`}
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        isLoading={isDeleting}
+      />
 
       <Toast
         isOpen={toast.isOpen}

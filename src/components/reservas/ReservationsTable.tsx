@@ -8,6 +8,7 @@ import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 type Reservation = {
   id: string;
@@ -66,6 +67,12 @@ export default function ReservationsTable({ initialReservations }: { initialRese
     message: '',
     type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    reservationId: '',
+    vehicleInfo: '',
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Nielsen: Flexibilidad y eficiencia - Filtros y búsqueda
   const filteredReservations = reservations.filter((reservation) => {
@@ -80,10 +87,17 @@ export default function ReservationsTable({ initialReservations }: { initialRese
   });
 
   // Nielsen: Prevención de errores - Confirmación antes de eliminar
-  const handleDelete = async (id: string, vehicleInfo: string) => {
-    if (!confirm(`¿Estás seguro de eliminar la reserva de ${vehicleInfo}?\n\nEsta acción no se puede deshacer.`)) {
-      return;
-    }
+  const handleDeleteClick = (id: string, vehicleInfo: string) => {
+    setConfirmModal({
+      isOpen: true,
+      reservationId: id,
+      vehicleInfo,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    const { reservationId: id } = confirmModal;
 
     try {
       const res = await fetch(`/api/reservations/${id}`, {
@@ -117,6 +131,9 @@ export default function ReservationsTable({ initialReservations }: { initialRese
         message: 'No se pudo conectar con el servidor',
         type: 'error',
       });
+    } finally {
+      setIsDeleting(false);
+      setConfirmModal({ isOpen: false, reservationId: '', vehicleInfo: '' });
     }
   };
 
@@ -285,7 +302,7 @@ export default function ReservationsTable({ initialReservations }: { initialRese
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDelete(
+                    onClick={() => handleDeleteClick(
                       reservation.id,
                       `${reservation.vehicle.brand} ${reservation.vehicle.plate}`
                     )}
@@ -305,6 +322,17 @@ export default function ReservationsTable({ initialReservations }: { initialRese
         title={toast.title}
         message={toast.message}
         type={toast.type}
+      />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, reservationId: '', vehicleInfo: '' })}
+        onConfirm={handleDeleteConfirm}
+        title="¿Eliminar reserva?"
+        message={`¿Estás seguro de eliminar la reserva de ${confirmModal.vehicleInfo}? Esta acción no se puede deshacer.`}
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        isLoading={isDeleting}
       />
     </section>
   );
