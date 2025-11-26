@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useModal } from '@/hooks/useModal';
-import Modal from '@/components/ui/Modal';
+import { DollarSign, CreditCard, Calendar, User, Car as CarIcon, Sparkles, ArrowLeft, CheckCircle } from 'lucide-react';
+import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Toast from '@/components/ui/Toast';
+import Badge from '@/components/ui/Badge';
 
 type Reservation = {
   id: string;
@@ -34,16 +37,22 @@ export default function RegistrarPagoPage() {
   const router = useRouter();
   const params = useParams();
   const reservationId = params.id as string;
-  const { modalState, showSuccess, showError, closeModal } = useModal();
 
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     paymentMethod: 'CASH',
     transactionId: '',
     notes: '',
+  });
+  const [toast, setToast] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
 
   useEffect(() => {
@@ -80,9 +89,16 @@ export default function RegistrarPagoPage() {
     e.preventDefault();
 
     if (parseFloat(formData.amount) > balance) {
-      showError('Error', 'El monto no puede ser mayor al saldo pendiente');
+      setToast({
+        isOpen: true,
+        title: 'Error',
+        message: 'El monto no puede ser mayor al saldo pendiente',
+        type: 'error',
+      });
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       const res = await fetch('/api/payments', {
@@ -95,81 +111,193 @@ export default function RegistrarPagoPage() {
       });
 
       if (res.ok) {
-        showSuccess('¡Éxito!', 'Pago registrado exitosamente');
+        setToast({
+          isOpen: true,
+          title: '¡Éxito!',
+          message: 'Pago registrado exitosamente',
+          type: 'success',
+        });
         setTimeout(() => router.push('/dashboard'), 1500);
       } else {
         const error = await res.json();
-        showError('Error', error.error || 'Error al registrar pago');
+        setToast({
+          isOpen: true,
+          title: 'Error',
+          message: error.error || 'Error al registrar pago',
+          type: 'error',
+        });
       }
     } catch (error) {
       console.error('Error:', error);
-      showError('Error', 'Error al registrar pago');
+      setToast({
+        isOpen: true,
+        title: 'Error',
+        message: 'Error al registrar pago',
+        type: 'error',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   if (loading) {
-    return <div className="p-6 text-gray-900">Cargando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-cyan-200 border-t-cyan-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Cargando información del pago...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!reservation) {
-    return <div className="p-6 text-gray-900">Reserva no encontrada</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardContent className="text-center py-12">
+            <DollarSign className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-900 font-semibold text-lg">Reserva no encontrada</p>
+            <p className="text-slate-600 mt-2 mb-6">No pudimos encontrar la reserva solicitada</p>
+            <Button onClick={() => router.push('/dashboard')}>Volver al Dashboard</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <section>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Registrar Pago</h1>
-        <p className="text-gray-600">Complete el formulario para registrar un pago</p>
+    <section className="max-w-6xl mx-auto">
+      <div className="mb-8">
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/dashboard')}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Volver al Dashboard
+        </Button>
+        
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-emerald-100 rounded-lg">
+            <DollarSign className="w-8 h-8 text-emerald-600" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Registrar Pago</h1>
+            <p className="text-slate-600 mt-1">Complete el formulario para registrar un pago de la reserva</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Información de la Reserva */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900">Información de la Reserva</h2>
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm text-gray-600">Cliente</p>
-              <p className="font-medium text-gray-900">{reservation.vehicle.ownerName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Vehículo</p>
-              <p className="font-medium text-gray-900">
-                {reservation.vehicle.brand} {reservation.vehicle.model} - {reservation.vehicle.plate}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Servicio</p>
-              <p className="font-medium text-gray-900">{reservation.service.name}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Fecha/Hora</p>
-              <p className="font-medium text-gray-900">
-                {new Date(reservation.scheduledDate).toLocaleDateString()} - {reservation.scheduledTime}
-              </p>
-            </div>
-            <div className="pt-3 border-t">
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Total:</span>
-                <span className="font-medium text-gray-900">${reservation.totalAmount.toFixed(2)}</span>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-cyan-100 rounded-lg">
+                <Calendar className="w-5 h-5 text-cyan-600" />
               </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Pagado:</span>
-                <span className="font-medium text-green-600">${totalPaid.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-semibold text-gray-900">Saldo:</span>
-                <span className="font-semibold text-red-600">${balance.toFixed(2)}</span>
+              <div>
+                <CardTitle>Información de la Reserva</CardTitle>
+                <CardDescription>Detalles del servicio y cliente</CardDescription>
               </div>
             </div>
-          </div>
-        </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <User className="w-4 h-4 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Cliente</p>
+                  <p className="font-medium text-slate-900">{reservation.vehicle.ownerName}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <CarIcon className="w-4 h-4 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Vehículo</p>
+                  <p className="font-medium text-slate-900">
+                    {reservation.vehicle.brand} {reservation.vehicle.model}
+                  </p>
+                  <Badge variant="neutral" size="sm" className="mt-1">{reservation.vehicle.plate}</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <Sparkles className="w-4 h-4 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Servicio</p>
+                  <p className="font-medium text-slate-900">{reservation.service.name}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <Calendar className="w-4 h-4 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Fecha/Hora</p>
+                  <p className="font-medium text-slate-900">
+                    {new Date(reservation.scheduledDate).toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
+                  <p className="text-sm text-slate-600">{reservation.scheduledTime}</p>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-cyan-100">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Total:</span>
+                    <span className="font-semibold text-slate-900 text-lg">${reservation.totalAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Pagado:</span>
+                    <span className="font-semibold text-emerald-600 text-lg">${totalPaid.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-3 border-t border-cyan-100">
+                    <span className="font-bold text-slate-900">Saldo Pendiente:</span>
+                    <span className="font-bold text-red-600 text-2xl">${balance.toFixed(2)}</span>
+                  </div>
+                  {balance === 0 && (
+                    <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      <p className="text-sm font-medium text-emerald-900">Pago completado</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Formulario de Pago */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900">Registrar Pago</h2>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <CreditCard className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <CardTitle>Registrar Pago</CardTitle>
+                <CardDescription>Ingrese los datos del pago a registrar</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">Monto</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Monto a Pagar</label>
               <input
                 type="number"
                 required
@@ -178,112 +306,149 @@ export default function RegistrarPagoPage() {
                 step="0.01"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="w-full px-3 py-2 border rounded-md text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
                 placeholder="0.00"
+                disabled={balance <= 0}
               />
-              <p className="text-xs text-gray-500 mt-1">Máximo: ${balance.toFixed(2)}</p>
+              <p className="text-xs text-slate-500 mt-1">Saldo disponible: ${balance.toFixed(2)}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">Método de Pago</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Método de Pago</label>
               <select
                 value={formData.paymentMethod}
                 onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                className="w-full px-3 py-2 border rounded-md text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+                disabled={balance <= 0}
               >
-                <option value="CASH">Efectivo</option>
-                <option value="CARD">Tarjeta</option>
-                <option value="TRANSFER">Transferencia</option>
-                <option value="OTHER">Otro</option>
+                <option value="CASH">💵 Efectivo</option>
+                <option value="CARD">💳 Tarjeta</option>
+                <option value="TRANSFER">🏦 Transferencia</option>
+                <option value="OTHER">📝 Otro</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">ID de Transacción (opcional)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ID de Transacción (opcional)</label>
               <input
                 type="text"
                 value={formData.transactionId}
                 onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
-                className="w-full px-3 py-2 border rounded-md text-gray-900 bg-white"
+                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
                 placeholder="REF-12345"
+                disabled={balance <= 0}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-700">Notas (opcional)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Notas Adicionales (opcional)</label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-3 py-2 border rounded-md text-gray-900 bg-white"
-                placeholder="Notas adicionales..."
+                className="w-full px-4 py-3 border-2 border-cyan-200 rounded-lg text-slate-900 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all resize-none"
+                placeholder="Notas adicionales sobre el pago..."
                 rows={3}
+                disabled={balance <= 0}
               />
             </div>
 
             <div className="flex gap-4">
-              <button
+              <Button
                 type="submit"
-                disabled={balance <= 0}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                size="lg"
+                className="flex-1"
+                disabled={balance <= 0 || isSubmitting}
+                isLoading={isSubmitting}
               >
-                Registrar Pago
-              </button>
-              <button
+                {balance <= 0 ? 'Pago Completado' : 'Registrar Pago'}
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="lg"
                 onClick={() => router.push('/dashboard')}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                disabled={isSubmitting}
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Historial de Pagos */}
       {payments.length > 0 && (
-        <div className="mt-6 bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900">Historial de Pagos</h2>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID Transacción</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {payments.map((payment) => (
-                <tr key={payment.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(payment.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${payment.amount.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.paymentMethod}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.transactionId || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      payment.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {payment.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-    )}
+        <Card className="mt-6">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <CardTitle>Historial de Pagos</CardTitle>
+                <CardDescription>Registro de todos los pagos realizados para esta reserva</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Monto</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Método</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID Transacción</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {payments.map((payment) => (
+                    <tr key={payment.id} className="hover:bg-cyan-50/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                        {new Date(payment.createdAt).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">
+                        ${payment.amount.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                        {payment.paymentMethod === 'CASH' && '💵 Efectivo'}
+                        {payment.paymentMethod === 'CARD' && '💳 Tarjeta'}
+                        {payment.paymentMethod === 'TRANSFER' && '🏦 Transferencia'}
+                        {payment.paymentMethod === 'OTHER' && '📝 Otro'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {payment.transactionId || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <Badge 
+                          variant={payment.status === 'COMPLETED' ? 'success' : 'warning'}
+                          size="sm"
+                        >
+                          {payment.status === 'COMPLETED' ? 'Completado' : 'Pendiente'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-    <Modal
-      isOpen={modalState.isOpen}
-      onClose={closeModal}
-      title={modalState.title}
-      message={modalState.message}
-      type={modalState.type}
-    />
-  </section>
+      <Toast
+        isOpen={toast.isOpen}
+        onClose={() => setToast({ ...toast, isOpen: false })}
+        title={toast.title}
+        message={toast.message}
+        type={toast.type}
+      />
+    </section>
   );
 }
