@@ -21,7 +21,6 @@ model User {
   resetTokenExpiry  DateTime?
 
   // Relaciones
-  vehicles          Vehicle[]
   reservations      Reservation[]
   messages          Message[]
 
@@ -29,23 +28,6 @@ model User {
   updatedAt         DateTime  @updatedAt
 
   @@map("users")
-}
-
-// ============ PRODUCTOS (CRUD REQUERIDO) ============
-model Producto {
-  id          String   @id @default(cuid())
-  nombre      String
-  descripcion String?
-  precio      Float
-  stock       Int      @default(0)
-  categoria   String
-  imagen      String?
-  activo      Boolean  @default(true)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("productos")
 }
 
 // ============ CHAT (WEBSOCKET REQUERIDO) ============
@@ -66,14 +48,14 @@ model Message {
 // ============ NEGOCIO: AUTOLAVADO ============
 model Vehicle {
   id            String      @id @default(cuid())
-  userId        String
+  ownerName     String
+  ownerPhone    String?
   brand         String
   model         String
   plate         String      @unique
   vehicleType   VehicleType
   color         String?
 
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   reservations  Reservation[]
 
   createdAt     DateTime     @default(now())
@@ -101,23 +83,45 @@ model Service {
 
 model Reservation {
   id              String            @id @default(cuid())
-  userId          String
+  userId          String            // Empleado que registra la reserva
   vehicleId       String
   serviceId       String
   scheduledDate   DateTime
   scheduledTime   String
   status          ReservationStatus @default(PENDING)
-  amount          Float
+  totalAmount     Float
   notes           String?
 
   user            User              @relation(fields: [userId], references: [id])
   vehicle         Vehicle           @relation(fields: [vehicleId], references: [id])
   service         Service           @relation(fields: [serviceId], references: [id])
+  payments        Payment[]
 
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
   @@map("reservations")
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  reservationId   String
+  amount          Float
+  paymentMethod   PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  transactionId   String?
+  notes           String?
+
+  reservation     Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("payments")
+  @@index([reservationId])
 }
 
 model TimeSlot {
@@ -149,4 +153,18 @@ enum ReservationStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
 }
