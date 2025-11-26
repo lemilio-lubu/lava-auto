@@ -3,6 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Plus, Trash2, DollarSign, Calendar, Clock, Car, User, Filter, Search } from 'lucide-react';
+import Badge from '@/components/ui/Badge';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Toast from '@/components/ui/Toast';
 
 type Reservation = {
   id: string;
@@ -21,20 +26,64 @@ type Reservation = {
   };
 };
 
+// Nielsen: Reconocer antes que recordar - Estados con colores semánticos
+const statusConfig = {
+  PENDING: {
+    variant: 'warning' as const,
+    label: 'Pendiente',
+    description: 'Esperando confirmación',
+  },
+  CONFIRMED: {
+    variant: 'info' as const,
+    label: 'Confirmada',
+    description: 'Lista para el servicio',
+  },
+  IN_PROGRESS: {
+    variant: 'primary' as const,
+    label: 'En Proceso',
+    description: 'Servicio en curso',
+  },
+  COMPLETED: {
+    variant: 'success' as const,
+    label: 'Completada',
+    description: 'Servicio finalizado',
+  },
+  CANCELLED: {
+    variant: 'error' as const,
+    label: 'Cancelada',
+    description: 'Reserva cancelada',
+  },
+};
+
 export default function ReservationsTable({ initialReservations }: { initialReservations: any[] }) {
   const router = useRouter();
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [toast, setToast] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
+  });
 
-  const statusColors = {
-    PENDING: 'bg-yellow-100 text-yellow-800',
-    CONFIRMED: 'bg-blue-100 text-blue-800',
-    IN_PROGRESS: 'bg-purple-100 text-purple-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    CANCELLED: 'bg-red-100 text-red-800',
-  };
+  // Nielsen: Flexibilidad y eficiencia - Filtros y búsqueda
+  const filteredReservations = reservations.filter((reservation) => {
+    const matchesSearch =
+      reservation.vehicle.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reservation.vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reservation.service.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesFilter = filterStatus === 'ALL' || reservation.status === filterStatus;
+    
+    return matchesSearch && matchesFilter;
+  });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta reserva?')) return;
+  // Nielsen: Prevención de errores - Confirmación antes de eliminar
+  const handleDelete = async (id: string, vehicleInfo: string) => {
+    if (!confirm(`¿Estás seguro de eliminar la reserva de ${vehicleInfo}?\n\nEsta acción no se puede deshacer.`)) {
+      return;
+    }
 
     try {
       const res = await fetch(`/api/reservations/${id}`, {
@@ -43,87 +92,220 @@ export default function ReservationsTable({ initialReservations }: { initialRese
 
       if (res.ok) {
         setReservations(reservations.filter(r => r.id !== id));
+        // Nielsen: Visibilidad del estado del sistema
+        setToast({
+          isOpen: true,
+          title: 'Reserva eliminada',
+          message: 'La reserva ha sido eliminada exitosamente',
+          type: 'success',
+        });
       } else {
         const error = await res.json();
-        alert(error.error || 'Error al eliminar reserva');
+        // Nielsen: Ayudar a reconocer y corregir errores
+        setToast({
+          isOpen: true,
+          title: 'Error al eliminar',
+          message: error.error || 'No se pudo eliminar la reserva. Intenta de nuevo.',
+          type: 'error',
+        });
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al eliminar reserva');
+      setToast({
+        isOpen: true,
+        title: 'Error del sistema',
+        message: 'No se pudo conectar con el servidor',
+        type: 'error',
+      });
     }
   };
 
   return (
-    <section>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Reservas</h1>
-        <Link 
-          href="/dashboard/reservas/nueva"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          + Nueva Reserva
+    <section className="space-y-6">
+      {/* Header con acción principal */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Mis Reservas</h1>
+          <p className="text-slate-600 mt-1">
+            Gestiona y consulta todas tus reservas de autolavado
+          </p>
+        </div>
+        
+        {/* Nielsen: Consistencia - Acción primaria destacada */}
+        <Link href="/dashboard/reservas/nueva">
+          <Button size="lg" className="shadow-lg">
+            <Plus className="w-5 h-5" />
+            Nueva Reserva
+          </Button>
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehículo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Servicio</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha/Hora</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {reservations.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                  No tienes reservas registradas
-                </td>
-              </tr>
-            ) : (
-              reservations.map((reservation) => (
-                <tr key={reservation.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{reservation.vehicle.ownerName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {reservation.vehicle.brand} {reservation.vehicle.model} - {reservation.vehicle.plate}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{reservation.service.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(reservation.scheduledDate).toLocaleDateString()} - {reservation.scheduledTime}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${reservation.totalAmount.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[reservation.status]}`}>
-                      {reservation.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/dashboard/pagos/${reservation.id}`}
-                        className="text-green-600 hover:text-green-800"
-                      >
-                        Pagar
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(reservation.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Eliminar
-                      </button>
+      {/* Nielsen: Flexibilidad y eficiencia - Filtros */}
+      <Card>
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Búsqueda */}
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar por cliente, placa o servicio..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-11 pr-4 py-2.5 rounded-lg border-2 border-cyan-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Filtro por estado */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-slate-600" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2.5 rounded-lg border-2 border-cyan-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none transition-all bg-white"
+            >
+              <option value="ALL">Todos los estados</option>
+              <option value="PENDING">Pendientes</option>
+              <option value="CONFIRMED">Confirmadas</option>
+              <option value="IN_PROGRESS">En Proceso</option>
+              <option value="COMPLETED">Completadas</option>
+              <option value="CANCELLED">Canceladas</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* Nielsen: Visibilidad del estado - Contador de resultados */}
+        <div className="mt-4 pt-4 border-t border-cyan-100">
+          <p className="text-sm text-slate-600">
+            Mostrando <span className="font-semibold text-cyan-600">{filteredReservations.length}</span> de {reservations.length} reservas
+          </p>
+        </div>
+      </Card>
+
+      {/* Nielsen: Diseño estético y minimalista - Vista de tarjetas en lugar de tabla */}
+      {filteredReservations.length === 0 ? (
+        <Card className="text-center py-12">
+          <Calendar className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">
+            {searchTerm || filterStatus !== 'ALL' 
+              ? 'No se encontraron reservas'
+              : 'No tienes reservas registradas'}
+          </h3>
+          <p className="text-slate-600 mb-6">
+            {searchTerm || filterStatus !== 'ALL'
+              ? 'Intenta con otros criterios de búsqueda'
+              : 'Crea tu primera reserva para comenzar'}
+          </p>
+          {!searchTerm && filterStatus === 'ALL' && (
+            <Link href="/dashboard/reservas/nueva">
+              <Button>
+                <Plus className="w-5 h-5" />
+                Crear Primera Reserva
+              </Button>
+            </Link>
+          )}
+        </Card>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {filteredReservations.map((reservation) => {
+            const config = statusConfig[reservation.status];
+            return (
+              <Card key={reservation.id} hover className="group">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant={config.variant} size="md">
+                        {config.label}
+                      </Badge>
+                      <span className="text-xs text-slate-500">{config.description}</span>
                     </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {reservation.service.name}
+                    </h3>
+                  </div>
+                  
+                  {/* Nielsen: Diseño estético - Monto destacado */}
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-cyan-600">
+                      ${reservation.totalAmount.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Información del vehículo y cliente */}
+                <div className="space-y-3 mb-4 bg-slate-50 rounded-lg p-4">
+                  <div className="flex items-center gap-3 text-sm">
+                    <User className="w-4 h-4 text-slate-400" />
+                    <span className="font-medium text-slate-700">
+                      {reservation.vehicle.ownerName}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 text-sm">
+                    <Car className="w-4 h-4 text-slate-400" />
+                    <span className="text-slate-600">
+                      {reservation.vehicle.brand} {reservation.vehicle.model}
+                    </span>
+                    <Badge variant="neutral" size="sm">
+                      {reservation.vehicle.plate}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      <span className="text-slate-600">
+                        {new Date(reservation.scheduledDate).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-slate-400" />
+                      <span className="text-slate-600 font-medium">
+                        {reservation.scheduledTime}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Nielsen: Control y libertad - Acciones claramente visibles */}
+                <div className="flex gap-2 pt-4 border-t border-cyan-100">
+                  <Link href={`/dashboard/pagos/${reservation.id}`} className="flex-1">
+                    <Button variant="secondary" fullWidth size="sm">
+                      <DollarSign className="w-4 h-4" />
+                      Pagar
+                    </Button>
+                  </Link>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(
+                      reservation.id,
+                      `${reservation.vehicle.brand} ${reservation.vehicle.plate}`
+                    )}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <Toast
+        isOpen={toast.isOpen}
+        onClose={() => setToast({ ...toast, isOpen: false })}
+        title={toast.title}
+        message={toast.message}
+        type={toast.type}
+      />
     </section>
   );
 }

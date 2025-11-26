@@ -4,128 +4,274 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { loginSchema } from '@/lib/validations/auth.schema';
 import Link from 'next/link';
-import { useModal } from '@/hooks/useModal';
-import Modal from '@/components/ui/Modal';
+import { Droplets, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import Toast from '@/components/ui/Toast';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { modalState, showError, closeModal } = useModal();
+  const [toast, setToast] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
+  });
+
+  // Nielsen: Prevención de errores - Validación en tiempo real
+  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
+
+  const validateEmail = (value: string) => {
+    if (!value) return 'El correo es requerido';
+    if (!/\S+@\S+\.\S+/.test(value)) return 'Correo electrónico inválido';
+    return '';
+  };
+
+  const validatePassword = (value: string) => {
+    if (!value) return 'La contraseña es requerida';
+    if (value.length < 6) return 'Mínimo 6 caracteres';
+    return '';
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setIsLoading(true);
+
+    // Nielsen: Reconocer, diagnosticar y corregir errores
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+    
+    if (emailError || passwordError) {
+      setFieldErrors({ email: emailError, password: passwordError });
+      setIsLoading(false);
+      return;
+    }
 
     const parsed = loginSchema.safeParse({ email, password });
     if (!parsed.success) {
-      setError('Por favor, verifica los datos ingresados');
+      setToast({
+        isOpen: true,
+        title: 'Datos incorrectos',
+        message: 'Por favor, verifica los datos ingresados',
+        type: 'error',
+      });
       setIsLoading(false);
       return;
     }
 
     try {
       const res = await signIn('credentials', { redirect: false, email, password });
-      // @ts-ignore
+      
       if (res?.error) {
-        showError('Error de autenticación', 'Credenciales inválidas. Por favor, intenta de nuevo.');
+        // Nielsen: Ayudar a reconocer y corregir errores
+        setToast({
+          isOpen: true,
+          title: 'Error de autenticación',
+          message: 'Credenciales inválidas. Verifica tu correo y contraseña.',
+          type: 'error',
+        });
       } else {
-        window.location.href = '/dashboard';
+        // Nielsen: Visibilidad del estado del sistema
+        setToast({
+          isOpen: true,
+          title: '¡Bienvenido!',
+          message: 'Accediendo al sistema...',
+          type: 'success',
+        });
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1000);
       }
     } catch (err) {
-      showError('Error', 'Ocurrió un error. Por favor, intenta más tarde.');
+      setToast({
+        isOpen: true,
+        title: 'Error del sistema',
+        message: 'No pudimos conectar con el servidor. Intenta de nuevo.',
+        type: 'error',
+      });
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <div className="w-full max-w-md mx-auto p-6">
-      <div className="bg-surface-muted rounded-lg shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-on-surface mb-2">Bienvenido</h1>
-          <p className="text-on-surface-muted">Ingresa a tu cuenta de Autolavado Digital</p>
+    <>
+      <div className="w-full max-w-md mx-auto p-6 animate-fadeIn">
+        <div className="glass-effect rounded-2xl shadow-xl p-8">
+          {/* Nielsen: Diseño estético y minimalista - Logo + Identidad visual */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-2xl mb-4 shadow-lg">
+              <Droplets className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Bienvenido
+            </h1>
+            <p className="text-slate-600">
+              Sistema de Reservas de Autolavado
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Campo Email - Nielsen: Reconocer antes que recordar */}
+            <div>
+              <label 
+                htmlFor="email" 
+                className="block text-sm font-semibold text-slate-700 mb-2"
+              >
+                Correo electrónico
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setFieldErrors({ ...fieldErrors, email: '' });
+                  }}
+                  onBlur={() => setFieldErrors({ ...fieldErrors, email: validateEmail(email) })}
+                  className={`
+                    w-full pl-11 pr-4 py-3 rounded-lg 
+                    bg-white border-2 
+                    ${fieldErrors.email ? 'border-red-400 focus:border-red-500' : 'border-cyan-200 focus:border-cyan-500'}
+                    text-slate-900 
+                    focus:outline-none focus:ring-2 
+                    ${fieldErrors.email ? 'focus:ring-red-200' : 'focus:ring-cyan-200'}
+                    transition-all
+                    disabled:bg-slate-50 disabled:cursor-not-allowed
+                  `}
+                  placeholder="tu@email.com"
+                  required
+                  disabled={isLoading}
+                  autoComplete="email"
+                />
+              </div>
+              {/* Nielsen: Ayudar a reconocer y diagnosticar errores */}
+              {fieldErrors.email && (
+                <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+                  <span className="font-medium">⚠</span> {fieldErrors.email}
+                </p>
+              )}
+            </div>
+
+            {/* Campo Contraseña */}
+            <div>
+              <label 
+                htmlFor="password" 
+                className="block text-sm font-semibold text-slate-700 mb-2"
+              >
+                Contraseña
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldErrors({ ...fieldErrors, password: '' });
+                  }}
+                  onBlur={() => setFieldErrors({ ...fieldErrors, password: validatePassword(password) })}
+                  className={`
+                    w-full pl-11 pr-12 py-3 rounded-lg 
+                    bg-white border-2
+                    ${fieldErrors.password ? 'border-red-400 focus:border-red-500' : 'border-cyan-200 focus:border-cyan-500'}
+                    text-slate-900 
+                    focus:outline-none focus:ring-2 
+                    ${fieldErrors.password ? 'focus:ring-red-200' : 'focus:ring-cyan-200'}
+                    transition-all
+                    disabled:bg-slate-50 disabled:cursor-not-allowed
+                  `}
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                />
+                {/* Nielsen: Control y libertad del usuario */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {fieldErrors.password && (
+                <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+                  <span className="font-medium">⚠</span> {fieldErrors.password}
+                </p>
+              )}
+            </div>
+
+            {/* Nielsen: Flexibilidad - Recuperación de contraseña */}
+            <div className="flex items-center justify-end">
+              <Link
+                href="/reset-password"
+                className="text-sm font-medium text-cyan-600 hover:text-cyan-700 transition-colors underline decoration-dotted underline-offset-4"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+
+            {/* Botón Submit - Nielsen: Visibilidad del estado */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="
+                w-full py-3.5 px-4 
+                bg-gradient-to-r from-cyan-600 to-cyan-700
+                hover:from-cyan-700 hover:to-cyan-800
+                text-white font-semibold rounded-lg 
+                shadow-md hover:shadow-lg
+                transition-all duration-200
+                disabled:opacity-50 disabled:cursor-not-allowed
+                focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2
+                flex items-center justify-center gap-2
+              "
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Ingresando...
+                </>
+              ) : (
+                'Iniciar Sesión'
+              )}
+            </button>
+          </form>
+
+          {/* Nielsen: Relación con el mundo real - Lenguaje familiar */}
+          <div className="mt-6 pt-6 border-t border-cyan-100 text-center">
+            <p className="text-sm text-slate-600">
+              ¿No tienes cuenta?{' '}
+              <Link
+                href="/register"
+                className="font-semibold text-cyan-600 hover:text-cyan-700 transition-colors"
+              >
+                Regístrate aquí
+              </Link>
+            </p>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-on-surface mb-2">
-              Correo electrónico
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-              placeholder="tu@email.com"
-              required
-              disabled={isLoading}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-on-surface mb-2">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-surface border border-border text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-              placeholder="••••••••"
-              required
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="flex items-center justify-end">
-            <Link
-              href="/reset-password"
-              className="text-sm text-primary hover:text-primary/80 transition"
-            >
-              ¿Olvidaste tu contraseña?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-contrast font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-on-surface-muted">
-            ¿No tienes cuenta?{' '}
-            <Link
-              href="/register"
-              className="text-primary hover:text-primary/80 font-medium transition"
-            >
-              Regístrate aquí
-            </Link>
-          </p>
+        {/* Nielsen: Ayuda contextual */}
+        <div className="mt-6 text-center text-xs text-slate-500">
+          <p>¿Necesitas ayuda? Contacta a soporte técnico</p>
         </div>
       </div>
 
-      <Modal
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        title={modalState.title}
-        message={modalState.message}
-        type={modalState.type}
+      <Toast
+        isOpen={toast.isOpen}
+        onClose={() => setToast({ ...toast, isOpen: false })}
+        title={toast.title}
+        message={toast.message}
+        type={toast.type}
       />
-    </div>
+    </>
   );
 }
