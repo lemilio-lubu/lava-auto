@@ -380,29 +380,21 @@ export default async function WasherDashboard() {
                   ) : null}
                   
                   {job.status === 'CONFIRMED' && (
-                    <>
-                      <Link
-                        href={`/dashboard/washer/trabajo/${job.id}/en-camino`}
-                        className="flex-1 bg-cyan-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-cyan-600 transition-colors text-center"
-                      >
-                        🚗 Estoy en Camino
-                      </Link>
-                      <Link
-                        href={`/dashboard/washer/trabajo/${job.id}/iniciar`}
-                        className="flex-1 bg-green-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-600 transition-colors text-center"
-                      >
-                        ▶️ Iniciar Servicio
-                      </Link>
-                    </>
+                    <Link
+                      href={`/dashboard/washer/trabajos/${job.id}`}
+                      className="flex-1 bg-cyan-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-cyan-600 transition-colors text-center"
+                    >
+                      Ver Trabajo y Gestionar
+                    </Link>
                   )}
                   
                   {job.status === 'IN_PROGRESS' && (
                     <Link
-                      href={`/dashboard/washer/trabajo/${job.id}/completar`}
+                      href={`/dashboard/washer/trabajos/${job.id}`}
                       className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold py-3 px-4 rounded-lg hover:shadow-lg transition-all text-center flex items-center justify-center gap-2"
                     >
                       <Camera className="w-5 h-5" />
-                      Subir Fotos y Completar
+                      Ir a Completar Trabajo
                     </Link>
                   )}
                 </div>

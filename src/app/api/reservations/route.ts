@@ -75,12 +75,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Servicio no encontrado' }, { status: 404 });
     }
 
+    // Crear fecha con hora local para evitar problemas de zona horaria
+    const [year, month, day] = scheduledDate.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day, 12, 0, 0); // Mediodía para evitar cambios de zona horaria
+
     const reservation = await prisma.reservation.create({
       data: {
         userId: user.id,
         vehicleId,
         serviceId,
-        scheduledDate: new Date(scheduledDate),
+        scheduledDate: localDate,
         scheduledTime,
         totalAmount: service.price,
         address: address || undefined,

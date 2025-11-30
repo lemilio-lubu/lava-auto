@@ -229,10 +229,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <div>
               <span className="text-sm text-slate-600 dark:text-slate-400">Hora programada</span>
               <p className="font-semibold text-slate-900 dark:text-white">
-                {new Date(job.scheduledDate).toLocaleTimeString('es-ES', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {job.scheduledTime}
               </p>
             </div>
           </div>

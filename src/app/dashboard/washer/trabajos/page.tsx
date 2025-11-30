@@ -173,10 +173,7 @@ function JobCard({ job, isToday = false }: { job: any; isToday?: boolean }) {
             </span>
             <span className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              {new Date(job.scheduledDate).toLocaleTimeString('es-MX', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {job.scheduledTime}
             </span>
           </div>
 

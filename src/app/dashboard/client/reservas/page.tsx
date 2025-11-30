@@ -162,9 +162,7 @@ export default async function ReservasPage() {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        })}, {reservation.scheduledTime}
                       </span>
                     </div>
 

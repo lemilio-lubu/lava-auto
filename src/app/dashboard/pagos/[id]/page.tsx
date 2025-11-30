@@ -404,7 +404,6 @@ export default function RegistrarPagoPage() {
                   <option value="CASH">Efectivo</option>
                   <option value="CARD">Tarjeta</option>
                   <option value="TRANSFER">Transferencia</option>
-                  <option value="OTHER">Otro</option>
                 </select>
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                   {formData.paymentMethod === 'CASH' && (
@@ -422,11 +421,6 @@ export default function RegistrarPagoPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                     </svg>
                   )}
-                  {formData.paymentMethod === 'OTHER' && (
-                    <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  )}
                 </div>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                   <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -436,17 +430,19 @@ export default function RegistrarPagoPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ID de Transacción (opcional)</label>
-              <input
-                type="text"
-                value={formData.transactionId}
-                onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
-                placeholder="REF-12345"
-                disabled={balance <= 0}
-              />
-            </div>
+            {formData.paymentMethod === 'TRANSFER' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ID de Transacción (opcional)</label>
+                <input
+                  type="text"
+                  value={formData.transactionId}
+                  onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
+                  placeholder="REF-12345"
+                  disabled={balance <= 0}
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notas Adicionales (opcional)</label>
@@ -502,8 +498,7 @@ export default function RegistrarPagoPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     {balance <= 0 ? 'Pago Completado' : `Registrar Pago (${
-                      formData.paymentMethod === 'CASH' ? 'Efectivo' :
-                      formData.paymentMethod === 'TRANSFER' ? 'Transferencia' : 'Otro'
+                      formData.paymentMethod === 'CASH' ? 'Efectivo' : 'Transferencia'
                     })`}
                   </Button>
                   <Button
@@ -541,7 +536,6 @@ export default function RegistrarPagoPage() {
                     <p className="text-xs text-cyan-700 dark:text-cyan-400 mt-1">
                       {formData.paymentMethod === 'CASH' && `El pago en efectivo de $${balance.toFixed(2)} será registrado en el sistema inmediatamente.`}
                       {formData.paymentMethod === 'TRANSFER' && `Registra la transferencia bancaria de $${balance.toFixed(2)} con su ID de transacción para mejor seguimiento.`}
-                      {formData.paymentMethod === 'OTHER' && `Puedes agregar notas adicionales para especificar cómo se realizó el pago de $${balance.toFixed(2)}.`}
                     </p>
                   </div>
                 </div>
