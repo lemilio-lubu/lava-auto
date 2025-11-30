@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import io, { Socket } from 'socket.io-client';
-import { MessageCircle, Send, User, Clock } from 'lucide-react';
+import { MessageCircle, Send, User, Clock, Check, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -76,10 +76,13 @@ export default function ChatPage() {
             socket?.emit('register', currentUser.id);
           });
 
-          socket.on('new-message', (message: Message) => {
+              socket.on('new-message', (message: Message) => {
             console.log('Mensaje recibido:', message);
             
-            // Solo agregar el mensaje si es relevante para la conversación actual
+            // Actualizar conversaciones siempre
+            loadConversations();
+            
+            // Actualizar mensajes si la conversación está activa
             setSelectedUser((currentSelectedUser) => {
               if (currentSelectedUser) {
                 const isRelevantMessage = 
@@ -89,23 +92,27 @@ export default function ChatPage() {
                 if (isRelevantMessage) {
                   setMessages((prev) => {
                     // Reemplazar mensaje temporal con el mensaje real del servidor
-                    // o evitar duplicados si ya existe
                     const withoutTemp = prev.filter(m => !m.id.startsWith('temp-'));
-                    if (withoutTemp.some(m => m.id === message.id)) {
+                    const exists = withoutTemp.some(m => m.id === message.id);
+                    
+                    if (exists) {
                       return prev;
                     }
                     return [...withoutTemp, message];
                   });
+                  
+                  // Si es un mensaje recibido (no propio), marcar como leído
+                  if (message.senderId === currentSelectedUser.id && socket) {
+                    socket.emit('mark-as-read', {
+                      senderId: currentSelectedUser.id,
+                      receiverId: currentUser.id,
+                    });
+                  }
                 }
               }
               return currentSelectedUser;
             });
-
-            // Actualizar conversaciones
-            loadConversations();
-          });
-
-          socket.on('messages-read', ({ senderId, receiverId }) => {
+          });          socket.on('messages-read', ({ senderId, receiverId }) => {
             setMessages((prev) =>
               prev.map((m) =>
                 m.senderId === senderId && m.receiverId === receiverId
@@ -333,6 +340,8 @@ export default function ChatPage() {
                 ) : (
                   messages.map((message) => {
                     const isOwn = message.senderId === currentUserId;
+                    const isTemporary = message.id.startsWith('temp-');
+                    
                     return (
                       <div
                         key={message.id}
@@ -349,10 +358,20 @@ export default function ChatPage() {
                         >
                           <p className="text-sm break-words">{message.content}</p>
                           <div className={`flex items-center gap-1 mt-1 text-xs ${isOwn ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>
-                            <Clock className="w-3 h-3" />
                             <span>
                               {format(new Date(message.createdAt), 'HH:mm', { locale: es })}
                             </span>
+                            {isOwn && (
+                              <>
+                                {isTemporary ? (
+                                  <Clock className="w-3.5 h-3.5 ml-1" />
+                                ) : message.read ? (
+                                  <CheckCheck className="w-3.5 h-3.5 ml-1 text-blue-200" />
+                                ) : (
+                                  <CheckCheck className="w-3.5 h-3.5 ml-1" />
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

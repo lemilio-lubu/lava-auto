@@ -4,6 +4,17 @@ import prisma from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
+    // Verificar que Stripe esté configurado
+    if (!stripe) {
+      return NextResponse.json(
+        { 
+          error: 'El sistema de pagos no está configurado. Por favor contacta al administrador.',
+          details: 'STRIPE_SECRET_KEY no está definido'
+        },
+        { status: 503 }
+      );
+    }
+
     const { reservationId, amount } = await request.json();
 
     console.log('📝 Datos recibidos:', { reservationId, amount });

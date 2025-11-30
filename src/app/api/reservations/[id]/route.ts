@@ -3,6 +3,141 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    const params = await context.params;
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: params.id },
+      include: {
+        vehicle: true,
+        service: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        washer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        rating: true,
+      },
+    });
+
+    if (!reservation) {
+      return NextResponse.json({ error: 'Reserva no encontrada' }, { status: 404 });
+    }
+
+    // Verificar que el usuario tenga acceso a esta reserva
+    if (user.role === 'CLIENT' && reservation.userId !== user.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    if (user.role === 'WASHER' && reservation.washerId !== user.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    return NextResponse.json(reservation);
+  } catch (error) {
+    console.error('Error al obtener reserva:', error);
+    return NextResponse.json({ error: 'Error al obtener reserva' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    const params = await context.params;
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!reservation) {
+      return NextResponse.json({ error: 'Reserva no encontrada' }, { status: 404 });
+    }
+
+    // Verificar permisos
+    if (user.role === 'CLIENT' && reservation.userId !== user.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    if (user.role === 'WASHER' && reservation.washerId !== user.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { status } = body;
+
+    // Validar cambios de estado según rol
+    if (user.role === 'CLIENT' && status !== 'CANCELLED') {
+      return NextResponse.json(
+        { error: 'Los clientes solo pueden cancelar reservas' },
+        { status: 403 }
+      );
+    }
+
+    if (user.role === 'CLIENT' && reservation.status !== 'PENDING' && reservation.status !== 'CONFIRMED') {
+      return NextResponse.json(
+        { error: 'Solo se pueden cancelar reservas pendientes o confirmadas' },
+        { status: 400 }
+      );
+    }
+
+    const updatedReservation = await prisma.reservation.update({
+      where: { id: params.id },
+      data: { status },
+      include: {
+        vehicle: true,
+        service: true,
+        user: true,
+        washer: true,
+      },
+    });
+
+    return NextResponse.json(updatedReservation);
+  } catch (error) {
+    console.error('Error al actualizar reserva:', error);
+    return NextResponse.json({ error: 'Error al actualizar reserva' }, { status: 500 });
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }

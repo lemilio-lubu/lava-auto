@@ -34,7 +34,7 @@ export function RegisterForm() {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
-        body: JSON.stringify(parsed.data),
+        body: JSON.stringify({ ...parsed.data, role: 'CLIENT' }),
         headers: { 'Content-Type': 'application/json' }
       });
 

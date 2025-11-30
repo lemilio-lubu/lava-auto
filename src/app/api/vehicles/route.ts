@@ -6,17 +6,46 @@ import prisma from '@/lib/prisma';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
     const vehicles = await prisma.vehicle.findMany({
+      where: { userId: user.id },
       orderBy: {
         createdAt: 'desc',
       },
+      include: {
+        _count: {
+          select: {
+            reservations: {
+              where: {
+                status: {
+                  in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'],
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
-    return NextResponse.json(vehicles);
+    // Transformar la respuesta para incluir hasActiveReservations
+    const vehiclesWithStatus = vehicles.map((vehicle) => ({
+      ...vehicle,
+      hasActiveReservations: vehicle._count.reservations > 0,
+      _count: undefined, // Remover _count de la respuesta
+    }));
+
+    return NextResponse.json(vehiclesWithStatus);
   } catch (error) {
     console.error('Error al obtener vehículos:', error);
     return NextResponse.json({ error: 'Error al obtener vehículos' }, { status: 500 });
@@ -26,12 +55,20 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
     const body = await request.json();
-    const { ownerName, ownerPhone, brand, model, plate, vehicleType, color } = body;
+    const { ownerName, ownerPhone, brand, model, plate, vehicleType, color, year } = body;
 
     if (!ownerName || !brand || !model || !plate || !vehicleType) {
       return NextResponse.json(
@@ -41,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     const existingVehicle = await prisma.vehicle.findUnique({
-      where: { plate },
+      where: { plate: plate.toUpperCase() },
     });
 
     if (existingVehicle) {
@@ -53,13 +90,15 @@ export async function POST(request: NextRequest) {
 
     const vehicle = await prisma.vehicle.create({
       data: {
+        userId: user.id,
         ownerName,
-        ownerPhone,
+        ownerPhone: ownerPhone || null,
         brand,
         model,
-        plate,
+        plate: plate.toUpperCase(),
         vehicleType,
-        color,
+        color: color || null,
+        year: year ? parseInt(year) : null,
       },
     });
 

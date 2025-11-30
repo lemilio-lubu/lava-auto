@@ -62,6 +62,15 @@ export default function RegistrarPagoPage() {
     fetchData();
   }, [reservationId]);
 
+  // Cuando se carga la reservación, establecer el monto al saldo total
+  useEffect(() => {
+    if (reservation && payments.length >= 0) {
+      const totalPaid = payments.reduce((sum, p) => p.status === 'COMPLETED' ? sum + p.amount : sum, 0);
+      const balance = reservation.totalAmount - totalPaid;
+      setFormData(prev => ({ ...prev, amount: balance.toString() }));
+    }
+  }, [reservation, payments]);
+
   const fetchData = async () => {
     try {
       const [resRes, paymentsRes] = await Promise.all([
@@ -89,16 +98,6 @@ export default function RegistrarPagoPage() {
   const balance = reservation ? reservation.totalAmount - totalPaid : 0;
 
   const handleStripePayment = async () => {
-    if (parseFloat(formData.amount) > balance) {
-      setToast({
-        isOpen: true,
-        title: 'Error',
-        message: 'El monto no puede ser mayor al saldo pendiente',
-        type: 'error',
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -107,7 +106,7 @@ export default function RegistrarPagoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reservationId,
-          amount: parseFloat(formData.amount),
+          amount: balance, // Usar el saldo total
         }),
       });
 
@@ -140,16 +139,6 @@ export default function RegistrarPagoPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (parseFloat(formData.amount) > balance) {
-      setToast({
-        isOpen: true,
-        title: 'Error',
-        message: 'El monto no puede ser mayor al saldo pendiente',
-        type: 'error',
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -158,7 +147,10 @@ export default function RegistrarPagoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reservationId,
-          ...formData,
+          amount: balance, // Usar el saldo total
+          paymentMethod: formData.paymentMethod,
+          transactionId: formData.transactionId,
+          notes: formData.notes,
         }),
       });
 
@@ -383,19 +375,21 @@ export default function RegistrarPagoPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Monto a Pagar</label>
-              <input
-                type="number"
-                required
-                min="0.01"
-                max={balance}
-                step="0.01"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-white dark:bg-slate-700 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all"
-                placeholder="0.00"
-                disabled={balance <= 0}
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Saldo disponible: ${balance.toFixed(2)}</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={`$${balance.toFixed(2)}`}
+                  className="w-full px-4 py-3 border-2 border-cyan-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 focus:border-cyan-500 dark:focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200 dark:focus:ring-cyan-800 outline-none transition-all cursor-not-allowed font-bold text-xl"
+                  disabled
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">💳 Pago único del saldo total</p>
             </div>
 
             <div>
@@ -476,7 +470,7 @@ export default function RegistrarPagoPage() {
                     size="lg"
                     className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 dark:from-purple-500 dark:to-indigo-500 dark:hover:from-purple-600 dark:hover:to-indigo-600 shadow-lg"
                     onClick={handleStripePayment}
-                    disabled={balance <= 0 || isSubmitting || !formData.amount}
+                    disabled={balance <= 0 || isSubmitting}
                     isLoading={isSubmitting}
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -531,8 +525,8 @@ export default function RegistrarPagoPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div>
-                    <p className="text-sm font-medium text-purple-900 dark:text-purple-300">Pago con tarjeta en línea</p>
-                    <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">Serás redirigido a la pasarela de pago segura de Stripe para completar la transacción.</p>
+                    <p className="text-sm font-medium text-purple-900 dark:text-purple-300">Pago único con tarjeta</p>
+                    <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">Se procesará el pago completo de <strong>${balance.toFixed(2)}</strong> mediante la pasarela segura de Stripe.</p>
                   </div>
                 </div>
               )}
@@ -543,11 +537,11 @@ export default function RegistrarPagoPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div>
-                    <p className="text-sm font-medium text-cyan-900 dark:text-cyan-300">Registro manual de pago</p>
+                    <p className="text-sm font-medium text-cyan-900 dark:text-cyan-300">Registro manual de pago completo</p>
                     <p className="text-xs text-cyan-700 dark:text-cyan-400 mt-1">
-                      {formData.paymentMethod === 'CASH' && 'El pago en efectivo será registrado en el sistema inmediatamente.'}
-                      {formData.paymentMethod === 'TRANSFER' && 'Registra la transferencia bancaria con su ID de transacción para mejor seguimiento.'}
-                      {formData.paymentMethod === 'OTHER' && 'Puedes agregar notas adicionales para especificar el método de pago utilizado.'}
+                      {formData.paymentMethod === 'CASH' && `El pago en efectivo de $${balance.toFixed(2)} será registrado en el sistema inmediatamente.`}
+                      {formData.paymentMethod === 'TRANSFER' && `Registra la transferencia bancaria de $${balance.toFixed(2)} con su ID de transacción para mejor seguimiento.`}
+                      {formData.paymentMethod === 'OTHER' && `Puedes agregar notas adicionales para especificar cómo se realizó el pago de $${balance.toFixed(2)}.`}
                     </p>
                   </div>
                 </div>

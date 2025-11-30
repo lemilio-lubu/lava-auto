@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { vehicleId, serviceId, scheduledDate, scheduledTime, notes } = body;
+    const { vehicleId, serviceId, scheduledDate, scheduledTime, address, latitude, longitude, notes } = body;
 
     if (!vehicleId || !serviceId || !scheduledDate || !scheduledTime) {
       return NextResponse.json(
@@ -77,12 +77,15 @@ export async function POST(request: NextRequest) {
 
     const reservation = await prisma.reservation.create({
       data: {
-        userId: user.id, // Empleado que registra la reserva
+        userId: user.id,
         vehicleId,
         serviceId,
         scheduledDate: new Date(scheduledDate),
         scheduledTime,
         totalAmount: service.price,
+        address: address || undefined,
+        latitude: latitude || undefined,
+        longitude: longitude || undefined,
         notes: notes || undefined,
       } as any,
       include: {

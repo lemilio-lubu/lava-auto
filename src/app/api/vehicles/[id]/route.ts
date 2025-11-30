@@ -9,13 +9,35 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
     const params = await context.params;
+
+    // Verificar que el vehículo pertenece al usuario
+    const currentVehicle = await prisma.vehicle.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!currentVehicle) {
+      return NextResponse.json({ error: 'Vehículo no encontrado' }, { status: 404 });
+    }
+
+    if (currentVehicle.userId !== user.id && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
     const body = await request.json();
-    const { ownerName, ownerPhone, brand, model, plate, vehicleType, color } = body;
+    const { ownerName, ownerPhone, brand, model, plate, vehicleType, color, year } = body;
 
     if (!ownerName || !brand || !model || !plate || !vehicleType) {
       return NextResponse.json(
@@ -25,7 +47,7 @@ export async function PUT(
     }
 
     // Verificar si existe otro vehículo con la misma placa (excluyendo el actual)
-    const existingVehicle = await prisma.vehicle.findFirst({
+    const duplicateVehicle = await prisma.vehicle.findFirst({
       where: {
         plate: plate.toUpperCase(),
         id: {
@@ -34,7 +56,7 @@ export async function PUT(
       },
     });
 
-    if (existingVehicle) {
+    if (duplicateVehicle) {
       return NextResponse.json(
         { error: 'Ya existe otro vehículo con esta placa' },
         { status: 400 }
@@ -51,6 +73,7 @@ export async function PUT(
         plate: plate.toUpperCase(),
         vehicleType,
         color: color || null,
+        year: year ? parseInt(year) : null,
       },
     });
 
@@ -67,11 +90,32 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
     const params = await context.params;
+
+    // Verificar que el vehículo pertenece al usuario
+    const vehicleToDelete = await prisma.vehicle.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!vehicleToDelete) {
+      return NextResponse.json({ error: 'Vehículo no encontrado' }, { status: 404 });
+    }
+
+    if (vehicleToDelete.userId !== user.id && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
 
     // Verificar si el vehículo tiene reservas
     const reservationsCount = await prisma.reservation.count({

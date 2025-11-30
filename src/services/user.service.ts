@@ -2,9 +2,23 @@ import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function createUser(data: { name: string; email: string; password: string; phone?: string }) {
+export async function createUser(data: { 
+  name: string; 
+  email: string; 
+  password: string; 
+  phone?: string;
+  role?: 'CLIENT' | 'WASHER' | 'ADMIN';
+}) {
   const hashed = await bcrypt.hash(data.password, 10);
-  return prisma.user.create({ data: { ...data, password: hashed } });
+  return prisma.user.create({ 
+    data: { 
+      name: data.name,
+      email: data.email,
+      password: hashed,
+      phone: data.phone,
+      role: data.role || 'CLIENT',
+    } 
+  });
 }
 
 export async function findByEmail(email: string) {

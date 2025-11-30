@@ -2,43 +2,192 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Calendar, Car, Sparkles, LogOut, Droplets, User, MessageCircle } from 'lucide-react';
+import { 
+  Calendar, Car, LogOut, Droplets, User, MessageCircle,
+  Briefcase, Users, Settings, BarChart, Home, Bell
+} from 'lucide-react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import WasherLocationTracker from '@/components/washer/WasherLocationTracker';
+import prisma from '@/lib/prisma';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user?.email) {
     redirect('/login');
   }
 
-  // Nielsen: Reconocer antes que recordar - Navegación clara y visible
-  const navItems = [
-    {
-      icon: Calendar,
-      label: 'Reservas',
-      href: '/dashboard',
-      description: 'Gestiona tus reservas',
+  // Obtener el usuario con su rol
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
     },
-    {
-      icon: Car,
-      label: 'Vehículos',
-      href: '/dashboard/vehiculos',
-      description: 'Administra vehículos',
-    },
-    {
-      icon: Sparkles,
-      label: 'Servicios',
-      href: '/dashboard/servicios',
-      description: 'Ver servicios disponibles',
-    },
-    {
-      icon: MessageCircle,
-      label: 'Chat',
-      href: '/dashboard/chat',
-      description: 'Mensajes en tiempo real',
-    },
-  ];
+  });
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Contar trabajos disponibles para lavadores
+  let availableJobsCount = 0;
+  if (user.role === 'WASHER') {
+    availableJobsCount = await prisma.reservation.count({
+      where: {
+        status: 'PENDING',
+        washerId: null,
+      },
+    });
+  }
+
+  // Nielsen: Reconocer antes que recordar - Navegación según el rol del usuario
+  const getNavItemsByRole = () => {
+    switch (user.role) {
+      case 'CLIENT':
+        return [
+          {
+            icon: Home,
+            label: 'Inicio',
+            href: '/dashboard/client',
+            description: 'Panel principal',
+          },
+          {
+            icon: Calendar,
+            label: 'Solicitar Lavado',
+            href: '/dashboard/client/nueva-reserva',
+            description: 'Pide tu lavado',
+          },
+          {
+            icon: Calendar,
+            label: 'Mis Reservas',
+            href: '/dashboard/client/reservas',
+            description: 'Historial de servicios',
+          },
+          {
+            icon: Car,
+            label: 'Mis Vehículos',
+            href: '/dashboard/client/vehiculos',
+            description: 'Administra vehículos',
+          },
+          {
+            icon: MessageCircle,
+            label: 'Chat',
+            href: '/dashboard/chat',
+            description: 'Mensajes',
+          },
+        ];
+
+      case 'WASHER':
+        return [
+          {
+            icon: Home,
+            label: 'Inicio',
+            href: '/dashboard/washer',
+            description: 'Panel principal',
+          },
+          {
+            icon: Bell,
+            label: 'Disponibles',
+            href: '/dashboard/washer/disponibles',
+            description: 'Trabajos nuevos',
+            badge: true, // Para mostrar badge de notificación
+          },
+          {
+            icon: Briefcase,
+            label: 'Mis Trabajos',
+            href: '/dashboard/washer/trabajos',
+            description: 'Trabajos asignados',
+          },
+          {
+            icon: Calendar,
+            label: 'Calendario',
+            href: '/dashboard/washer/calendario',
+            description: 'Agenda del día',
+          },
+          {
+            icon: BarChart,
+            label: 'Mis Estadísticas',
+            href: '/dashboard/washer/estadisticas',
+            description: 'Ganancias y ratings',
+          },
+          {
+            icon: MessageCircle,
+            label: 'Chat',
+            href: '/dashboard/chat',
+            description: 'Mensajes',
+          },
+        ];
+
+      case 'ADMIN':
+        return [
+          {
+            icon: Home,
+            label: 'Dashboard',
+            href: '/dashboard/admin',
+            description: 'Vista general',
+          },
+          {
+            icon: Users,
+            label: 'Usuarios',
+            href: '/dashboard/admin/usuarios',
+            description: 'Clientes y lavadores',
+          },
+          {
+            icon: Calendar,
+            label: 'Reservas',
+            href: '/dashboard/admin/reservas',
+            description: 'Todas las reservas',
+          },
+          {
+            icon: Droplets,
+            label: 'Servicios',
+            href: '/dashboard/admin/servicios',
+            description: 'Gestionar servicios',
+          },
+          {
+            icon: BarChart,
+            label: 'Reportes',
+            href: '/dashboard/admin/reportes',
+            description: 'Análisis y métricas',
+          },
+          {
+            icon: MessageCircle,
+            label: 'Chat',
+            href: '/dashboard/chat',
+            description: 'Mensajes',
+          },
+          {
+            icon: Settings,
+            label: 'Configuración',
+            href: '/dashboard/admin/configuracion',
+            description: 'Ajustes del sistema',
+          },
+        ];
+
+      default:
+        return [];
+    }
+  };
+
+  const navItems = getNavItemsByRole();
+  
+  const getRoleBadge = () => {
+    switch (user.role) {
+      case 'CLIENT':
+        return { label: 'Cliente', color: 'bg-blue-500' };
+      case 'WASHER':
+        return { label: 'Lavador', color: 'bg-green-500' };
+      case 'ADMIN':
+        return { label: 'Admin', color: 'bg-purple-500' };
+      default:
+        return { label: 'Usuario', color: 'bg-slate-500' };
+    }
+  };
+
+  const roleBadge = getRoleBadge();
 
   return (
     <ThemeProvider>
@@ -58,7 +207,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </div>
 
-        {/* Nielsen: Visibilidad del estado - Usuario actual visible */}
+        {/* Nielsen: Visibilidad del estado - Usuario actual visible con rol */}
         <div className="px-6 py-4 bg-cyan-50/50 dark:bg-slate-700/50 border-b border-cyan-100 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center shadow-sm">
@@ -66,20 +215,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                {session.user?.name || session.user?.email}
+                {user.name || user.email}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Usuario activo</p>
+              <span className={`text-xs px-2 py-0.5 rounded-full text-white font-semibold ${roleBadge.color}`}>
+                {roleBadge.label}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Nielsen: Diseño estético y minimalista - Navegación limpia */}
-        <nav className="flex-1 p-4 space-y-2">
+        {/* Nielsen: Diseño estético y minimalista - Navegación específica por rol */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <p className="px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-            Menú Principal
+            {user.role === 'ADMIN' ? 'Administración' : user.role === 'WASHER' ? 'Lavador' : 'Cliente'}
           </p>
           {navItems.map((item) => {
             const Icon = item.icon;
+            const showBadge = item.badge && user.role === 'WASHER' && availableJobsCount > 0;
+            
             return (
               <Link
                 key={item.href}
@@ -90,15 +243,26 @@ export default async function DashboardLayout({ children }: { children: React.Re
                   hover:bg-cyan-50 dark:hover:bg-slate-700
                   transition-all duration-200
                   group
+                  relative
                 "
               >
-                <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/30 transition-colors">
+                <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/30 transition-colors relative">
                   <Icon className="w-5 h-5" />
+                  {showBadge && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                      <span className="text-white text-[10px] font-bold">{availableJobsCount}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold text-sm">{item.label}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{item.description}</p>
                 </div>
+                {showBadge && (
+                  <div className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+                    {availableJobsCount}
+                  </div>
+                )}
               </Link>
             );
           })}
@@ -133,16 +297,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {/* Nielsen: Visibilidad del estado - Header con breadcrumbs */}
+        {/* Nielsen: Visibilidad del estado - Header con información relevante */}
         <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-cyan-100 dark:border-slate-700 px-8 py-6 shadow-sm sticky top-0 z-10">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  Panel de Control
+                  {user.role === 'ADMIN' 
+                    ? 'Panel de Administración' 
+                    : user.role === 'WASHER'
+                    ? 'Panel del Lavador'
+                    : 'Mi Panel'}
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Gestiona tus reservas y servicios de autolavado
+                  {user.role === 'ADMIN'
+                    ? 'Gestiona todo el sistema de autolavado'
+                    : user.role === 'WASHER'
+                    ? 'Gestiona tus trabajos y ganancias'
+                    : 'Solicita y gestiona tus servicios de lavado'}
                 </p>
               </div>
               
@@ -168,8 +340,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {children}
           </div>
         </div>
+
+        {/* Tracker de ubicación para lavadores */}
+        <WasherLocationTracker />
       </main>
     </div>
     </ThemeProvider>
   );
 }
+
