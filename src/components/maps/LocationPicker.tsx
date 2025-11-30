@@ -49,7 +49,8 @@ export default function LocationPicker({
 
     if (typeof window !== 'undefined' && !window.google && !existingScript) {
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC1CQzF4mPbGJ0Dh5ogymcrLWOkZhRTmx0&libraries=places`;
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
       script.async = true;
       script.defer = true;
       script.onload = () => setMapLoaded(true);
