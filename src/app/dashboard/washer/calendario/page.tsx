@@ -9,6 +9,7 @@ import { ArrowLeft, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from '
 interface Job {
   id: string;
   scheduledDate: string;
+  scheduledTime: string;
   status: string;
   service: {
     name: string;
