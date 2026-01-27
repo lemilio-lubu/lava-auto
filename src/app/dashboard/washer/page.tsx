@@ -45,7 +45,7 @@ export default function WasherDashboard() {
             completedToday: completedToday.length,
             totalEarnings: jobs.filter((j: any) => j.status === 'COMPLETED')
               .reduce((sum: number, j: any) => sum + (j.service?.price || 0), 0),
-            rating: user.rating || 0,
+            rating: (user as any).rating || 0,
           });
           setRecentJobs(jobs.slice(0, 5));
         })

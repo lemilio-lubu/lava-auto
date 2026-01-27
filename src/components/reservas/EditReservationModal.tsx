@@ -3,27 +3,9 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, FileText } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import { reservationApi } from '@/lib/api-client';
+import { reservationApi, Vehicle, Service } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import LocationPicker from '@/components/maps/LocationPicker';
-
-interface Vehicle {
-  id: string;
-  brand: string;
-  model: string;
-  plate: string;
-  color: string | null;
-  vehicleType: string;
-}
-
-interface Service {
-  id: string;
-  name: string;
-  description: string | null;
-  duration: number;
-  price: number;
-  vehicleType: string;
-}
 
 interface Reservation {
   id: string;
@@ -31,7 +13,7 @@ interface Reservation {
   serviceId: string;
   scheduledDate: string;
   scheduledTime: string;
-  address: string;
+  address?: string;
   latitude?: number;
   longitude?: number;
   notes?: string;

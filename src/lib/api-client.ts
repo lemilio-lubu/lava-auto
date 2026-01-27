@@ -352,7 +352,7 @@ export interface Vehicle {
   model: string;
   plate: string;
   vehicleType: 'SEDAN' | 'SUV' | 'PICKUP' | 'VAN' | 'MOTORCYCLE';
-  color?: string;
+  color?: string | null;
   year?: number;
   ownerName: string;
   ownerPhone?: string;

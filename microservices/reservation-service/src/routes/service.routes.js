@@ -60,7 +60,7 @@ router.post('/', authMiddleware, roleMiddleware('ADMIN'), async (req, res, next)
     const db = req.app.get('db');
     const serviceRepo = new ServiceRepository(db);
     
-    const { name, description, duration, price, vehicleType } = req.body;
+    const { name, description, duration, price, vehicleType, isActive } = req.body;
 
     if (!name || !duration || !price || !vehicleType) {
       return res.status(400).json({ 
@@ -73,7 +73,8 @@ router.post('/', authMiddleware, roleMiddleware('ADMIN'), async (req, res, next)
       description,
       duration,
       price,
-      vehicleType
+      vehicleType,
+      isActive: isActive !== undefined ? isActive : true
     });
 
     res.status(201).json(service);

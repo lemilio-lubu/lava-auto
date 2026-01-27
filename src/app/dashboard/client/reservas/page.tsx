@@ -5,25 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import ReservationsTable from '@/components/reservas/ReservationsTable';
-import { reservationApi, vehicleApi, serviceApi } from '@/lib/api-client';
-
-interface Vehicle {
-  id: string;
-  brand: string;
-  model: string;
-  plate: string;
-  color: string | null;
-  vehicleType: string;
-}
-
-interface Service {
-  id: string;
-  name: string;
-  description: string | null;
-  duration: number;
-  price: number;
-  vehicleType: string;
-}
+import { reservationApi, vehicleApi, serviceApi, Vehicle, Service } from '@/lib/api-client';
 
 export default function ReservasPage() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -83,7 +65,8 @@ export default function ReservasPage() {
         reservations={reservations} 
         vehicles={vehicles}
         services={services}
-        onUpdate={loadData} 
+        onUpdate={loadData}
+        showHeader={false}
       />
     </div>
   );

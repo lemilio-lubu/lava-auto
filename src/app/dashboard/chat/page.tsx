@@ -40,8 +40,6 @@ interface Conversation {
 
 const NOTIFICATION_SERVICE_URL = process.env.NEXT_PUBLIC_NOTIFICATION_URL || 'http://localhost:4005';
 
-let socket: Socket | null = null;
-
 export default function ChatPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -53,6 +51,22 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Socket ref - managed within component lifecycle
+  const socketRef = useRef<Socket | null>(null);
+  
+  // Refs to access current values inside socket listeners
+  const userRef = useRef(user);
+  const selectedUserRef = useRef(selectedUser);
+  
+  // Keep refs updated
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+  
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -85,60 +99,71 @@ export default function ChatPage() {
         // Load conversations
         await loadConversations();
         
-        // Initialize Socket.IO for real-time messaging
-        if (!socket) {
-          socket = io(NOTIFICATION_SERVICE_URL, {
-            path: '/socket.io',
-            auth: { token }
-          });
-
-          socket.on('connect', () => {
-            console.log('Connected to Socket.IO');
-            // Register with user ID and role
-            socket?.emit('register', { userId: user.id, userRole: user.role });
-          });
-
-          socket.on('new-message', (message: Message) => {
-            // Reload conversations to update unread counts
-            loadConversations();
-            
-            // Update messages if conversation is active
-            // Only add messages from OTHER users - our own messages are already added optimistically
-            setSelectedUser((currentSelectedUser) => {
-              if (currentSelectedUser && user && message.senderId !== user.id) {
-                const isRelevantMessage = message.senderId === currentSelectedUser.id;
-                
-                if (isRelevantMessage) {
-                  setMessages((prev) => {
-                    const messageId = message.id || `socket-${Date.now()}`;
-                    const messageWithId = { ...message, id: messageId };
-                    
-                    // Check if message already exists (by content and approximate time)
-                    const isDuplicate = prev.some(m => 
-                      m.content === message.content && 
-                      m.senderId === message.senderId &&
-                      Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 5000
-                    );
-                    
-                    if (isDuplicate) return prev;
-                    return [...prev, messageWithId];
-                  });
-                }
-              }
-              return currentSelectedUser;
-            });
-          });
-
-          socket.on('messages-read', ({ senderId, receiverId }: { senderId: string; receiverId: string }) => {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.senderId === senderId && m.receiverId === receiverId
-                  ? { ...m, read: true }
-                  : m
-              )
-            );
-          });
+        // Disconnect existing socket if any (cleanup from previous mount)
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
         }
+        
+        // Initialize new Socket.IO connection
+        const newSocket = io(NOTIFICATION_SERVICE_URL, {
+          path: '/socket.io',
+          auth: { token },
+          forceNew: true // Force new connection each time
+        });
+        
+        socketRef.current = newSocket;
+
+        newSocket.on('connect', () => {
+          console.log('Connected to Socket.IO');
+          // Register with user ID and role
+          newSocket.emit('register', { userId: user.id, userRole: user.role });
+        });
+
+        newSocket.on('new-message', (message: Message) => {
+          // Reload conversations to update unread counts
+          loadConversations();
+          
+          // Update messages if conversation is active
+          // Only add messages from OTHER users - our own messages are already added optimistically
+          const currentUser = userRef.current;
+          const currentSelectedUser = selectedUserRef.current;
+          
+          if (currentSelectedUser && currentUser && message.senderId !== currentUser.id) {
+            const isRelevantMessage = message.senderId === currentSelectedUser.id;
+            
+            if (isRelevantMessage) {
+              setMessages((prev) => {
+                const messageId = message.id || `socket-${Date.now()}`;
+                const messageWithId = { ...message, id: messageId };
+                
+                // Check if message already exists (by content and approximate time)
+                const isDuplicate = prev.some(m => 
+                  m.content === message.content && 
+                  m.senderId === message.senderId &&
+                  Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 5000
+                );
+                
+                if (isDuplicate) return prev;
+                return [...prev, messageWithId];
+              });
+            }
+          }
+        });
+
+        newSocket.on('messages-read', ({ senderId, receiverId }: { senderId: string; receiverId: string }) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.senderId === senderId && m.receiverId === receiverId
+                ? { ...m, read: true }
+                : m
+            )
+          );
+        });
+        
+        newSocket.on('disconnect', () => {
+          console.log('Disconnected from Socket.IO');
+        });
 
         setLoading(false);
       } catch (error) {
@@ -149,10 +174,11 @@ export default function ChatPage() {
 
     initializeChat();
 
+    // Cleanup on unmount - fully disconnect socket
     return () => {
-      if (socket) {
-        socket.off('new-message');
-        socket.off('messages-read');
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
   }, [authLoading, user, token, loadConversations]);
@@ -164,8 +190,8 @@ export default function ChatPage() {
       setMessages(data || []);
 
       // Mark messages as read via socket
-      if (socket && user) {
-        socket.emit('mark-as-read', {
+      if (socketRef.current && user) {
+        socketRef.current.emit('mark-as-read', {
           senderId: otherUserId,
           receiverId: user.id,
         });
@@ -223,8 +249,8 @@ export default function ChatPage() {
       await chatApi.sendMessage(selectedUser.id, content, token, selectedUser.role);
       
       // Emit via socket for real-time delivery to receiver only
-      if (socket) {
-        socket.emit('send-message', {
+      if (socketRef.current) {
+        socketRef.current.emit('send-message', {
           senderId: user.id,
           senderRole: user.role,
           receiverId: selectedUser.id,

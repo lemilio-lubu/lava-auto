@@ -12,13 +12,14 @@ interface Job {
   scheduledDate: string;
   scheduledTime: string;
   status: string;
-  service: {
+  service?: {
     name: string;
   };
-  user: {
+  serviceName?: string;
+  user?: {
     name: string;
   };
-  vehicle: {
+  vehicle?: {
     brand: string;
     model: string;
   };
@@ -45,7 +46,7 @@ export default function CalendarioPage() {
     const fetchJobs = async () => {
       if (!token) return;
       try {
-        const allJobs = await jobApi.getMyJobs(token);
+        const allJobs = await jobApi.getMyJobs(token) as Job[];
         setJobs(allJobs);
       } catch (error) {
         console.error('Error al cargar trabajos:', error);
@@ -250,10 +251,10 @@ export default function CalendarioPage() {
               >
                 <div className="flex-1">
                   <p className="font-semibold text-slate-900 dark:text-white">
-                    {job.service.name}
+                    {job.service?.name || job.serviceName || 'Servicio'}
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {job.user.name} - {job.vehicle.brand} {job.vehicle.model}
+                    {job.user?.name || 'Cliente'} - {job.vehicle?.brand || ''} {job.vehicle?.model || ''}
                   </p>
                 </div>
                 <div className="text-right">

@@ -8,6 +8,7 @@ Esta carpeta contiene la arquitectura de microservicios para la aplicación Lava
 ┌─────────────────────────────────────────────────────────────┐
 │                      Frontend (Next.js)                       │
 │                    http://localhost:3000                      │
+│                    (Docker Container)                         │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
@@ -36,12 +37,17 @@ Esta carpeta contiene la arquitectura de microservicios para la aplicación Lava
 
 ## 🐳 Ejecución con Docker (Recomendado)
 
+Todo el sistema, incluyendo el frontend, se ejecuta en contenedores Docker:
+
 ```bash
-# Desde la raíz del proyecto
+# Desde la raíz del proyecto - Iniciar todo (frontend + microservicios)
 docker-compose -f docker-compose.microservices.yml up -d --build
 
-# Ver logs
+# Ver logs de todos los servicios
 docker-compose -f docker-compose.microservices.yml logs -f
+
+# Ver logs solo del frontend
+docker-compose -f docker-compose.microservices.yml logs -f frontend
 
 # Detener servicios
 docker-compose -f docker-compose.microservices.yml down
@@ -50,10 +56,10 @@ docker-compose -f docker-compose.microservices.yml down
 docker-compose -f docker-compose.microservices.yml down -v
 ```
 
-Después de iniciar los contenedores, inicia el frontend:
-```bash
-npm run dev
-```
+Una vez iniciados los contenedores, accede a:
+- **Frontend**: http://localhost:3000
+- **API Gateway**: http://localhost:4000
+- **Socket.IO (Notifications)**: http://localhost:4005
 
 ## Patrones de Diseño Implementados
 

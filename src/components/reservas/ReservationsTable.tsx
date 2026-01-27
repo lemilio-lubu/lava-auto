@@ -10,7 +10,7 @@ import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import EditReservationModal from '@/components/reservas/EditReservationModal';
-import { reservationApi } from '@/lib/api-client';
+import { reservationApi, Vehicle, Service } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Reservation = {
@@ -27,24 +27,6 @@ type Reservation = {
   latitude?: number;
   longitude?: number;
   notes?: string;
-};
-
-type Vehicle = {
-  id: string;
-  brand: string;
-  model: string;
-  plate: string;
-  color: string | null;
-  vehicleType: string;
-};
-
-type Service = {
-  id: string;
-  name: string;
-  description: string | null;
-  duration: number;
-  price: number;
-  vehicleType: string;
 };
 
 // Nielsen: Reconocer antes que recordar - Estados con colores semánticos
@@ -80,12 +62,14 @@ export default function ReservationsTable({
   reservations: initialReservations, 
   vehicles = [],
   services = [],
-  onUpdate 
+  onUpdate,
+  showHeader = true
 }: { 
   reservations: any[]; 
   vehicles?: Vehicle[];
   services?: Service[];
   onUpdate?: () => void;
+  showHeader?: boolean;
 }) {
   const router = useRouter();
   const { token } = useAuth();
@@ -199,7 +183,8 @@ export default function ReservationsTable({
 
   return (
     <section className="space-y-6">
-      {/* Header con acción principal */}
+      {/* Header con acción principal - Solo mostrar si showHeader es true */}
+      {showHeader && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Mis Reservas</h1>
@@ -216,6 +201,7 @@ export default function ReservationsTable({
           </Button>
         </Link>
       </div>
+      )}
 
       {/* Nielsen: Flexibilidad y eficiencia - Filtros */}
       <Card>

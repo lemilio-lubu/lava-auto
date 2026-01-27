@@ -3,18 +3,8 @@
 import { useEffect, useState } from 'react';
 import  Card  from '@/components/ui/Card';
 import  Button  from '@/components/ui/Button';
-import { vehicleApi } from '@/lib/api-client';
+import { vehicleApi, Vehicle } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Vehicle {
-  id: string;
-  brand: string;
-  model: string;
-  plate: string;
-  vehicleType: string;
-  year?: number;
-  color?: string;
-}
 
 export default function GarajeVirtual() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
