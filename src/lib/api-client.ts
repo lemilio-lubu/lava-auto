@@ -226,8 +226,14 @@ export const paymentApi = {
     apiRequest<Payment>('/api/payments', { method: 'POST', body: data, token }),
 
   createIntent: (data: { reservationId: string; amount: number }, token: string) =>
-    apiRequest<{ clientSecret: string; paymentId: string }>(
+    apiRequest<{ clientSecret: string; paymentId: string; isMock?: boolean }>(
       '/api/payments/create-intent',
+      { method: 'POST', body: data, token }
+    ),
+
+  mockConfirm: (data: { paymentId: string; cardNumber: string; cardExpiry: string; cardCvc: string; cardName: string }, token: string) =>
+    apiRequest<{ success: boolean; payment: Payment; message: string }>(
+      '/api/payments/mock-confirm',
       { method: 'POST', body: data, token }
     ),
 

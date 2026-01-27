@@ -122,13 +122,9 @@ router.post('/', authMiddleware, async (req, res, next) => {
   }
 });
 
-// Create Stripe payment intent
+// Create Stripe payment intent (with mock fallback)
 router.post('/create-intent', authMiddleware, async (req, res, next) => {
   try {
-    if (!stripe) {
-      return res.status(503).json({ error: 'Stripe is not configured' });
-    }
-
     const db = req.app.get('db');
     const paymentRepo = new PaymentRepository(db);
     
@@ -138,15 +134,26 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
       return res.status(400).json({ error: 'reservationId and amount are required' });
     }
 
-    // Create Stripe payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe uses cents
-      currency: 'mxn',
-      metadata: {
-        reservationId,
-        userId: req.user.id
-      }
-    });
+    let paymentIntentId;
+    let clientSecret;
+
+    if (stripe) {
+      // Real Stripe payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Stripe uses cents
+        currency: 'mxn',
+        metadata: {
+          reservationId,
+          userId: req.user.id
+        }
+      });
+      paymentIntentId = paymentIntent.id;
+      clientSecret = paymentIntent.client_secret;
+    } else {
+      // Mock payment intent (for development without Stripe keys)
+      paymentIntentId = `pi_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      clientSecret = `${paymentIntentId}_secret_mock`;
+    }
 
     // Create payment record
     const payment = await paymentRepo.create({
@@ -154,12 +161,71 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
       userId: req.user.id,
       amount,
       paymentMethod: 'CARD',
-      stripePaymentIntent: paymentIntent.id
+      stripePaymentIntent: paymentIntentId
     });
 
     res.json({
-      clientSecret: paymentIntent.client_secret,
-      paymentId: payment.id
+      clientSecret,
+      paymentId: payment.id,
+      isMock: !stripe // Indicate if this is a mock payment
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Confirm mock payment (for development without real Stripe)
+router.post('/mock-confirm', authMiddleware, async (req, res, next) => {
+  try {
+    const db = req.app.get('db');
+    const paymentRepo = new PaymentRepository(db);
+    
+    const { paymentId, cardNumber, cardExpiry, cardCvc, cardName } = req.body;
+
+    if (!paymentId) {
+      return res.status(400).json({ error: 'paymentId is required' });
+    }
+
+    const payment = await paymentRepo.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    if (payment.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Payment already processed' });
+    }
+
+    // Simulate card validation (mock - always succeeds for valid format)
+    const isValidCard = cardNumber && cardNumber.replace(/\s/g, '').length >= 13;
+    const isValidExpiry = cardExpiry && /^\d{2}\/\d{2}$/.test(cardExpiry);
+    const isValidCvc = cardCvc && /^\d{3,4}$/.test(cardCvc);
+
+    if (!isValidCard || !isValidExpiry || !isValidCvc) {
+      // Simulate payment failure for invalid card data
+      await paymentRepo.update(paymentId, { 
+        status: 'FAILED',
+        notes: 'Invalid card information (mock)'
+      });
+      return res.status(400).json({ 
+        error: 'Invalid card information',
+        details: {
+          card: !isValidCard ? 'Invalid card number' : null,
+          expiry: !isValidExpiry ? 'Invalid expiry date (use MM/YY)' : null,
+          cvc: !isValidCvc ? 'Invalid CVC' : null
+        }
+      });
+    }
+
+    // Simulate successful payment
+    const updated = await paymentRepo.update(paymentId, { 
+      status: 'COMPLETED',
+      transactionId: `mock_txn_${Date.now()}`
+    });
+
+    res.json({
+      success: true,
+      payment: updated,
+      message: 'Pago procesado exitosamente (modo demo)'
     });
   } catch (error) {
     next(error);
