@@ -1,224 +1,416 @@
-import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, Plus, Clock, DollarSign, Sparkles, Edit, Trash2 } from 'lucide-react';
+'use client';
 
-export default async function ServiciosPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect('/login');
-  }
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2, Plus, Edit, Trash, X } from 'lucide-react';
+import { serviceApi } from '@/lib/api-client';
+import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
+import Toast from '@/components/ui/Toast';
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+type Service = {
+  id: string;
+  name: string;
+  description?: string;
+  duration: number;
+  price: number;
+  vehicleType: string;
+  isActive: boolean;
+};
+
+type ServiceFormData = {
+  name: string;
+  description: string;
+  duration: string;
+  price: string;
+  vehicleType: string;
+  isActive: boolean;
+};
+
+const VEHICLE_TYPES = ['SEDAN', 'SUV', 'PICKUP', 'VAN', 'MOTORCYCLE'];
+
+export default function ServiciosAdminPage() {
+  const { user, token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState<ServiceFormData>({
+    name: '',
+    description: '',
+    duration: '',
+    price: '',
+    vehicleType: 'SEDAN',
+    isActive: true,
+  });
+  const [toast, setToast] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
 
-  if (!user || user.role !== 'ADMIN') {
-    redirect('/dashboard');
-  }
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user || user.role !== 'ADMIN') {
+      router.push('/dashboard');
+      return;
+    }
 
-  const services = await prisma.service.findMany({
-    include: {
-      reservations: true,
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+    loadServices();
+  }, [user, token, authLoading, router]);
 
-  const stats = {
-    total: services.length,
-    active: services.filter((s) => s.isActive).length,
-    inactive: services.filter((s) => !s.isActive).length,
-    totalRevenue: services.reduce(
-      (sum, s) =>
-        sum +
-        s.reservations
-          .filter((r) => r.status === 'COMPLETED')
-          .reduce((rSum, r) => rSum + Number(r.totalAmount), 0),
-      0
-    ),
+  const loadServices = async () => {
+    if (!token) return;
+    try {
+      const data = await serviceApi.getAll(token);
+      setServices(data);
+    } catch (error) {
+      console.error('Error loading services:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleOpenCreate = () => {
+    setEditingService(null);
+    setFormData({
+      name: '',
+      description: '',
+      duration: '',
+      price: '',
+      vehicleType: 'SEDAN',
+      isActive: true,
+    });
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (service: Service) => {
+    setEditingService(service);
+    setFormData({
+      name: service.name,
+      description: service.description || '',
+      duration: service.duration.toString(),
+      price: service.price.toString(),
+      vehicleType: service.vehicleType,
+      isActive: service.isActive,
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+
+    setIsSaving(true);
+    try {
+      const data = {
+        name: formData.name,
+        description: formData.description || undefined,
+        duration: parseInt(formData.duration),
+        price: parseFloat(formData.price),
+        vehicleType: formData.vehicleType,
+        isActive: formData.isActive,
+      };
+
+      if (editingService) {
+        await serviceApi.update(editingService.id, data, token);
+        setToast({
+          isOpen: true,
+          title: 'Éxito',
+          message: 'Servicio actualizado correctamente',
+          type: 'success',
+        });
+      } else {
+        await serviceApi.create(data, token);
+        setToast({
+          isOpen: true,
+          title: 'Éxito',
+          message: 'Servicio creado correctamente',
+          type: 'success',
+        });
+      }
+
+      setShowModal(false);
+      loadServices();
+    } catch (error: any) {
+      setToast({
+        isOpen: true,
+        title: 'Error',
+        message: error.message || 'Error al guardar el servicio',
+        type: 'error',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!token) return;
+    if (!confirm(`¿Estás seguro de eliminar el servicio "${name}"?`)) return;
+
+    try {
+      await serviceApi.delete(id, token);
+      setToast({
+        isOpen: true,
+        title: 'Éxito',
+        message: 'Servicio eliminado correctamente',
+        type: 'success',
+      });
+      loadServices();
+    } catch (error: any) {
+      setToast({
+        isOpen: true,
+        title: 'Error',
+        message: error.message || 'Error al eliminar el servicio',
+        type: 'error',
+      });
+    }
+  };
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/dashboard/admin"
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Gestión de Servicios
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              Administra el catálogo de servicios de lavado
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Gestión de Servicios</h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            Administra los servicios disponibles
+          </p>
         </div>
-        <button className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all">
+        <Button onClick={handleOpenCreate}>
           <Plus className="w-5 h-5" />
           Nuevo Servicio
-        </button>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Total Servicios</p>
-          <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.total}</p>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Activos</p>
-          <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-            {stats.active}
-          </p>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Inactivos</p>
-          <p className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.inactive}</p>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Ingresos Totales</p>
-          <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-            ${stats.totalRevenue.toFixed(0)}
-          </p>
-        </div>
-      </div>
-
+      {/* Services Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {services.map((service) => (
           <div
             key={service.id}
-            className={`bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border-2 ${
-              service.isActive
-                ? 'border-slate-200 dark:border-slate-700'
-                : 'border-red-200 dark:border-red-800 opacity-60'
-            } hover:shadow-lg transition-all`}
+            className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
           >
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-gradient-to-br from-cyan-100 to-emerald-100 dark:from-cyan-900/30 dark:to-emerald-900/30 rounded-lg">
-                <Sparkles className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
-              </div>
-              <div className="flex gap-2">
-                <button className="p-2 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                  <Edit className="w-5 h-5" />
-                </button>
-                <button className="p-2 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2 py-1 text-xs font-medium rounded bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400">
+                    {service.vehicleType}
+                  </span>
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${
+                    service.isActive
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                  }`}>
+                    {service.isActive ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-1">
                   {service.name}
                 </h3>
-                {!service.isActive && (
-                  <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full font-semibold">
-                    Inactivo
-                  </span>
-                )}
+                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                  {service.description || 'Sin descripción'}
+                </p>
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{service.description}</p>
             </div>
 
-            <div className="space-y-3 border-t border-slate-200 dark:border-slate-700 pt-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                  <DollarSign className="w-5 h-5" />
-                  <span className="text-sm">Precio</span>
-                </div>
-                <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  ${service.price.toFixed(0)}
-                </span>
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700 mb-4">
+              <div>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Precio</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  ${service.price}
+                </p>
               </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                  <Clock className="w-5 h-5" />
-                  <span className="text-sm">Duración</span>
-                </div>
-                <span className="font-semibold text-slate-900 dark:text-white">
+              <div className="text-right">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Duración</p>
+                <p className="font-semibold text-slate-900 dark:text-white">
                   {service.duration} min
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-700">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Reservas</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {service.reservations.length}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Completadas</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  {service.reservations.filter((r) => r.status === 'COMPLETED').length}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Ingresos</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  $
-                  {service.reservations
-                    .filter((r) => r.status === 'COMPLETED')
-                    .reduce((sum, r) => sum + Number(r.totalAmount), 0)
-                    .toFixed(0)}
-                </span>
+                </p>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-              <button
-                className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors ${
-                  service.isActive
-                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                    : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50'
-                }`}
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                fullWidth
+                onClick={() => handleOpenEdit(service)}
               >
-                {service.isActive ? 'Desactivar' : 'Activar'}
-              </button>
+                <Edit className="w-4 h-4" />
+                Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDelete(service.id, service.name)}
+              >
+                <Trash className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-        <h3 className="font-bold text-slate-900 dark:text-white mb-4">
-          Recomendaciones para Servicios
-        </h3>
-        <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-          <li className="flex gap-2">
-            <span className="text-cyan-600 dark:text-cyan-400">•</span>
-            <span>
-              Define precios competitivos basados en el mercado local y calidad del servicio
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-cyan-600 dark:text-cyan-400">•</span>
-            <span>
-              Establece duraciones realistas para que los lavadores puedan cumplir los tiempos
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-cyan-600 dark:text-cyan-400">•</span>
-            <span>
-              Incluye descripciones claras de lo que incluye cada servicio para evitar confusiones
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-cyan-600 dark:text-cyan-400">•</span>
-            <span>
-              Desactiva servicios temporalmente en lugar de eliminarlos para mantener historial
-            </span>
-          </li>
-        </ul>
-      </div>
+      {services.length === 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
+          <p className="text-slate-600 dark:text-slate-400 mb-4">
+            No hay servicios registrados
+          </p>
+          <Button onClick={handleOpenCreate}>
+            <Plus className="w-5 h-5" />
+            Crear Primer Servicio
+          </Button>
+        </div>
+      )}
+
+      {/* Modal de Crear/Editar */}
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              {editingService ? 'Editar Servicio' : 'Nuevo Servicio'}
+            </h2>
+            <button
+              onClick={() => setShowModal(false)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Nombre del Servicio *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                placeholder="Ej: Lavado Premium"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Descripción
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                rows={3}
+                placeholder="Descripción del servicio"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Duración (minutos) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  placeholder="60"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Precio ($) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  placeholder="100.00"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Tipo de Vehículo *
+              </label>
+              <select
+                required
+                value={formData.vehicleType}
+                onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+              >
+                {VEHICLE_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                className="w-4 h-4 text-cyan-600 border-slate-300 rounded focus:ring-cyan-500"
+              />
+              <label htmlFor="isActive" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Servicio activo
+              </label>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                fullWidth
+                onClick={() => setShowModal(false)}
+                disabled={isSaving}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" fullWidth disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  editingService ? 'Actualizar' : 'Crear'
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      <Toast
+        isOpen={toast.isOpen}
+        onClose={() => setToast({ ...toast, isOpen: false })}
+        title={toast.title}
+        message={toast.message}
+        type={toast.type}
+      />
     </div>
   );
 }

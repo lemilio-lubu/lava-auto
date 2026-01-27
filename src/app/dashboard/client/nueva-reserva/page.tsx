@@ -1,32 +1,49 @@
-import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import ReservationForm from '@/components/reservas/ReservationForm';
+import { vehicleApi, serviceApi } from '@/lib/api-client';
 
-export default async function NuevaReservaPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect('/login');
+export default function NuevaReservaPage() {
+  const { user, token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user || user.role !== 'CLIENT') {
+      router.push('/dashboard');
+      return;
+    }
+
+    if (token) {
+      Promise.all([
+        vehicleApi.getAll(token),
+        serviceApi.getAll(token)
+      ])
+        .then(([vehiclesData, servicesData]) => {
+          setVehicles(vehiclesData);
+          setServices(servicesData.filter((s: any) => s.isActive));
+        })
+        .catch(console.error)
+        .finally(() => setIsLoading(false));
+    }
+  }, [user, token, authLoading, router]);
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-600" />
+      </div>
+    );
   }
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      vehicles: true,
-    },
-  });
-
-  if (!user || user.role !== 'CLIENT') {
-    redirect('/dashboard');
-  }
-
-  const services = await prisma.service.findMany({
-    where: { isActive: true },
-    orderBy: { price: 'asc' },
-  });
 
   return (
     <div className="space-y-6">
@@ -47,7 +64,7 @@ export default async function NuevaReservaPage() {
         </div>
       </div>
 
-      {user.vehicles.length === 0 ? (
+      {vehicles.length === 0 ? (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6">
           <h3 className="font-bold text-amber-900 dark:text-amber-100 mb-2">
             No tienes vehículos registrados
@@ -59,14 +76,14 @@ export default async function NuevaReservaPage() {
             href="/dashboard/client/vehiculos"
             className="inline-block bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
           >
-            Registrar Vehículo
+            Registrar mi primer vehículo
           </Link>
         </div>
       ) : (
         <ReservationForm
-          vehicles={user.vehicles}
+          vehicles={vehicles}
           services={services}
-          defaultAddress={user.address || ''}
+          defaultAddress=""
         />
       )}
     </div>

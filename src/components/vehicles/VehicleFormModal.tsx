@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Loader2 } from 'lucide-react';
+import { vehicleApi } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface VehicleFormModalProps {
   vehicle?: {
@@ -14,9 +16,8 @@ interface VehicleFormModalProps {
     color: string | null;
     vehicleType: string;
   };
-  userName: string;
-  userPhone: string | null;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const vehicleTypes = [
@@ -28,8 +29,9 @@ const vehicleTypes = [
   { value: 'MOTORCYCLE', label: 'Motocicleta' },
 ];
 
-export default function VehicleFormModal({ vehicle, userName, userPhone, onClose }: VehicleFormModalProps) {
+export default function VehicleFormModal({ vehicle, onClose, onSuccess }: VehicleFormModalProps) {
   const router = useRouter();
+  const { token, user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,34 +42,28 @@ export default function VehicleFormModal({ vehicle, userName, userPhone, onClose
 
     const formData = new FormData(e.currentTarget);
     const data = {
-      brand: formData.get('brand'),
-      model: formData.get('model'),
-      plate: formData.get('plate'),
+      brand: formData.get('brand') as string,
+      model: formData.get('model') as string,
+      plate: formData.get('plate') as string,
       year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
-      color: formData.get('color'),
-      vehicleType: formData.get('vehicleType'),
-      ownerName: userName,
-      ownerPhone: userPhone,
+      color: formData.get('color') as string,
+      vehicleType: formData.get('vehicleType') as string,
+      ownerName: user?.name || '',
+      ownerPhone: user?.phone || null,
     };
 
     try {
-      const url = vehicle ? `/api/vehicles/${vehicle.id}` : '/api/vehicles';
-      const method = vehicle ? 'PUT' : 'POST';
+      if (!token) throw new Error('No token');
+      if (!user?.name) throw new Error('No se pudo obtener el nombre del usuario');
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al guardar el vehículo');
+      if (vehicle) {
+        await vehicleApi.update(vehicle.id, data, token);
+      } else {
+        await vehicleApi.create(data, token);
       }
 
       router.refresh();
+      onSuccess?.();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');

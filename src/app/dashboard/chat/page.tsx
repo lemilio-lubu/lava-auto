@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { chatApi } from '@/lib/api-client';
 import io, { Socket } from 'socket.io-client';
-import { MessageCircle, Send, User, Clock, Check, CheckCheck } from 'lucide-react';
+import { MessageCircle, Send, User, Clock, Check, CheckCheck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-interface User {
+interface ChatUser {
   id: string;
   name: string;
-  email: string;
 }
 
 interface Message {
@@ -20,27 +20,27 @@ interface Message {
   receiverId: string;
   createdAt: string;
   read: boolean;
-  sender: User;
-  receiver: User;
 }
 
 interface Conversation {
-  user: User;
-  lastMessage: Message;
-  unreadCount: number;
+  other_user_id: string;
+  other_user_name: string;
+  last_message_at: string;
+  unread_count: number;
 }
+
+const NOTIFICATION_SERVICE_URL = process.env.NEXT_PUBLIC_NOTIFICATION_URL || 'http://localhost:4005';
 
 let socket: Socket | null = null;
 
 export default function ChatPage() {
-  const { data: session } = useSession();
-  const [users, setUsers] = useState<User[]>([]);
+  const { user, token, isLoading: authLoading } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -51,68 +51,64 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Inicializar Socket.IO y cargar datos
+  const loadConversations = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await chatApi.getConversations(token);
+      setConversations(data || []);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  }, [token]);
+
+  // Initialize Socket.IO and load data
   useEffect(() => {
-    if (!session?.user?.email) return;
+    if (authLoading || !user || !token) return;
 
     const initializeChat = async () => {
       try {
-        // Obtener usuario actual
-        const userRes = await fetch('/api/auth/users');
-        const userData = await userRes.json();
-        const currentUser = userData.users.find((u: User) => u.email === session.user?.email);
+        // Load conversations
+        await loadConversations();
         
-        if (!currentUser) return;
-        setCurrentUserId(currentUser.id);
-
-        // Inicializar Socket.IO
+        // Initialize Socket.IO for real-time messaging
         if (!socket) {
-          socket = io({
+          socket = io(NOTIFICATION_SERVICE_URL, {
             path: '/socket.io',
+            auth: { token }
           });
 
           socket.on('connect', () => {
-            console.log('Conectado a Socket.IO');
-            socket?.emit('register', currentUser.id);
+            console.log('Connected to Socket.IO');
+            socket?.emit('register', user.id);
           });
 
-              socket.on('new-message', (message: Message) => {
-            console.log('Mensaje recibido:', message);
-            
-            // Actualizar conversaciones siempre
+          socket.on('new-message', (message: Message) => {
+            // Reload conversations to update unread counts
             loadConversations();
             
-            // Actualizar mensajes si la conversación está activa
+            // Update messages if conversation is active
             setSelectedUser((currentSelectedUser) => {
-              if (currentSelectedUser) {
+              if (currentSelectedUser && user) {
                 const isRelevantMessage = 
-                  (message.senderId === currentUser.id && message.receiverId === currentSelectedUser.id) ||
-                  (message.senderId === currentSelectedUser.id && message.receiverId === currentUser.id);
+                  (message.senderId === user.id && message.receiverId === currentSelectedUser.id) ||
+                  (message.senderId === currentSelectedUser.id && message.receiverId === user.id);
                 
                 if (isRelevantMessage) {
                   setMessages((prev) => {
-                    // Reemplazar mensaje temporal con el mensaje real del servidor
+                    // Replace temp message with real message from server
                     const withoutTemp = prev.filter(m => !m.id.startsWith('temp-'));
                     const exists = withoutTemp.some(m => m.id === message.id);
                     
-                    if (exists) {
-                      return prev;
-                    }
+                    if (exists) return prev;
                     return [...withoutTemp, message];
                   });
-                  
-                  // Si es un mensaje recibido (no propio), marcar como leído
-                  if (message.senderId === currentSelectedUser.id && socket) {
-                    socket.emit('mark-as-read', {
-                      senderId: currentSelectedUser.id,
-                      receiverId: currentUser.id,
-                    });
-                  }
                 }
               }
               return currentSelectedUser;
             });
-          });          socket.on('messages-read', ({ senderId, receiverId }) => {
+          });
+
+          socket.on('messages-read', ({ senderId, receiverId }: { senderId: string; receiverId: string }) => {
             setMessages((prev) =>
               prev.map((m) =>
                 m.senderId === senderId && m.receiverId === receiverId
@@ -123,11 +119,9 @@ export default function ChatPage() {
           });
         }
 
-        // Cargar usuarios y conversaciones
-        await Promise.all([loadUsers(), loadConversations()]);
         setLoading(false);
       } catch (error) {
-        console.error('Error al inicializar chat:', error);
+        console.error('Error initializing chat:', error);
         setLoading(false);
       }
     };
@@ -140,85 +134,73 @@ export default function ChatPage() {
         socket.off('messages-read');
       }
     };
-  }, [session]);
+  }, [authLoading, user, token, loadConversations]);
 
-  const loadUsers = async () => {
+  const loadMessages = async (otherUserId: string) => {
+    if (!token) return;
     try {
-      const res = await fetch('/api/chat/users');
-      const data = await res.json();
-      setUsers(data.users || []);
-    } catch (error) {
-      console.error('Error al cargar usuarios:', error);
-    }
-  };
+      const data = await chatApi.getConversation(otherUserId, token);
+      setMessages(data || []);
 
-  const loadConversations = async () => {
-    try {
-      const res = await fetch('/api/chat/conversations');
-      const data = await res.json();
-      setConversations(data.conversations || []);
-    } catch (error) {
-      console.error('Error al cargar conversaciones:', error);
-    }
-  };
-
-  const loadMessages = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/chat/messages?userId=${userId}`);
-      const data = await res.json();
-      setMessages(data.messages || []);
-
-      // Marcar mensajes como leídos
-      if (socket && currentUserId) {
+      // Mark messages as read via socket
+      if (socket && user) {
         socket.emit('mark-as-read', {
-          senderId: userId,
-          receiverId: currentUserId,
+          senderId: otherUserId,
+          receiverId: user.id,
         });
       }
     } catch (error) {
-      console.error('Error al cargar mensajes:', error);
+      console.error('Error loading messages:', error);
     }
   };
 
-  const handleSelectUser = (user: User) => {
-    setSelectedUser(user);
-    loadMessages(user.id);
+  const handleSelectConversation = (conversation: Conversation) => {
+    const chatUser: ChatUser = {
+      id: conversation.other_user_id,
+      name: conversation.other_user_name,
+    };
+    setSelectedUser(chatUser);
+    loadMessages(conversation.other_user_id);
   };
 
-  const handleSendMessage = () => {
-    if (!messageText.trim() || !selectedUser || !currentUserId || !socket) return;
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedUser || !user || !token) return;
 
+    const content = messageText.trim();
     const tempMessage: Message = {
       id: `temp-${Date.now()}`,
-      content: messageText.trim(),
-      senderId: currentUserId,
+      content,
+      senderId: user.id,
       receiverId: selectedUser.id,
       createdAt: new Date().toISOString(),
       read: false,
-      sender: {
-        id: currentUserId,
-        name: session?.user?.name || '',
-        email: session?.user?.email || '',
-      },
-      receiver: {
-        id: selectedUser.id,
-        name: selectedUser.name,
-        email: selectedUser.email,
-      },
     };
 
-    // Agregar mensaje inmediatamente a la UI (optimistic update)
+    // Optimistic update
     setMessages((prev) => [...prev, tempMessage]);
-    
-    // Limpiar el input inmediatamente
     setMessageText('');
+    setSending(true);
 
-    // Enviar al servidor
-    socket.emit('send-message', {
-      senderId: currentUserId,
-      receiverId: selectedUser.id,
-      content: tempMessage.content,
-    });
+    try {
+      // Send via API
+      await chatApi.sendMessage(selectedUser.id, content, token);
+      
+      // Also emit via socket for real-time delivery
+      if (socket) {
+        socket.emit('send-message', {
+          senderId: user.id,
+          receiverId: selectedUser.id,
+          content,
+        });
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Remove temp message on error
+      setMessages((prev) => prev.filter(m => m.id !== tempMessage.id));
+      setMessageText(content);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -228,11 +210,11 @@ export default function ChatPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <Loader2 className="w-12 h-12 animate-spin text-cyan-500 mx-auto mb-4" />
           <p className="text-slate-600 dark:text-slate-400">Cargando chat...</p>
         </div>
       </div>
@@ -256,25 +238,28 @@ export default function ChatPage() {
       </div>
 
       <div className="flex h-[calc(100vh-280px)]">
-        {/* Lista de usuarios / conversaciones */}
+        {/* Conversations list */}
         <div className="w-80 border-r border-cyan-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-y-auto">
-          {/* Usuarios disponibles */}
           <div className="p-4">
             <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-              Usuarios Disponibles
+              Conversaciones
             </h2>
-            <div className="space-y-2">
-              {users.map((user) => {
-                const conversation = conversations.find(c => c.user.id === user.id);
-                const unreadCount = conversation?.unreadCount || 0;
-
-                return (
+            {conversations.length === 0 ? (
+              <div className="text-center py-8">
+                <MessageCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  No tienes conversaciones aún
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {conversations.map((conversation) => (
                   <button
-                    key={user.id}
-                    onClick={() => handleSelectUser(user)}
+                    key={conversation.other_user_id}
+                    onClick={() => handleSelectConversation(conversation)}
                     className={`
                       w-full text-left px-4 py-3 rounded-xl transition-all duration-200
-                      ${selectedUser?.id === user.id
+                      ${selectedUser?.id === conversation.other_user_id
                         ? 'bg-cyan-500 text-white shadow-md'
                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700'
                       }
@@ -283,52 +268,53 @@ export default function ChatPage() {
                     <div className="flex items-center gap-3">
                       <div className={`
                         w-10 h-10 rounded-full flex items-center justify-center
-                        ${selectedUser?.id === user.id
+                        ${selectedUser?.id === conversation.other_user_id
                           ? 'bg-white/20'
                           : 'bg-gradient-to-br from-cyan-400 to-emerald-400'
                         }
                       `}>
-                        <User className={`w-5 h-5 ${selectedUser?.id === user.id ? 'text-white' : 'text-white'}`} />
+                        <User className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{user.name}</p>
-                        {conversation?.lastMessage && (
-                          <p className={`text-xs truncate ${selectedUser?.id === user.id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
-                            {conversation.lastMessage.content}
-                          </p>
-                        )}
+                        <p className="font-semibold text-sm truncate">
+                          {conversation.other_user_name}
+                        </p>
+                        <p className={`text-xs ${selectedUser?.id === conversation.other_user_id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {format(new Date(conversation.last_message_at), 'dd/MM HH:mm', { locale: es })}
+                        </p>
                       </div>
-                      {unreadCount > 0 && (
+                      {conversation.unread_count > 0 && (
                         <div className="bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                          {unreadCount}
+                          {conversation.unread_count}
                         </div>
                       )}
                     </div>
                   </button>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Área de mensajes */}
+        {/* Messages area */}
         <div className="flex-1 flex flex-col">
           {selectedUser ? (
             <>
-              {/* Header del chat */}
+              {/* Chat header */}
               <div className="px-6 py-4 border-b border-cyan-100 dark:border-slate-700 bg-white dark:bg-slate-800">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{selectedUser.name}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{selectedUser.email}</p>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">
+                      {selectedUser.name}
+                    </h3>
                   </div>
                 </div>
               </div>
 
-              {/* Mensajes */}
+              {/* Messages */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-slate-900/30">
                 {messages.length === 0 ? (
                   <div className="text-center py-12">
@@ -339,7 +325,7 @@ export default function ChatPage() {
                   </div>
                 ) : (
                   messages.map((message) => {
-                    const isOwn = message.senderId === currentUserId;
+                    const isOwn = message.senderId === user?.id;
                     const isTemporary = message.id.startsWith('temp-');
                     
                     return (
@@ -368,7 +354,7 @@ export default function ChatPage() {
                                 ) : message.read ? (
                                   <CheckCheck className="w-3.5 h-3.5 ml-1 text-blue-200" />
                                 ) : (
-                                  <CheckCheck className="w-3.5 h-3.5 ml-1" />
+                                  <Check className="w-3.5 h-3.5 ml-1" />
                                 )}
                               </>
                             )}
@@ -381,7 +367,7 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input de mensaje */}
+              {/* Message input */}
               <div className="p-4 border-t border-cyan-100 dark:border-slate-700 bg-white dark:bg-slate-800">
                 <div className="flex gap-3">
                   <input
@@ -390,14 +376,19 @@ export default function ChatPage() {
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Escribe un mensaje..."
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                    disabled={sending}
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all disabled:opacity-50"
                   />
                   <button
                     onClick={handleSendMessage}
-                    disabled={!messageText.trim()}
+                    disabled={!messageText.trim() || sending}
                     className="px-6 py-3 bg-gradient-to-br from-cyan-500 to-emerald-500 text-white rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold flex items-center gap-2"
                   >
-                    <Send className="w-5 h-5" />
+                    {sending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
                     Enviar
                   </button>
                 </div>
@@ -408,10 +399,10 @@ export default function ChatPage() {
               <div className="text-center">
                 <MessageCircle className="w-24 h-24 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Selecciona un usuario
+                  Selecciona una conversación
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400">
-                  Elige un usuario de la lista para comenzar a chatear
+                  Elige una conversación de la lista para ver los mensajes
                 </p>
               </div>
             </div>

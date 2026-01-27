@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, XCircle } from 'lucide-react';
 import Toast from '@/components/ui/Toast';
+import { jobApi, reservationApi } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface JobActionsProps {
   jobId: string;
@@ -12,6 +14,7 @@ interface JobActionsProps {
 
 export default function JobActions({ jobId, status }: JobActionsProps) {
   const router = useRouter();
+  const { token } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState({
     isOpen: false,
@@ -24,17 +27,9 @@ export default function JobActions({ jobId, status }: JobActionsProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/reservations/${jobId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'IN_PROGRESS' }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al iniciar el trabajo');
-      }
+      if (!token) throw new Error('No token');
+      
+      await jobApi.start(jobId, token);
 
       setToast({
         isOpen: true,
@@ -62,17 +57,9 @@ export default function JobActions({ jobId, status }: JobActionsProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/reservations/${jobId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'COMPLETED' }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al completar el trabajo');
-      }
+      if (!token) throw new Error('No token');
+      
+      await jobApi.complete(jobId, [], token);
 
       setToast({
         isOpen: true,
@@ -104,17 +91,10 @@ export default function JobActions({ jobId, status }: JobActionsProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/reservations/${jobId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'CANCELLED' }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al rechazar el trabajo');
-      }
+      if (!token) throw new Error('No token');
+      
+      // Usar el método de cancelar reservación
+      await reservationApi.cancel(jobId, token);
 
       setToast({
         isOpen: true,

@@ -7,6 +7,8 @@ import Link from 'next/link';
 import VehicleFormModal from './VehicleFormModal';
 import DeleteVehicleModal from './DeleteVehicleModal';
 import CannotDeleteModal from './CannotDeleteModal';
+import { vehicleApi } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Vehicle {
   id: string;
@@ -21,12 +23,12 @@ interface Vehicle {
 
 interface VehicleListProps {
   vehicles: Vehicle[];
-  userName: string;
-  userPhone: string | null;
 }
 
-export default function VehicleList({ vehicles, userName, userPhone }: VehicleListProps) {
+export default function VehicleList({ vehicles: initialVehicles }: VehicleListProps) {
   const router = useRouter();
+  const { token } = useAuth();
+  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
   const [showModal, setShowModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -54,24 +56,25 @@ export default function VehicleList({ vehicles, userName, userPhone }: VehicleLi
   };
 
   const handleConfirmDelete = async () => {
-    if (!vehicleToDelete) return;
+    if (!vehicleToDelete || !token) return;
 
     setDeletingId(vehicleToDelete.id);
 
     try {
-      const response = await fetch(`/api/vehicles/${vehicleToDelete.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al eliminar el vehículo');
-      }
-
+      await vehicleApi.delete(vehicleToDelete.id, token);
+      
+      // Actualizar el estado local
+      setVehicles(vehicles.filter(v => v.id !== vehicleToDelete.id));
       setVehicleToDelete(null);
-      router.refresh();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al eliminar');
+    } catch (err: any) {
+      // Si el error indica que hay reservas activas, mostrar modal especial
+      if (err.data?.hasActiveReservations) {
+        setVehicleToDelete(null);
+        setCannotDeleteVehicle(vehicleToDelete);
+        setShowCannotDeleteModal(true);
+      } else {
+        alert(err.message || 'Error al eliminar el vehículo');
+      }
     } finally {
       setDeletingId(null);
     }
@@ -81,9 +84,19 @@ export default function VehicleList({ vehicles, userName, userPhone }: VehicleLi
     setVehicleToDelete(null);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = async () => {
     setShowModal(false);
     setEditingVehicle(undefined);
+    
+    // Recargar vehículos después de crear/editar
+    if (token) {
+      try {
+        const updatedVehicles = await vehicleApi.getAll(token);
+        setVehicles(updatedVehicles);
+      } catch (error) {
+        console.error('Error reloading vehicles:', error);
+      }
+    }
   };
 
   if (vehicles.length === 0) {
@@ -108,9 +121,8 @@ export default function VehicleList({ vehicles, userName, userPhone }: VehicleLi
 
         {showModal && (
           <VehicleFormModal
-            userName={userName}
-            userPhone={userPhone}
             onClose={handleCloseModal}
+            onSuccess={handleCloseModal}
           />
         )}
       </>
@@ -209,9 +221,8 @@ export default function VehicleList({ vehicles, userName, userPhone }: VehicleLi
       {showModal && (
         <VehicleFormModal
           vehicle={editingVehicle}
-          userName={userName}
-          userPhone={userPhone}
           onClose={handleCloseModal}
+          onSuccess={handleCloseModal}
         />
       )}
 

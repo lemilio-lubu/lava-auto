@@ -1,217 +1,165 @@
-import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2, MapPin, Clock, Car, Play, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, MapPin, Car as CarIcon, User, Clock, DollarSign } from 'lucide-react';
-import JobActions from '@/components/washer/JobActions';
+import { jobApi } from '@/lib/api-client';
 
-const statusColors = {
-  PENDING: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  CONFIRMED: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
-  IN_PROGRESS: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  COMPLETED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-  CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-};
+export default function TrabajosPage() {
+  const { user, token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-const statusLabels = {
-  PENDING: 'Pendiente',
-  CONFIRMED: 'Confirmada',
-  IN_PROGRESS: 'En Progreso',
-  COMPLETED: 'Completada',
-  CANCELLED: 'Cancelada',
-};
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user || user.role !== 'WASHER') {
+      router.push('/dashboard');
+      return;
+    }
 
-export default async function TrabajosPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect('/login');
+    loadJobs();
+  }, [user, token, authLoading, router]);
+
+  const loadJobs = async () => {
+    if (!token) return;
+    try {
+      const data = await jobApi.getMyJobs(token);
+      setJobs(data);
+    } catch (error) {
+      console.error('Error loading jobs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-600" />
+      </div>
+    );
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      assignedJobs: {
-        include: {
-          service: true,
-          vehicle: true,
-          user: true,
-        },
-        orderBy: { scheduledDate: 'desc' },
-      },
-    },
-  });
-
-  if (!user || user.role !== 'WASHER') {
-    redirect('/dashboard');
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const todayJobs = user.assignedJobs.filter(
-    (job) =>
-      new Date(job.scheduledDate) >= today &&
-      new Date(job.scheduledDate) < tomorrow &&
-      job.status !== 'CANCELLED' &&
-      job.status !== 'COMPLETED'
-  );
-
-  const upcomingJobs = user.assignedJobs.filter(
-    (job) =>
-      new Date(job.scheduledDate) >= tomorrow &&
-      job.status !== 'CANCELLED' &&
-      job.status !== 'COMPLETED'
-  );
-
-  const completedJobs = user.assignedJobs.filter((job) => job.status === 'COMPLETED');
+  const activeJobs = jobs.filter(j => j.status === 'CONFIRMED' || j.status === 'IN_PROGRESS');
+  const completedJobs = jobs.filter(j => j.status === 'COMPLETED');
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/dashboard/washer"
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Mis Trabajos</h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Administra todas tus asignaciones de lavado
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Mis Trabajos</h1>
+        <p className="text-slate-600 dark:text-slate-400">
+          Gestiona tus trabajos asignados
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Hoy</p>
-          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{todayJobs.length}</p>
+      {/* Active Jobs */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-emerald-50 dark:bg-emerald-900/20">
+          <h2 className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
+            Trabajos Activos ({activeJobs.length})
+          </h2>
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Próximos</p>
-          <p className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
-            {upcomingJobs.length}
-          </p>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Completados</p>
-          <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-            {completedJobs.length}
-          </p>
-        </div>
-      </div>
-
-      {todayJobs.length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Trabajos de Hoy</h2>
-          <div className="space-y-4">
-            {todayJobs.map((job) => (
-              <JobCard key={job.id} job={job} isToday />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {upcomingJobs.length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Próximos Trabajos</h2>
-          <div className="space-y-4">
-            {upcomingJobs.map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {completedJobs.length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Trabajos Completados</h2>
-          <div className="space-y-4">
-            {completedJobs.slice(0, 5).map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {user.assignedJobs.length === 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-12 text-center border border-slate-200 dark:border-slate-700">
-          <Calendar className="w-20 h-20 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-            No tienes trabajos asignados
-          </h3>
-          <p className="text-slate-600 dark:text-slate-400">
-            Los trabajos aparecerán aquí cuando los administradores te los asignen
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function JobCard({ job, isToday = false }: { job: any; isToday?: boolean }) {
-  return (
-    <div
-      className={`bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border-2 ${
-        isToday
-          ? 'border-blue-500 dark:border-blue-400'
-          : 'border-slate-200 dark:border-slate-700'
-      } hover:shadow-lg transition-shadow`}
-    >
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-3">
-            <span
-              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${
-                statusColors[job.status as keyof typeof statusColors]
-              }`}
+        
+        {activeJobs.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-slate-600 dark:text-slate-400">No tienes trabajos activos</p>
+            <Link
+              href="/dashboard/washer/disponibles"
+              className="inline-block mt-4 text-cyan-600 dark:text-cyan-400 hover:underline"
             >
-              {statusLabels[job.status as keyof typeof statusLabels]}
-            </span>
-            <span className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {job.scheduledTime}
-            </span>
+              Ver trabajos disponibles →
+            </Link>
           </div>
-
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-            {job.service.name}
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <User className="w-4 h-4" />
-              <span>Cliente: {job.user.name}</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <CarIcon className="w-4 h-4" />
-              <span>
-                {job.vehicle.brand} {job.vehicle.model} - {job.vehicle.plate}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <MapPin className="w-4 h-4" />
-              <span className="truncate">{job.location}</span>
-            </div>
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-              <DollarSign className="w-4 h-4" />
-              <span className="font-semibold">${job.totalAmount.toFixed(0)}</span>
-            </div>
+        ) : (
+          <div className="divide-y divide-slate-200 dark:divide-slate-700">
+            {activeJobs.map((job) => (
+              <Link
+                key={job.id}
+                href={`/dashboard/washer/trabajos/${job.id}`}
+                className="block p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-slate-900 dark:text-white">
+                        {job.service?.name || 'Servicio'}
+                      </h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        job.status === 'IN_PROGRESS' 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
+                          : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400'
+                      }`}>
+                        {job.status === 'IN_PROGRESS' ? 'En Progreso' : 'Confirmado'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Car className="w-4 h-4" />
+                        {job.vehicle?.brand} {job.vehicle?.model}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {job.address || 'Sin dirección'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {new Date(job.scheduledDate).toLocaleDateString('es-ES')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                      ${job.service?.price || 0}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
-        </div>
+        )}
+      </div>
 
-        <div className="flex flex-col gap-2">
-          <JobActions jobId={job.id} status={job.status} />
-          <Link
-            href={`/dashboard/washer/trabajos/${job.id}`}
-            className="text-center bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold px-6 py-3 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-          >
-            Ver Detalles
-          </Link>
+      {/* Completed Jobs */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            Trabajos Completados ({completedJobs.length})
+          </h2>
         </div>
+        
+        {completedJobs.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-slate-600 dark:text-slate-400">Aún no has completado trabajos</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-200 dark:divide-slate-700">
+            {completedJobs.slice(0, 10).map((job) => (
+              <div
+                key={job.id}
+                className="p-4 flex items-center justify-between"
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <h3 className="font-semibold text-slate-900 dark:text-white">
+                      {job.service?.name || 'Servicio'}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    {job.vehicle?.brand} {job.vehicle?.model} - {new Date(job.completedAt || job.updatedAt).toLocaleDateString('es-ES')}
+                  </p>
+                </div>
+                <p className="font-bold text-green-600 dark:text-green-400">
+                  ${job.service?.price || 0}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

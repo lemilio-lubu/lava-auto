@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Loader2 } from 'lucide-react';
+import { reservationApi } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CancelReservationButtonProps {
   reservationId: string;
@@ -14,6 +16,7 @@ export default function CancelReservationButton({
   status,
 }: CancelReservationButtonProps) {
   const router = useRouter();
+  const { token } = useAuth();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState('');
@@ -27,18 +30,9 @@ export default function CancelReservationButton({
     setError('');
 
     try {
-      const response = await fetch(`/api/reservations/${reservationId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'CANCELLED' }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al cancelar la reserva');
-      }
+      if (!token) throw new Error('No token');
+      
+      await reservationApi.cancel(reservationId, token);
 
       router.refresh();
       setIsConfirming(false);
