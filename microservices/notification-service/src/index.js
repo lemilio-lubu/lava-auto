@@ -59,14 +59,35 @@ app.use('/api/chat', chatRoutes);
 // Socket.IO connection handling
 const connectedUsers = new Map();
 
+// Helper function to validate communication rules
+const validateCommunication = (senderRole, receiverRole) => {
+  if (senderRole === 'ADMIN') {
+    return true; // Admin can message everyone
+  }
+  if (senderRole === 'CLIENT' || senderRole === 'WASHER') {
+    return receiverRole === 'ADMIN'; // Can only message admins
+  }
+  return false;
+};
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
+  socket.on('register', (data) => {
+    const { userId, userRole } = typeof data === 'object' ? data : { userId: data, userRole: null };
+    connectedUsers.set(userId, { socketId: socket.id, role: userRole });
+    socket.userId = userId;
+    socket.userRole = userRole;
+    socket.join(`user:${userId}`);
+    console.log(`User ${userId} (${userRole}) registered`);
+  });
+
+  // Legacy authenticate event for backward compatibility
   socket.on('authenticate', (userId) => {
-    connectedUsers.set(userId, socket.id);
+    connectedUsers.set(userId, { socketId: socket.id, role: null });
     socket.userId = userId;
     socket.join(`user:${userId}`);
-    console.log(`User ${userId} authenticated`);
+    console.log(`User ${userId} authenticated (legacy)`);
   });
 
   socket.on('join-chat', (roomId) => {
@@ -79,14 +100,36 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send-message', async (data) => {
-    const { receiverId, content } = data;
+    const { receiverId, receiverRole, content } = data;
     
-    // Emit to receiver
-    io.to(`user:${receiverId}`).emit('new-message', {
+    // Validate communication rules if roles are known
+    if (socket.userRole && receiverRole) {
+      if (!validateCommunication(socket.userRole, receiverRole)) {
+        socket.emit('error', { 
+          message: 'No tienes permiso para enviar mensajes a este usuario' 
+        });
+        return;
+      }
+    }
+    
+    const messageData = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       senderId: socket.userId,
+      senderRole: socket.userRole,
+      receiverId,
       content,
-      createdAt: new Date()
-    });
+      createdAt: new Date().toISOString(),
+      read: false
+    };
+    
+    // Emit ONLY to receiver (sender already has the message via optimistic update)
+    io.to(`user:${receiverId}`).emit('new-message', messageData);
+  });
+
+  socket.on('mark-as-read', async (data) => {
+    const { senderId, receiverId } = data;
+    // Notify sender that messages were read
+    io.to(`user:${senderId}`).emit('messages-read', { senderId, receiverId });
   });
 
   socket.on('disconnect', () => {

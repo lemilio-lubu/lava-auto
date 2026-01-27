@@ -120,4 +120,39 @@ router.put('/:id/location', authMiddleware, async (req, res, next) => {
   }
 });
 
+// Get users available for chat based on current user's role
+// - ADMIN can see all CLIENTS and WASHERS
+// - CLIENT and WASHER can only see ADMINs
+router.get('/chat/available', authMiddleware, async (req, res, next) => {
+  try {
+    const db = req.app.get('db');
+    const userRepo = new UserRepository(db);
+    
+    const { role } = req.user;
+    let availableUsers = [];
+    
+    if (role === 'ADMIN') {
+      // Admin can contact everyone except other admins
+      const clients = await userRepo.findAll({ role: 'CLIENT' });
+      const washers = await userRepo.findAll({ role: 'WASHER' });
+      availableUsers = [...clients, ...washers];
+    } else {
+      // Clients and Washers can only contact admins
+      availableUsers = await userRepo.findAll({ role: 'ADMIN' });
+    }
+    
+    // Return only necessary info for chat
+    const sanitizedUsers = availableUsers.map(user => ({
+      id: user.id,
+      name: user.name,
+      role: user.role,
+      isAvailable: user.isAvailable
+    }));
+    
+    res.json(sanitizedUsers);
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

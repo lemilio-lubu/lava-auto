@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE TABLE IF NOT EXISTS messages (
     id VARCHAR(30) PRIMARY KEY,
     sender_id VARCHAR(30) NOT NULL,
+    sender_role VARCHAR(20),
     receiver_id VARCHAR(30) NOT NULL,
     content TEXT NOT NULL,
     read BOOLEAN DEFAULT false,

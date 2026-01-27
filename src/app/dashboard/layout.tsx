@@ -69,6 +69,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             href: '/dashboard/client/vehiculos',
             description: 'Administra vehículos',
           },
+          {
+            icon: MessageCircle,
+            label: 'Chat',
+            href: '/dashboard/chat',
+            description: 'Mensajes con admin',
+          },
         ];
 
       case 'WASHER':
@@ -97,6 +103,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             label: 'Mis Estadísticas',
             href: '/dashboard/washer/estadisticas',
             description: 'Ganancias y ratings',
+          },
+          {
+            icon: MessageCircle,
+            label: 'Chat',
+            href: '/dashboard/chat',
+            description: 'Mensajes con admin',
           },
         ];
 
@@ -131,6 +143,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             label: 'Servicios',
             href: '/dashboard/admin/servicios',
             description: 'Gestionar servicios',
+          },
+          {
+            icon: MessageCircle,
+            label: 'Chat',
+            href: '/dashboard/chat',
+            description: 'Mensajes',
           },
           {
             icon: BarChart,

@@ -270,14 +270,20 @@ export const chatApi = {
   getConversation: (otherUserId: string, token: string) =>
     apiRequest<Message[]>(`/api/chat/conversation/${otherUserId}`, { token }),
 
-  sendMessage: (receiverId: string, content: string, token: string) =>
-    apiRequest<Message>('/api/chat/send', { method: 'POST', body: { receiverId, content }, token }),
+  sendMessage: (receiverId: string, content: string, token: string, receiverRole?: string) =>
+    apiRequest<Message>('/api/chat/send', { method: 'POST', body: { receiverId, content, receiverRole }, token }),
 
   getUnreadCount: (token: string) =>
     apiRequest<{ count: number }>('/api/chat/unread-count', { token }),
   
   markAsRead: (messageId: string, token: string) =>
     apiRequest<Message>(`/api/chat/${messageId}/read`, { method: 'PUT', token }),
+
+  getAvailableUsers: (token: string) =>
+    apiRequest<{ id: string; name: string; role: string; isAvailable?: boolean }[]>(
+      '/api/users/chat/available',
+      { token }
+    ),
 };
 
 // Washer API

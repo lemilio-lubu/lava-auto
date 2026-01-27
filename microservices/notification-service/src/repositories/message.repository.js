@@ -71,13 +71,14 @@ class MessageRepository {
   async create(data) {
     const id = this.generateId();
     const query = `
-      INSERT INTO ${this.tableName} (id, sender_id, receiver_id, content)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO ${this.tableName} (id, sender_id, sender_role, receiver_id, content)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `;
     const result = await this.db.query(query, [
       id,
       data.senderId,
+      data.senderRole || null,
       data.receiverId,
       data.content
     ]);
@@ -110,6 +111,7 @@ class MessageRepository {
     return {
       id: row.id,
       senderId: row.sender_id,
+      senderRole: row.sender_role,
       receiverId: row.receiver_id,
       content: row.content,
       read: row.read,

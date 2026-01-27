@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Calendar, User, Car, UserCheck, X } from 'lucide-react';
-import { reservationApi, washerApi } from '@/lib/api-client';
+import { reservationApi, washerApi, adminApi } from '@/lib/api-client';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
@@ -15,7 +15,7 @@ export default function ReservasAdminPage() {
   const [reservations, setReservations] = useState<any[]>([]);
   const [washers, setWashers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'>('ALL');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
   const [selectedWasher, setSelectedWasher] = useState('');
@@ -41,11 +41,32 @@ export default function ReservasAdminPage() {
   const loadData = async () => {
     if (!token) return;
     try {
-      const [reservationsData, washersData] = await Promise.all([
+      const [reservationsData, washersData, clientsData] = await Promise.all([
         reservationApi.getAllReservations(token),
-        washerApi.getAll(token)
+        washerApi.getAll(token),
+        adminApi.getUsers(token, 'CLIENT')
       ]);
-      setReservations(reservationsData);
+      
+      // Create a map of client IDs to names for quick lookup
+      const clientMap = new Map<string, string>();
+      clientsData?.forEach((client: any) => {
+        clientMap.set(client.id, client.name);
+      });
+      
+      // Also create a map of washer IDs to names
+      const washerMap = new Map<string, string>();
+      washersData?.forEach((washer: any) => {
+        washerMap.set(washer.id, washer.name);
+      });
+      
+      // Enrich reservations with client names
+      const enrichedReservations = reservationsData.map((res: any) => ({
+        ...res,
+        clientName: clientMap.get(res.userId) || null,
+        washerName: washerMap.get(res.washerId) || null
+      }));
+      
+      setReservations(enrichedReservations);
       setWashers(washersData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -116,7 +137,7 @@ export default function ReservasAdminPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        {(['ALL', 'PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const).map((status) => (
+        {(['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -171,16 +192,13 @@ export default function ReservasAdminPage() {
                     <div className="font-medium text-slate-900 dark:text-white">
                       {reservation.serviceName || 'Servicio'}
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      ID: {reservation.serviceId}
-                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
                       {reservation.address || 'Sin dirección'}
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                      Cliente: {reservation.userId}
+                      Cliente: {reservation.clientName || reservation.userName || 'Cliente'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -197,7 +215,7 @@ export default function ReservasAdminPage() {
                       <div className="flex items-center gap-2">
                         <UserCheck className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-slate-600 dark:text-slate-400">
-                          {reservation.washerId}
+                          {reservation.washerName || 'Lavador asignado'}
                         </span>
                       </div>
                     ) : (

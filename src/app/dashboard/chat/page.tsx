@@ -4,19 +4,28 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatApi } from '@/lib/api-client';
 import io, { Socket } from 'socket.io-client';
-import { MessageCircle, Send, User, Clock, Check, CheckCheck, Loader2 } from 'lucide-react';
+import { MessageCircle, Send, User, Clock, Check, CheckCheck, Loader2, Users, Shield, Car, UserCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface ChatUser {
   id: string;
   name: string;
+  role?: string;
+}
+
+interface AvailableUser {
+  id: string;
+  name: string;
+  role: string;
+  isAvailable?: boolean;
 }
 
 interface Message {
   id: string;
   content: string;
   senderId: string;
+  senderRole?: string;
   receiverId: string;
   createdAt: string;
   read: boolean;
@@ -36,11 +45,13 @@ let socket: Socket | null = null;
 export default function ChatPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -54,8 +65,12 @@ export default function ChatPage() {
   const loadConversations = useCallback(async () => {
     if (!token) return;
     try {
-      const data = await chatApi.getConversations(token);
-      setConversations(data || []);
+      const [convData, usersData] = await Promise.all([
+        chatApi.getConversations(token),
+        chatApi.getAvailableUsers(token)
+      ]);
+      setConversations(convData || []);
+      setAvailableUsers(usersData || []);
     } catch (error) {
       console.error('Error loading conversations:', error);
     }
@@ -79,7 +94,8 @@ export default function ChatPage() {
 
           socket.on('connect', () => {
             console.log('Connected to Socket.IO');
-            socket?.emit('register', user.id);
+            // Register with user ID and role
+            socket?.emit('register', { userId: user.id, userRole: user.role });
           });
 
           socket.on('new-message', (message: Message) => {
@@ -87,20 +103,25 @@ export default function ChatPage() {
             loadConversations();
             
             // Update messages if conversation is active
+            // Only add messages from OTHER users - our own messages are already added optimistically
             setSelectedUser((currentSelectedUser) => {
-              if (currentSelectedUser && user) {
-                const isRelevantMessage = 
-                  (message.senderId === user.id && message.receiverId === currentSelectedUser.id) ||
-                  (message.senderId === currentSelectedUser.id && message.receiverId === user.id);
+              if (currentSelectedUser && user && message.senderId !== user.id) {
+                const isRelevantMessage = message.senderId === currentSelectedUser.id;
                 
                 if (isRelevantMessage) {
                   setMessages((prev) => {
-                    // Replace temp message with real message from server
-                    const withoutTemp = prev.filter(m => !m.id.startsWith('temp-'));
-                    const exists = withoutTemp.some(m => m.id === message.id);
+                    const messageId = message.id || `socket-${Date.now()}`;
+                    const messageWithId = { ...message, id: messageId };
                     
-                    if (exists) return prev;
-                    return [...withoutTemp, message];
+                    // Check if message already exists (by content and approximate time)
+                    const isDuplicate = prev.some(m => 
+                      m.content === message.content && 
+                      m.senderId === message.senderId &&
+                      Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 5000
+                    );
+                    
+                    if (isDuplicate) return prev;
+                    return [...prev, messageWithId];
                   });
                 }
               }
@@ -155,20 +176,36 @@ export default function ChatPage() {
   };
 
   const handleSelectConversation = (conversation: Conversation) => {
+    // Find user info from available users
+    const userInfo = availableUsers.find(u => u.id === conversation.other_user_id);
     const chatUser: ChatUser = {
       id: conversation.other_user_id,
-      name: conversation.other_user_name,
+      name: userInfo?.name || conversation.other_user_name,
+      role: userInfo?.role
     };
     setSelectedUser(chatUser);
+    setShowNewChat(false);
     loadMessages(conversation.other_user_id);
+  };
+
+  const handleSelectNewUser = (availableUser: AvailableUser) => {
+    const chatUser: ChatUser = {
+      id: availableUser.id,
+      name: availableUser.name,
+      role: availableUser.role
+    };
+    setSelectedUser(chatUser);
+    setShowNewChat(false);
+    loadMessages(availableUser.id);
   };
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedUser || !user || !token) return;
 
     const content = messageText.trim();
+    const tempId = `msg-${Date.now()}`;
     const tempMessage: Message = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       content,
       senderId: user.id,
       receiverId: selectedUser.id,
@@ -182,21 +219,26 @@ export default function ChatPage() {
     setSending(true);
 
     try {
-      // Send via API
-      await chatApi.sendMessage(selectedUser.id, content, token);
+      // Send via API (saves to database)
+      await chatApi.sendMessage(selectedUser.id, content, token, selectedUser.role);
       
-      // Also emit via socket for real-time delivery
+      // Emit via socket for real-time delivery to receiver only
       if (socket) {
         socket.emit('send-message', {
           senderId: user.id,
+          senderRole: user.role,
           receiverId: selectedUser.id,
+          receiverRole: selectedUser.role,
           content,
         });
       }
+      
+      // Reload conversations to update last message time
+      loadConversations();
     } catch (error) {
       console.error('Error sending message:', error);
       // Remove temp message on error
-      setMessages((prev) => prev.filter(m => m.id !== tempMessage.id));
+      setMessages((prev) => prev.filter(m => m.id !== tempId));
       setMessageText(content);
     } finally {
       setSending(false);
@@ -207,6 +249,20 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  // Helper to get role icon and color
+  const getRoleInfo = (role?: string) => {
+    switch (role) {
+      case 'ADMIN':
+        return { icon: Shield, color: 'from-purple-400 to-indigo-400', label: 'Administrador' };
+      case 'WASHER':
+        return { icon: Car, color: 'from-emerald-400 to-teal-400', label: 'Lavador' };
+      case 'CLIENT':
+        return { icon: UserCircle, color: 'from-cyan-400 to-blue-400', label: 'Cliente' };
+      default:
+        return { icon: User, color: 'from-slate-400 to-slate-500', label: 'Usuario' };
     }
   };
 
@@ -224,74 +280,153 @@ export default function ChatPage() {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-cyan-100 dark:border-slate-700 overflow-hidden">
       <div className="border-b border-cyan-100 dark:border-slate-700 bg-gradient-to-r from-cyan-50 to-emerald-50 dark:from-slate-700 dark:to-slate-700 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
-            <MessageCircle className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Chat</h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Comunícate con otros usuarios del sistema
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
+              <MessageCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Chat</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                {user?.role === 'ADMIN' 
+                  ? 'Comunícate con clientes y lavadores' 
+                  : 'Comunícate con el administrador'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="flex h-[calc(100vh-280px)]">
-        {/* Conversations list */}
+        {/* Conversations and users list */}
         <div className="w-80 border-r border-cyan-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-y-auto">
           <div className="p-4">
-            <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-              Conversaciones
-            </h2>
-            {conversations.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  No tienes conversaciones aún
-                </p>
-              </div>
+            {/* New Chat Button */}
+            <button
+              onClick={() => setShowNewChat(!showNewChat)}
+              className={`w-full mb-4 px-4 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-all ${
+                showNewChat 
+                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  : 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-white shadow-md hover:shadow-lg'
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              {showNewChat ? 'Ver Conversaciones' : 'Nueva Conversación'}
+            </button>
+
+            {showNewChat ? (
+              <>
+                <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+                  Usuarios Disponibles
+                </h2>
+                {availableUsers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      No hay usuarios disponibles
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {availableUsers.map((availableUser) => {
+                      const roleInfo = getRoleInfo(availableUser.role);
+                      const RoleIcon = roleInfo.icon;
+                      return (
+                        <button
+                          key={availableUser.id}
+                          onClick={() => handleSelectNewUser(availableUser)}
+                          className={`
+                            w-full text-left px-4 py-3 rounded-xl transition-all duration-200
+                            ${selectedUser?.id === availableUser.id
+                              ? 'bg-cyan-500 text-white shadow-md'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`
+                              w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br ${roleInfo.color}
+                            `}>
+                              <RoleIcon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate">
+                                {availableUser.name}
+                              </p>
+                              <p className={`text-xs ${selectedUser?.id === availableUser.id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                                {roleInfo.label}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="space-y-2">
-                {conversations.map((conversation) => (
-                  <button
-                    key={conversation.other_user_id}
-                    onClick={() => handleSelectConversation(conversation)}
-                    className={`
-                      w-full text-left px-4 py-3 rounded-xl transition-all duration-200
-                      ${selectedUser?.id === conversation.other_user_id
-                        ? 'bg-cyan-500 text-white shadow-md'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`
-                        w-10 h-10 rounded-full flex items-center justify-center
-                        ${selectedUser?.id === conversation.other_user_id
-                          ? 'bg-white/20'
-                          : 'bg-gradient-to-br from-cyan-400 to-emerald-400'
-                        }
-                      `}>
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">
-                          {conversation.other_user_name}
-                        </p>
-                        <p className={`text-xs ${selectedUser?.id === conversation.other_user_id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {format(new Date(conversation.last_message_at), 'dd/MM HH:mm', { locale: es })}
-                        </p>
-                      </div>
-                      {conversation.unread_count > 0 && (
-                        <div className="bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                          {conversation.unread_count}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <>
+                <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+                  Conversaciones
+                </h2>
+                {conversations.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      No tienes conversaciones aún
+                    </p>
+                    <button
+                      onClick={() => setShowNewChat(true)}
+                      className="mt-3 text-sm text-cyan-600 dark:text-cyan-400 hover:underline"
+                    >
+                      Iniciar una conversación
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {conversations.map((conversation) => {
+                      const userInfo = availableUsers.find(u => u.id === conversation.other_user_id);
+                      const roleInfo = getRoleInfo(userInfo?.role);
+                      const RoleIcon = roleInfo.icon;
+                      const displayName = userInfo?.name || conversation.other_user_name;
+                      return (
+                        <button
+                          key={conversation.other_user_id}
+                          onClick={() => handleSelectConversation(conversation)}
+                          className={`
+                            w-full text-left px-4 py-3 rounded-xl transition-all duration-200
+                            ${selectedUser?.id === conversation.other_user_id
+                              ? 'bg-cyan-500 text-white shadow-md'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`
+                              w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br ${roleInfo.color}
+                            `}>
+                              <RoleIcon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate">
+                                {displayName}
+                              </p>
+                              <p className={`text-xs ${selectedUser?.id === conversation.other_user_id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                                {format(new Date(conversation.last_message_at), 'dd/MM HH:mm', { locale: es })}
+                              </p>
+                            </div>
+                            {conversation.unread_count > 0 && (
+                              <div className="bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                                {conversation.unread_count}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -303,14 +438,25 @@ export default function ChatPage() {
               {/* Chat header */}
               <div className="px-6 py-4 border-b border-cyan-100 dark:border-slate-700 bg-white dark:bg-slate-800">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white">
-                      {selectedUser.name}
-                    </h3>
-                  </div>
+                  {(() => {
+                    const roleInfo = getRoleInfo(selectedUser.role);
+                    const RoleIcon = roleInfo.icon;
+                    return (
+                      <>
+                        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${roleInfo.color} flex items-center justify-center`}>
+                          <RoleIcon className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-white">
+                            {selectedUser.name}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {roleInfo.label}
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
