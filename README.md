@@ -259,7 +259,20 @@ Cada microservicio tiene su propia base de datos PostgreSQL:
 4. Push a la rama (`git push origin feature/NuevaFuncionalidad`)
 5. Abre un Pull Request
 
-## 📄 Licencia
+## � CI/CD
+
+El proyecto incluye un pipeline de GitHub Actions que se ejecuta en cada push y pull request:
+
+| Job | Descripción |
+|-----|-------------|
+| **Frontend** | Lint y build de Next.js |
+| **Microservices** | Build de imágenes Docker (en paralelo) |
+| **Integration** | Levanta todos los servicios y verifica health checks |
+| **Security** | Auditoría de dependencias (solo en PRs) |
+
+El workflow se encuentra en `.github/workflows/ci.yml`.
+
+## �📄 Licencia
 
 Este proyecto está bajo la Licencia MIT.
 
