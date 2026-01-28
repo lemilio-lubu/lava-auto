@@ -44,7 +44,7 @@ jobs:
   integration:
     name: Integration Test
     runs-on: ubuntu-latest
-    needs: [frontend, microservices]
+    needs: [microservices]
     
     steps:
       - name: Checkout código
