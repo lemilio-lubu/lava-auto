@@ -219,6 +219,9 @@ export const paymentApi = {
   getAll: (token: string) =>
     apiRequest<Payment[]>('/api/payments', { token }),
 
+  getAllAdmin: (token: string) =>
+    apiRequest<Payment[]>('/api/payments/all', { token }),
+
   getByReservation: (reservationId: string, token: string) =>
     apiRequest<Payment[]>(`/api/payments/reservation/${reservationId}`, { token }),
 

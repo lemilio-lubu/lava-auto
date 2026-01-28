@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Briefcase, DollarSign, Star, TrendingUp, Loader2 } from 'lucide-react';
+import { Users, Briefcase, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { adminApi, reservationApi } from '@/lib/api-client';
+import { adminApi, reservationApi, paymentApi } from '@/lib/api-client';
 
 export default function AdminDashboard() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -14,7 +14,6 @@ export default function AdminDashboard() {
     totalUsers: 0,
     totalReservations: 0,
     totalRevenue: 0,
-    activeWashers: 0,
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,16 +30,17 @@ export default function AdminDashboard() {
       Promise.all([
         adminApi.getUsers(token),
         reservationApi.getAllReservations(token),
+        paymentApi.getAllAdmin(token),
       ])
-        .then(([users, reservations]) => {
-          const washers = users.filter((u: any) => u.role === 'WASHER' && u.available);
-          const completedReservations = reservations.filter((r: any) => r.status === 'COMPLETED');
+        .then(([users, reservations, payments]) => {
+          // Calculate revenue from confirmed payments only
+          const confirmedPayments = payments.filter((p: any) => p.status === 'COMPLETED');
+          const totalRevenue = confirmedPayments.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
           
           setStats({
             totalUsers: users.length,
             totalReservations: reservations.length,
-            totalRevenue: completedReservations.reduce((sum: number, r: any) => sum + (r.service?.price || 0), 0),
-            activeWashers: washers.length,
+            totalRevenue,
           });
           setRecentActivity(reservations.slice(0, 5));
         })
@@ -68,7 +68,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div>
@@ -96,16 +96,6 @@ export default function AdminDashboard() {
               <p className="text-3xl font-bold text-slate-900 dark:text-white">${stats.totalRevenue}</p>
             </div>
             <DollarSign className="w-12 h-12 text-green-500" />
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Lavadores Activos</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.activeWashers}</p>
-            </div>
-            <Star className="w-12 h-12 text-amber-500" />
           </div>
         </div>
       </div>

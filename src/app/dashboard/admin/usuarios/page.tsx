@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Loader2, UserCog, Shield, Star } from 'lucide-react';
+import { Users, Loader2, UserCog, Shield } from 'lucide-react';
 import { adminApi } from '@/lib/api-client';
 
 export default function UsuariosPage() {
@@ -119,9 +119,6 @@ export default function UsuariosPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Teléfono
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Rating
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -154,16 +151,6 @@ export default function UsuariosPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
                     {u.phone || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {u.role === 'WASHER' && (
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                        <span className="text-slate-900 dark:text-white font-medium">
-                          {u.rating?.toFixed(1) || '0.0'}
-                        </span>
-                      </div>
-                    )}
                   </td>
                 </tr>
               ))}

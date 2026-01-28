@@ -127,7 +127,7 @@ export default function PaymentModal({
               <p className="text-cyan-100 text-sm">{serviceName}</p>
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold">${amount.toFixed(2)} MXN</div>
+          <div className="mt-4 text-3xl font-bold">${amount.toFixed(2)} USD</div>
         </div>
 
         {/* Content */}
@@ -217,7 +217,7 @@ export default function PaymentModal({
                 className="w-full bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-bold py-4 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
               >
                 <Lock className="w-5 h-5" />
-                Pagar ${amount.toFixed(2)} MXN
+                Pagar ${amount.toFixed(2)} USD
               </button>
 
               <p className="text-xs text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1">

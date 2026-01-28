@@ -141,7 +141,7 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
       // Real Stripe payment intent
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount * 100), // Stripe uses cents
-        currency: 'mxn',
+        currency: 'usd',
         metadata: {
           reservationId,
           userId: req.user.id

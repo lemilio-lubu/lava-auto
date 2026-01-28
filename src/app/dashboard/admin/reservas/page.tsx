@@ -304,7 +304,7 @@ export default function ReservasAdminPage() {
                   <option value="">-- Selecciona un lavador --</option>
                   {getAvailableWashers(selectedReservation).map((washer) => (
                     <option key={washer.id} value={washer.id}>
-                      {washer.name} - ⭐ {washer.rating.toFixed(1)} ({washer.completedServices} servicios)
+                      {washer.name} ({washer.completedServices} servicios)
                     </option>
                   ))}
                 </select>

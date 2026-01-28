@@ -132,7 +132,8 @@ export default function VehicleFormModal({ vehicle, onClose, onSuccess }: Vehicl
                 name="plate"
                 defaultValue={vehicle?.plate}
                 required
-                placeholder="ABC-123-D"
+                pattern="[A-Z]{3}-\d{4}"
+                placeholder="ABC-1234"
                 className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white uppercase"
               />
             </div>

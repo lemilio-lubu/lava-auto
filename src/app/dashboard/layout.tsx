@@ -102,7 +102,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             icon: BarChart,
             label: 'Mis Estadísticas',
             href: '/dashboard/washer/estadisticas',
-            description: 'Ganancias y ratings',
+            description: 'Ganancias y rendimiento',
           },
           {
             icon: MessageCircle,

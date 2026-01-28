@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Plus, User, Star, CheckCircle, XCircle, X, Phone, Mail, MapPin } from 'lucide-react';
+import { Loader2, Plus, User, CheckCircle, XCircle, X, Phone, Mail, MapPin } from 'lucide-react';
 import { washerApi, Washer } from '@/lib/api-client';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -147,21 +147,6 @@ export default function LavadoresAdminPage() {
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-              <Star className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Promedio Rating</p>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                {washers.length > 0 
-                  ? (washers.reduce((acc, w) => acc + w.rating, 0) / washers.length).toFixed(1)
-                  : '0.0'}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Washers Grid */}
@@ -214,12 +199,8 @@ export default function LavadoresAdminPage() {
                 </div>
               )}
               <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-1 text-amber-500">
-                  <Star className="w-4 h-4 fill-current" />
-                  <span className="font-medium">{washer.rating.toFixed(1)}</span>
-                </div>
                 <div className="text-slate-600 dark:text-slate-400">
-                  {washer.completedServices} servicios
+                  {washer.completedServices} servicios completados
                 </div>
               </div>
             </div>
@@ -311,7 +292,7 @@ export default function LavadoresAdminPage() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                placeholder="+52 123 456 7890"
+                placeholder="0999999999"
               />
             </div>
 

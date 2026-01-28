@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, DollarSign, Star, TrendingUp, Calendar } from 'lucide-react';
+import { Loader2, DollarSign, TrendingUp, Calendar } from 'lucide-react';
 import { jobApi } from '@/lib/api-client';
 
 export default function EstadisticasPage() {
@@ -12,7 +12,6 @@ export default function EstadisticasPage() {
   const [stats, setStats] = useState({
     totalJobs: 0,
     totalEarnings: 0,
-    averageRating: 0,
     thisMonthJobs: 0,
     thisMonthEarnings: 0,
   });
@@ -38,7 +37,6 @@ export default function EstadisticasPage() {
           setStats({
             totalJobs: completed.length,
             totalEarnings: completed.reduce((sum: number, j: any) => sum + (j.service?.price || 0), 0),
-            averageRating: (user as any).rating || 0,
             thisMonthJobs: thisMonthJobs.length,
             thisMonthEarnings: thisMonthJobs.reduce((sum: number, j: any) => sum + (j.service?.price || 0), 0),
           });
@@ -84,16 +82,6 @@ export default function EstadisticasPage() {
               <p className="text-3xl font-bold">{stats.totalJobs}</p>
             </div>
             <TrendingUp className="w-12 h-12 opacity-80" />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-amber-100 text-sm">Calificación Promedio</p>
-              <p className="text-3xl font-bold">{stats.averageRating.toFixed(1)} ⭐</p>
-            </div>
-            <Star className="w-12 h-12 opacity-80" />
           </div>
         </div>
 

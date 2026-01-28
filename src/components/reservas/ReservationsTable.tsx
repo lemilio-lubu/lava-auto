@@ -258,16 +258,8 @@ export default function ReservationsTable({
           <p className="text-slate-600 dark:text-slate-400 mb-6">
             {searchTerm || filterStatus !== 'ALL'
               ? 'Intenta con otros criterios de búsqueda'
-              : 'Crea tu primera reserva para comenzar'}
+              : 'No tienes reservas registradas'}
           </p>
-          {!searchTerm && filterStatus === 'ALL' && (
-            <Link href="/dashboard/reservas/nueva">
-              <Button>
-                <Plus className="w-5 h-5" />
-                Crear Primera Reserva
-              </Button>
-            </Link>
-          )}
         </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">

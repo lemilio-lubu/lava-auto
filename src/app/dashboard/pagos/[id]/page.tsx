@@ -137,7 +137,7 @@ export default function PaymentPage() {
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-slate-700 dark:text-slate-300">Total a pagar:</span>
               <span className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
-                ${Number(reservation.totalAmount).toFixed(2)} MXN
+                ${Number(reservation.totalAmount).toFixed(2)} USD
               </span>
             </div>
           </div>

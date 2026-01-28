@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Briefcase, DollarSign, Star, Clock, Loader2, TrendingUp } from 'lucide-react';
+import { Briefcase, DollarSign, Clock, Loader2, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { jobApi, reservationApi } from '@/lib/api-client';
 
@@ -14,7 +14,6 @@ export default function WasherDashboard() {
     activeJobs: 0,
     completedToday: 0,
     totalEarnings: 0,
-    rating: 0,
   });
   const [recentJobs, setRecentJobs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +44,6 @@ export default function WasherDashboard() {
             completedToday: completedToday.length,
             totalEarnings: jobs.filter((j: any) => j.status === 'COMPLETED')
               .reduce((sum: number, j: any) => sum + (j.service?.price || 0), 0),
-            rating: (user as any).rating || 0,
           });
           setRecentJobs(jobs.slice(0, 5));
         })
@@ -104,16 +102,7 @@ export default function WasherDashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Calificación</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.rating.toFixed(1)}</p>
-            </div>
-            <Star className="w-12 h-12 text-amber-500" />
-          </div>
         </div>
-      </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
