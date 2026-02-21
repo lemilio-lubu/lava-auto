@@ -72,17 +72,24 @@ router.get('/conversation/:otherUserId', authMiddleware, async (req, res, next) 
   try {
     const db = req.app.get('db');
     const messageRepo = new MessageRepository(db);
-    
+    const io = req.app.get('io');
+
     const { limit, offset } = req.query;
     const messages = await messageRepo.findConversation(
       req.user.id, 
       req.params.otherUserId,
       { limit: parseInt(limit) || 50, offset: parseInt(offset) || 0 }
     );
-    
-    // Mark messages as read
+
+    // Marcar como leídos en BD y notificar al sender en tiempo real
     await messageRepo.markConversationAsRead(req.params.otherUserId, req.user.id);
-    
+    if (io) {
+      io.to(`user:${req.params.otherUserId}`).emit('messages-read', {
+        senderId: req.params.otherUserId,
+        receiverId: req.user.id
+      });
+    }
+
     res.json(messages);
   } catch (error) {
     next(error);

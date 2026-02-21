@@ -3,13 +3,14 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package files
-COPY package.json ./
+COPY payment-service/package.json ./
 
 # Install dependencies
 RUN npm install --omit=dev
 
-# Copy source code
-COPY src ./src
+# Copy source and shared code
+COPY payment-service/src ./src
+COPY shared ./shared
 
 # Expose port
 EXPOSE 4004

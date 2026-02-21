@@ -7,9 +7,9 @@ CREATE TYPE payment_status AS ENUM ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED'
 
 -- Payments table
 CREATE TABLE IF NOT EXISTS payments (
-    id VARCHAR(30) PRIMARY KEY,
-    reservation_id VARCHAR(30) NOT NULL,
-    user_id VARCHAR(30) NOT NULL,
+    id VARCHAR(50) PRIMARY KEY,
+    reservation_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     payment_method payment_method NOT NULL,
     status payment_status DEFAULT 'PENDING',

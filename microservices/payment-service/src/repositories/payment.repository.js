@@ -2,16 +2,12 @@
  * Payment Repository - Repository Pattern Implementation
  */
 
-const crypto = require('crypto');
+const { generateId } = require('../../shared/utils/id-generator');
 
 class PaymentRepository {
   constructor(db) {
     this.db = db;
     this.tableName = 'payments';
-  }
-
-  generateId() {
-    return `pay_${Date.now().toString(36)}${crypto.randomBytes(4).toString('hex')}`;
   }
 
   async findById(id) {
@@ -62,7 +58,7 @@ class PaymentRepository {
   }
 
   async create(data) {
-    const id = this.generateId();
+    const id = generateId('pay');
     const query = `
       INSERT INTO ${this.tableName} 
       (id, reservation_id, user_id, amount, payment_method, status, transaction_id, stripe_payment_intent, notes)

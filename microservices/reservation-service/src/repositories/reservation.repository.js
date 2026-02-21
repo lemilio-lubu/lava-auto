@@ -2,16 +2,12 @@
  * Reservation Repository - Repository Pattern Implementation
  */
 
-const crypto = require('crypto');
+const { generateId } = require('../../shared/utils/id-generator');
 
 class ReservationRepository {
   constructor(db) {
     this.db = db;
     this.tableName = 'reservations';
-  }
-
-  generateId() {
-    return `res_${Date.now().toString(36)}${crypto.randomBytes(4).toString('hex')}`;
   }
 
   async findById(id) {
@@ -127,7 +123,7 @@ class ReservationRepository {
   }
 
   async create(data) {
-    const id = this.generateId();
+    const id = generateId('res');
     const query = `
       INSERT INTO ${this.tableName} 
       (id, user_id, vehicle_id, service_id, scheduled_date, scheduled_time, total_amount, notes, address, latitude, longitude)

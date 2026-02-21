@@ -38,7 +38,7 @@ interface Conversation {
   unread_count: number;
 }
 
-const NOTIFICATION_SERVICE_URL = process.env.NEXT_PUBLIC_NOTIFICATION_URL || 'http://localhost:4005';
+const NOTIFICATION_SERVICE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function ChatPage() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -116,38 +116,31 @@ export default function ChatPage() {
 
         newSocket.on('connect', () => {
           console.log('Connected to Socket.IO');
-          // Register with user ID and role
-          newSocket.emit('register', { userId: user.id, userRole: user.role });
+          // userId y role se extraen del token en el servidor — no se envían datos desde el cliente
+        });
+
+        newSocket.on('connect_error', (err) => {
+          console.error('Socket.IO auth error:', err.message);
         });
 
         newSocket.on('new-message', (message: Message) => {
-          // Reload conversations to update unread counts
           loadConversations();
-          
-          // Update messages if conversation is active
-          // Only add messages from OTHER users - our own messages are already added optimistically
+
+          // Solo agregar al estado si la conversación está activa y el mensaje es del otro usuario
           const currentUser = userRef.current;
           const currentSelectedUser = selectedUserRef.current;
-          
-          if (currentSelectedUser && currentUser && message.senderId !== currentUser.id) {
-            const isRelevantMessage = message.senderId === currentSelectedUser.id;
-            
-            if (isRelevantMessage) {
-              setMessages((prev) => {
-                const messageId = message.id || `socket-${Date.now()}`;
-                const messageWithId = { ...message, id: messageId };
-                
-                // Check if message already exists (by content and approximate time)
-                const isDuplicate = prev.some(m => 
-                  m.content === message.content && 
-                  m.senderId === message.senderId &&
-                  Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 5000
-                );
-                
-                if (isDuplicate) return prev;
-                return [...prev, messageWithId];
-              });
-            }
+
+          if (
+            currentSelectedUser &&
+            currentUser &&
+            message.senderId !== currentUser.id &&
+            message.senderId === currentSelectedUser.id
+          ) {
+            setMessages((prev) => {
+              // Dedup por ID real de BD
+              if (prev.some((m) => m.id === message.id)) return prev;
+              return [...prev, message];
+            });
           }
         });
 
@@ -188,14 +181,6 @@ export default function ChatPage() {
     try {
       const data = await chatApi.getConversation(otherUserId, token);
       setMessages(data || []);
-
-      // Mark messages as read via socket
-      if (socketRef.current && user) {
-        socketRef.current.emit('mark-as-read', {
-          senderId: otherUserId,
-          receiverId: user.id,
-        });
-      }
     } catch (error) {
       console.error('Error loading messages:', error);
     }
@@ -245,20 +230,14 @@ export default function ChatPage() {
     setSending(true);
 
     try {
-      // Send via API (saves to database)
-      await chatApi.sendMessage(selectedUser.id, content, token, selectedUser.role);
-      
-      // Emit via socket for real-time delivery to receiver only
-      if (socketRef.current) {
-        socketRef.current.emit('send-message', {
-          senderId: user.id,
-          senderRole: user.role,
-          receiverId: selectedUser.id,
-          receiverRole: selectedUser.role,
-          content,
-        });
+      // Send via API: persiste en BD y el servidor emite el socket al receptor con el ID real
+      const savedMessage = await chatApi.sendMessage(selectedUser.id, content, token, selectedUser.role);
+
+      // Reemplazar el mensaje temporal con el guardado (ID real de BD)
+      if (savedMessage) {
+        setMessages((prev) => prev.map((m) => m.id === tempId ? savedMessage : m));
       }
-      
+
       // Reload conversations to update last message time
       loadConversations();
     } catch (error) {

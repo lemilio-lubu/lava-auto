@@ -2,18 +2,12 @@
  * User Repository - Repository Pattern Implementation
  */
 
-const crypto = require('crypto');
+const { generateId } = require('../../shared/utils/id-generator');
 
 class UserRepository {
   constructor(db) {
     this.db = db;
     this.tableName = 'users';
-  }
-
-  generateId() {
-    const timestamp = Date.now().toString(36);
-    const random = crypto.randomBytes(8).toString('hex');
-    return `${timestamp}${random}`.substring(0, 25);
   }
 
   async findById(id) {
@@ -71,10 +65,8 @@ class UserRepository {
   }
 
   async create(data) {
-    const id = this.generateId();
-    // Generar ID con prefijo según rol
-    const rolePrefix = data.role === 'WASHER' ? 'washer_' : (data.role === 'ADMIN' ? 'admin_' : 'user_');
-    const finalId = `${rolePrefix}${crypto.randomBytes(8).toString('hex')}`;
+    const prefix = data.role === 'WASHER' ? 'washer' : (data.role === 'ADMIN' ? 'admin' : 'user');
+    const finalId = generateId(prefix);
     
     const query = `
       INSERT INTO ${this.tableName} (id, name, email, password, phone, role, address, latitude, longitude, is_available)

@@ -28,7 +28,7 @@ type ServiceFormData = {
   isActive: boolean;
 };
 
-const VEHICLE_TYPES = ['SEDAN', 'SUV', 'PICKUP', 'VAN', 'MOTORCYCLE'];
+const VEHICLE_TYPES = ['SEDAN', 'SUV', 'HATCHBACK', 'PICKUP', 'VAN', 'MOTORCYCLE'];
 
 export default function ServiciosAdminPage() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -151,7 +151,7 @@ export default function ServiciosAdminPage() {
 
   const handleDelete = async (id: string, name: string) => {
     if (!token) return;
-    if (!confirm(`¿Estás seguro de eliminar el servicio "${name}"?`)) return;
+    if (!confirm(`¿Estás seguro de eliminar el servicio "${name}"?\n\nEsta acción no se puede deshacer.`)) return;
 
     try {
       await serviceApi.delete(id, token);
@@ -163,10 +163,14 @@ export default function ServiciosAdminPage() {
       });
       loadServices();
     } catch (error: any) {
+      // 409 means the service has associated reservations
+      const isConflict = error?.status === 409;
       setToast({
         isOpen: true,
-        title: 'Error',
-        message: error.message || 'Error al eliminar el servicio',
+        title: isConflict ? 'No se puede eliminar' : 'Error',
+        message: isConflict
+          ? `El servicio "${name}" tiene reservas asociadas. Desactívalo en lugar de eliminarlo.`
+          : (error.message || 'Error al eliminar el servicio'),
         type: 'error',
       });
     }

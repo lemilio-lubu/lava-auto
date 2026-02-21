@@ -6,8 +6,8 @@ CREATE TYPE notification_type AS ENUM ('INFO', 'WASHER_ASSIGNED', 'WASHER_ON_WAY
 
 -- Notifications table
 CREATE TABLE IF NOT EXISTS notifications (
-    id VARCHAR(30) PRIMARY KEY,
-    user_id VARCHAR(30) NOT NULL,
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     type notification_type DEFAULT 'INFO',
@@ -19,10 +19,10 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Messages table (for chat)
 CREATE TABLE IF NOT EXISTS messages (
-    id VARCHAR(30) PRIMARY KEY,
-    sender_id VARCHAR(30) NOT NULL,
+    id VARCHAR(50) PRIMARY KEY,
+    sender_id VARCHAR(255) NOT NULL,
     sender_role VARCHAR(20),
-    receiver_id VARCHAR(30) NOT NULL,
+    receiver_id VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     read BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -2,18 +2,12 @@
  * Vehicle Repository - Repository Pattern Implementation
  */
 
-const crypto = require('crypto');
+const { generateId } = require('../../shared/utils/id-generator');
 
 class VehicleRepository {
   constructor(db) {
     this.db = db;
     this.tableName = 'vehicles';
-  }
-
-  generateId() {
-    const timestamp = Date.now().toString(36);
-    const random = crypto.randomBytes(8).toString('hex');
-    return `${timestamp}${random}`.substring(0, 25);
   }
 
   async findById(id) {
@@ -54,7 +48,7 @@ class VehicleRepository {
   }
 
   async create(data) {
-    const id = this.generateId();
+    const id = generateId('vhc');
     const query = `
       INSERT INTO ${this.tableName} (id, user_id, brand, model, plate, vehicle_type, color, year, owner_name, owner_phone)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)

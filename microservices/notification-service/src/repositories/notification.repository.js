@@ -2,16 +2,12 @@
  * Notification Repository - Repository Pattern Implementation
  */
 
-const crypto = require('crypto');
+const { generateId } = require('../../shared/utils/id-generator');
 
 class NotificationRepository {
   constructor(db) {
     this.db = db;
     this.tableName = 'notifications';
-  }
-
-  generateId() {
-    return `ntf_${Date.now().toString(36)}${crypto.randomBytes(4).toString('hex')}`;
   }
 
   async findById(id) {
@@ -37,7 +33,7 @@ class NotificationRepository {
   }
 
   async create(data) {
-    const id = this.generateId();
+    const id = generateId('ntf');
     const query = `
       INSERT INTO ${this.tableName} (id, user_id, title, message, type, action_url, metadata)
       VALUES ($1, $2, $3, $4, $5, $6, $7)

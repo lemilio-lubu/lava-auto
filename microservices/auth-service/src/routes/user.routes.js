@@ -146,7 +146,7 @@ router.get('/chat/available', authMiddleware, async (req, res, next) => {
       id: user.id,
       name: user.name,
       role: user.role,
-      isAvailable: user.isAvailable
+      isAvailable: user.is_available
     }));
     
     res.json(sanitizedUsers);

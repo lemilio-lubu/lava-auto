@@ -56,7 +56,8 @@ services:
       POSTGRES_DB: lava_auto_reservations
     volumes:
       - db_reservations_data:/var/lib/postgresql/data
-      - ./microservices/reservation-service/src/database/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./microservices/reservation-service/src/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./microservices/reservation-service/src/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d lava_auto_reservations"]
       interval: 10s
@@ -109,8 +110,8 @@ services:
 
   auth-service:
     build:
-      context: ./microservices/auth-service
-      dockerfile: Dockerfile
+      context: ./microservices
+      dockerfile: auth-service/Dockerfile
     container_name: lava-auth-service
     restart: unless-stopped
     environment:
@@ -131,8 +132,8 @@ services:
 
   vehicle-service:
     build:
-      context: ./microservices/vehicle-service
-      dockerfile: Dockerfile
+      context: ./microservices
+      dockerfile: vehicle-service/Dockerfile
     container_name: lava-vehicle-service
     restart: unless-stopped
     environment:
@@ -154,8 +155,8 @@ services:
 
   reservation-service:
     build:
-      context: ./microservices/reservation-service
-      dockerfile: Dockerfile
+      context: ./microservices
+      dockerfile: reservation-service/Dockerfile
     container_name: lava-reservation-service
     restart: unless-stopped
     environment:
@@ -178,8 +179,8 @@ services:
 
   payment-service:
     build:
-      context: ./microservices/payment-service
-      dockerfile: Dockerfile
+      context: ./microservices
+      dockerfile: payment-service/Dockerfile
     container_name: lava-payment-service
     restart: unless-stopped
     environment:
@@ -201,8 +202,8 @@ services:
 
   notification-service:
     build:
-      context: ./microservices/notification-service
-      dockerfile: Dockerfile
+      context: ./microservices
+      dockerfile: notification-service/Dockerfile
     container_name: lava-notification-service
     restart: unless-stopped
     environment:

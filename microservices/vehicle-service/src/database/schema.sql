@@ -2,12 +2,12 @@
 -- Database: lava_auto_vehicles
 
 -- Create enum types
-CREATE TYPE vehicle_type AS ENUM ('SEDAN', 'SUV', 'PICKUP', 'VAN', 'MOTORCYCLE');
+CREATE TYPE vehicle_type AS ENUM ('SEDAN', 'SUV', 'HATCHBACK', 'PICKUP', 'VAN', 'MOTORCYCLE');
 
 -- Vehicles table
 CREATE TABLE IF NOT EXISTS vehicles (
-    id VARCHAR(30) PRIMARY KEY,
-    user_id VARCHAR(30),
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(255),
     brand VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
     plate VARCHAR(20) UNIQUE NOT NULL,

@@ -2,16 +2,12 @@
  * Service Repository - Repository Pattern Implementation
  */
 
-const crypto = require('crypto');
+const { generateId } = require('../../shared/utils/id-generator');
 
 class ServiceRepository {
   constructor(db) {
     this.db = db;
     this.tableName = 'services';
-  }
-
-  generateId() {
-    return `svc_${Date.now().toString(36)}${crypto.randomBytes(4).toString('hex')}`;
   }
 
   async findById(id) {
@@ -54,7 +50,7 @@ class ServiceRepository {
   }
 
   async create(data) {
-    const id = this.generateId();
+    const id = generateId('svc');
     const query = `
       INSERT INTO ${this.tableName} (id, name, description, duration, price, vehicle_type, is_active)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -108,6 +104,12 @@ class ServiceRepository {
 
     const result = await this.db.query(query, values);
     return this.mapToEntity(result.rows[0]);
+  }
+
+  async hasReservations(id) {
+    const query = `SELECT COUNT(*) as count FROM reservations WHERE service_id = $1`;
+    const result = await this.db.query(query, [id]);
+    return parseInt(result.rows[0].count, 10) > 0;
   }
 
   async delete(id) {

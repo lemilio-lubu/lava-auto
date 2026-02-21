@@ -8,6 +8,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const http = require('http');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 const Database = require('./database/db');
 const notificationRoutes = require('./routes/notification.routes');
 const chatRoutes = require('./routes/chat.routes');
@@ -17,11 +18,29 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 4005;
 
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     methods: ['GET', 'POST']
+  }
+});
+
+// Middleware de autenticación WebSocket — rechaza conexiones sin token válido
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    return next(new Error('Authentication required'));
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    socket.userId = decoded.id || decoded.userId;
+    socket.userRole = decoded.role;
+    next();
+  } catch (err) {
+    next(new Error('Invalid or expired token'));
   }
 });
 
@@ -71,24 +90,10 @@ const validateCommunication = (senderRole, receiverRole) => {
 };
 
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  socket.on('register', (data) => {
-    const { userId, userRole } = typeof data === 'object' ? data : { userId: data, userRole: null };
-    connectedUsers.set(userId, { socketId: socket.id, role: userRole });
-    socket.userId = userId;
-    socket.userRole = userRole;
-    socket.join(`user:${userId}`);
-    console.log(`User ${userId} (${userRole}) registered`);
-  });
-
-  // Legacy authenticate event for backward compatibility
-  socket.on('authenticate', (userId) => {
-    connectedUsers.set(userId, { socketId: socket.id, role: null });
-    socket.userId = userId;
-    socket.join(`user:${userId}`);
-    console.log(`User ${userId} authenticated (legacy)`);
-  });
+  // userId y userRole vienen del token validado en io.use(), nunca del cliente
+  connectedUsers.set(socket.userId, { socketId: socket.id, role: socket.userRole });
+  socket.join(`user:${socket.userId}`);
+  console.log(`Client connected: ${socket.id} | user: ${socket.userId} (${socket.userRole})`);
 
   socket.on('join-chat', (roomId) => {
     socket.join(`chat:${roomId}`);
@@ -97,39 +102,6 @@ io.on('connection', (socket) => {
 
   socket.on('leave-chat', (roomId) => {
     socket.leave(`chat:${roomId}`);
-  });
-
-  socket.on('send-message', async (data) => {
-    const { receiverId, receiverRole, content } = data;
-    
-    // Validate communication rules if roles are known
-    if (socket.userRole && receiverRole) {
-      if (!validateCommunication(socket.userRole, receiverRole)) {
-        socket.emit('error', { 
-          message: 'No tienes permiso para enviar mensajes a este usuario' 
-        });
-        return;
-      }
-    }
-    
-    const messageData = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      senderId: socket.userId,
-      senderRole: socket.userRole,
-      receiverId,
-      content,
-      createdAt: new Date().toISOString(),
-      read: false
-    };
-    
-    // Emit ONLY to receiver (sender already has the message via optimistic update)
-    io.to(`user:${receiverId}`).emit('new-message', messageData);
-  });
-
-  socket.on('mark-as-read', async (data) => {
-    const { senderId, receiverId } = data;
-    // Notify sender that messages were read
-    io.to(`user:${senderId}`).emit('messages-read', { senderId, receiverId });
   });
 
   socket.on('disconnect', () => {

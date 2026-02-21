@@ -2,16 +2,12 @@
  * Rating Repository - Repository Pattern Implementation
  */
 
-const crypto = require('crypto');
+const { generateId } = require('../../shared/utils/id-generator');
 
 class RatingRepository {
   constructor(db) {
     this.db = db;
     this.tableName = 'ratings';
-  }
-
-  generateId() {
-    return `rat_${Date.now().toString(36)}${crypto.randomBytes(4).toString('hex')}`;
   }
 
   async findById(id) {
@@ -39,7 +35,7 @@ class RatingRepository {
   }
 
   async create(data) {
-    const id = this.generateId();
+    const id = generateId('rat');
     const query = `
       INSERT INTO ${this.tableName} (id, reservation_id, user_id, washer_id, stars, comment)
       VALUES ($1, $2, $3, $4, $5, $6)

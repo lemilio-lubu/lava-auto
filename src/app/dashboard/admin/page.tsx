@@ -33,6 +33,10 @@ export default function AdminDashboard() {
         paymentApi.getAllAdmin(token),
       ])
         .then(([users, reservations, payments]) => {
+          // Build userId → name lookup map
+          const userMap = new Map<string, string>();
+          users.forEach((u: any) => userMap.set(u.id, u.name || u.email || 'Cliente'));
+
           // Calculate revenue from confirmed payments only
           const confirmedPayments = payments.filter((p: any) => p.status === 'COMPLETED');
           const totalRevenue = confirmedPayments.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
@@ -42,7 +46,13 @@ export default function AdminDashboard() {
             totalReservations: reservations.length,
             totalRevenue,
           });
-          setRecentActivity(reservations.slice(0, 5));
+
+          // Enrich each reservation with resolved client name
+          const enriched = reservations.slice(0, 5).map((r: any) => ({
+            ...r,
+            clientName: userMap.get(r.userId) || 'Cliente',
+          }));
+          setRecentActivity(enriched);
         })
         .catch(console.error)
         .finally(() => setIsLoading(false));
@@ -142,10 +152,10 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-white">
-                      {reservation.service?.name || 'Servicio'}
+                      {reservation.serviceName || 'Servicio'}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Cliente: {reservation.user?.name || 'N/A'}
+                      Cliente: {reservation.clientName || 'N/A'}
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${

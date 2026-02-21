@@ -5,6 +5,7 @@
  */
 
 require('dotenv').config();
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -15,6 +16,7 @@ const { authMiddleware } = require('./middleware/auth');
 const routes = require('./routes');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 4000;
 
 // Security middleware
@@ -95,6 +97,15 @@ app.use('/api/payments', authMiddleware, createProxy(services.payments, { '^/api
 app.use('/api/notifications', authMiddleware, createProxy(services.notifications, { '^/api/notifications': '/api/notifications' }));
 app.use('/api/chat', authMiddleware, createProxy(services.notifications, { '^/api/chat': '/api/chat' }));
 
+// WebSocket proxy para Socket.IO — debe ir antes del listen
+const socketProxy = createProxyMiddleware({
+  target: services.notifications,
+  changeOrigin: true,
+  ws: true,
+  onError: (err) => console.error('WebSocket proxy error:', err)
+});
+app.use('/socket.io', socketProxy);
+
 // Washer and admin routes
 app.use('/api/washers', authMiddleware, createProxy(services.auth, { '^/api/washers': '/api/washers' }));
 app.use('/api/users', authMiddleware, createProxy(services.auth, { '^/api/users': '/api/users' }));
@@ -112,12 +123,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 API Gateway running on port ${PORT}`);
   console.log('📡 Routing to services:');
   Object.entries(services).forEach(([name, url]) => {
     console.log(`   - ${name}: ${url}`);
   });
 });
+
+// Delegar upgrade de WebSocket al proxy de Socket.IO
+server.on('upgrade', socketProxy.upgrade);
 
 module.exports = app;

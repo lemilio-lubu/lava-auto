@@ -2,16 +2,12 @@
  * Message Repository - Repository Pattern Implementation
  */
 
-const crypto = require('crypto');
+const { generateId } = require('../../shared/utils/id-generator');
 
 class MessageRepository {
   constructor(db) {
     this.db = db;
     this.tableName = 'messages';
-  }
-
-  generateId() {
-    return `msg_${Date.now().toString(36)}${crypto.randomBytes(4).toString('hex')}`;
   }
 
   async findById(id) {
@@ -69,7 +65,7 @@ class MessageRepository {
   }
 
   async create(data) {
-    const id = this.generateId();
+    const id = generateId('msg');
     const query = `
       INSERT INTO ${this.tableName} (id, sender_id, sender_role, receiver_id, content)
       VALUES ($1, $2, $3, $4, $5)

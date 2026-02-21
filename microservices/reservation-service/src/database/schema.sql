@@ -2,12 +2,12 @@
 -- Database: lava_auto_reservations
 
 -- Create enum types
-CREATE TYPE vehicle_type AS ENUM ('SEDAN', 'SUV', 'PICKUP', 'VAN', 'MOTORCYCLE');
+CREATE TYPE vehicle_type AS ENUM ('SEDAN', 'SUV', 'HATCHBACK', 'PICKUP', 'VAN', 'MOTORCYCLE');
 CREATE TYPE reservation_status AS ENUM ('PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
 
 -- Services table
 CREATE TABLE IF NOT EXISTS services (
-    id VARCHAR(30) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     duration INTEGER NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS services (
 
 -- Time Slots table
 CREATE TABLE IF NOT EXISTS time_slots (
-    id VARCHAR(30) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     date DATE NOT NULL,
     time VARCHAR(10) NOT NULL,
     capacity INTEGER DEFAULT 3,
@@ -33,11 +33,11 @@ CREATE TABLE IF NOT EXISTS time_slots (
 
 -- Reservations table
 CREATE TABLE IF NOT EXISTS reservations (
-    id VARCHAR(30) PRIMARY KEY,
-    user_id VARCHAR(30) NOT NULL,
-    vehicle_id VARCHAR(30) NOT NULL,
-    service_id VARCHAR(30) NOT NULL REFERENCES services(id),
-    washer_id VARCHAR(30),
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    vehicle_id VARCHAR(255) NOT NULL,
+    service_id VARCHAR(50) NOT NULL REFERENCES services(id),
+    washer_id VARCHAR(255),
     scheduled_date DATE NOT NULL,
     scheduled_time VARCHAR(10) NOT NULL,
     status reservation_status DEFAULT 'PENDING',
@@ -55,8 +55,8 @@ CREATE TABLE IF NOT EXISTS reservations (
 
 -- Service Proofs table
 CREATE TABLE IF NOT EXISTS service_proofs (
-    id VARCHAR(30) PRIMARY KEY,
-    reservation_id VARCHAR(30) UNIQUE NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+    id VARCHAR(50) PRIMARY KEY,
+    reservation_id VARCHAR(50) UNIQUE NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
     before_photos TEXT[],
     after_photos TEXT[],
     notes TEXT,
@@ -66,10 +66,10 @@ CREATE TABLE IF NOT EXISTS service_proofs (
 
 -- Ratings table
 CREATE TABLE IF NOT EXISTS ratings (
-    id VARCHAR(30) PRIMARY KEY,
-    reservation_id VARCHAR(30) UNIQUE NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
-    user_id VARCHAR(30) NOT NULL,
-    washer_id VARCHAR(30) NOT NULL,
+    id VARCHAR(50) PRIMARY KEY,
+    reservation_id VARCHAR(50) UNIQUE NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+    user_id VARCHAR(255) NOT NULL,
+    washer_id VARCHAR(255) NOT NULL,
     stars INTEGER NOT NULL CHECK (stars >= 1 AND stars <= 5),
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
