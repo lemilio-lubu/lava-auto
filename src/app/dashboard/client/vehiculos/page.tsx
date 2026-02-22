@@ -1,48 +1,41 @@
-import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import VehicleList from '@/components/vehicles/VehicleList';
+import { vehicleApi } from '@/lib/api-client';
 
-export default async function VehiculosPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect('/login');
-  }
+export default function VehiculosPage() {
+  const { user, token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    include: {
-      vehicles: {
-        orderBy: { createdAt: 'desc' },
-        include: {
-          _count: {
-            select: {
-              reservations: {
-                where: {
-                  status: {
-                    in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'],
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user || user.role !== 'CLIENT') {
+      router.push('/dashboard');
+      return;
+    }
 
-  // Transformar los vehículos para incluir hasActiveReservations
-  const vehiclesWithStatus = user?.vehicles.map((vehicle) => ({
-    ...vehicle,
-    hasActiveReservations: vehicle._count.reservations > 0,
-    _count: undefined,
-  })) || [];
+    if (token) {
+      vehicleApi.getAll(token)
+        .then(setVehicles)
+        .catch(console.error)
+        .finally(() => setIsLoading(false));
+    }
+  }, [user, token, authLoading, router]);
 
-  if (!user || user.role !== 'CLIENT') {
-    redirect('/dashboard');
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-600" />
+      </div>
+    );
   }
 
   return (
@@ -64,11 +57,7 @@ export default async function VehiculosPage() {
         </div>
       </div>
 
-      <VehicleList
-        vehicles={vehiclesWithStatus}
-        userName={user.name}
-        userPhone={user.phone}
-      />
+      <VehicleList vehicles={vehicles} />
 
       <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
         <h3 className="font-bold text-slate-900 dark:text-white mb-4">

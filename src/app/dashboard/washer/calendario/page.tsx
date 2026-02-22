@@ -1,30 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { jobApi } from '@/lib/api-client';
 
 interface Job {
   id: string;
   scheduledDate: string;
   scheduledTime: string;
   status: string;
-  service: {
+  service?: {
     name: string;
   };
-  user: {
+  serviceName?: string;
+  user?: {
     name: string;
   };
-  vehicle: {
+  vehicle?: {
     brand: string;
     model: string;
   };
 }
 
 export default function CalendarioPage() {
-  const { data: session, status } = useSession();
+  const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,22 +34,19 @@ export default function CalendarioPage() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
+    if (authLoading) return;
+    
+    if (!user || user.role !== 'WASHER') {
+      router.push('/dashboard');
+      return;
     }
-  }, [status, router]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     const fetchJobs = async () => {
+      if (!token) return;
       try {
-        // Obtener trabajos confirmados/en proceso/completados del lavador
-        const [confirmed, inProgress, completed] = await Promise.all([
-          fetch('/api/jobs?status=CONFIRMED').then(r => r.json()),
-          fetch('/api/jobs?status=IN_PROGRESS').then(r => r.json()),
-          fetch('/api/jobs?status=COMPLETED').then(r => r.json()),
-        ]);
-        
-        const allJobs = [...(confirmed || []), ...(inProgress || []), ...(completed || [])];
+        const allJobs = await jobApi.getMyJobs(token) as Job[];
         setJobs(allJobs);
       } catch (error) {
         console.error('Error al cargar trabajos:', error);
@@ -56,10 +55,10 @@ export default function CalendarioPage() {
       }
     };
 
-    if (session) {
+    if (user && token) {
       fetchJobs();
     }
-  }, [session]);
+  }, [user, token]);
 
   const handlePreviousMonth = () => {
     if (currentMonth === 0) {
@@ -252,10 +251,10 @@ export default function CalendarioPage() {
               >
                 <div className="flex-1">
                   <p className="font-semibold text-slate-900 dark:text-white">
-                    {job.service.name}
+                    {job.service?.name || job.serviceName || 'Servicio'}
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {job.user.name} - {job.vehicle.brand} {job.vehicle.model}
+                    {job.user?.name || 'Cliente'} - {job.vehicle?.brand || ''} {job.vehicle?.model || ''}
                   </p>
                 </div>
                 <div className="text-right">

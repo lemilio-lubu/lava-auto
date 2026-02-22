@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, ReactNode } from 'react';
 
 type ModalType = 'success' | 'error' | 'info' | 'warning';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
-  message: string;
+  title?: string;
+  message?: string;
   type?: ModalType;
   autoClose?: boolean;
   autoCloseDelay?: number;
+  children?: ReactNode;
 }
 
 export default function Modal({
@@ -22,6 +23,7 @@ export default function Modal({
   type = 'info',
   autoClose = false,
   autoCloseDelay = 3000,
+  children,
 }: ModalProps) {
   useEffect(() => {
     if (isOpen && autoClose) {
@@ -46,6 +48,24 @@ export default function Modal({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Si hay children, renderizar modal genérico
+  if (children) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Overlay */}
+        <div
+          className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
+          onClick={onClose}
+        />
+
+        {/* Modal Content */}
+        <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          {children}
+        </div>
+      </div>
+    );
+  }
 
   const getIconAndColors = () => {
     switch (type) {

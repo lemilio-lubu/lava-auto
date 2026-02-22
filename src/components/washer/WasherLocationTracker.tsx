@@ -1,21 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import { MapPin, X } from 'lucide-react';
+import { washerApi } from '@/lib/api-client';
 
 export default function WasherLocationTracker() {
-  const { data: session, status } = useSession();
+  const { user, token } = useAuth();
   const [locationStatus, setLocationStatus] = useState<'idle' | 'requesting' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
     // Solo ejecutar para lavadores autenticados
-    if (status === 'authenticated' && session?.user?.role === 'WASHER') {
+    if (user?.role === 'WASHER' && token) {
       requestLocation();
     }
-  }, [status, session]);
+  }, [user, token]);
 
   const requestLocation = () => {
     // Verificar si el navegador soporta geolocalización
@@ -34,16 +35,10 @@ export default function WasherLocationTracker() {
         try {
           const { latitude, longitude } = position.coords;
 
-          // Enviar ubicación al servidor
-          const response = await fetch('/api/auth/update-location', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ latitude, longitude }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Error al actualizar ubicación');
-          }
+          if (!token) throw new Error('No token');
+          
+          // Enviar ubicación al servidor usando la API
+          await washerApi.updateLocation({ latitude, longitude }, token);
 
           setLocationStatus('success');
           // Ocultar el mensaje después de 3 segundos

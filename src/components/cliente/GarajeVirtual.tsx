@@ -3,29 +3,22 @@
 import { useEffect, useState } from 'react';
 import  Card  from '@/components/ui/Card';
 import  Button  from '@/components/ui/Button';
-
-interface Vehicle {
-  id: string;
-  brand: string;
-  model: string;
-  plate: string;
-  vehicleType: string;
-  year?: number;
-  color?: string;
-}
+import { vehicleApi, Vehicle } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function GarajeVirtual() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const { token } = useAuth();
 
   useEffect(() => {
     fetchVehicles();
-  }, []);
+  }, [token]);
 
   const fetchVehicles = async () => {
+    if (!token) return;
     try {
-      const res = await fetch('/api/vehicles');
-      const data = await res.json();
+      const data = await vehicleApi.getAll(token);
       setVehicles(data);
     } catch (error) {
       console.error('Error al cargar vehículos:', error);

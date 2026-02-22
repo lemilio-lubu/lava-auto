@@ -1,0 +1,22 @@
+{
+  "name": "lava-auto-microservices",
+  "version": "1.0.0",
+  "description": "Lava Auto Microservices Architecture",
+  "scripts": {
+    "install:all": "npm run install:gateway && npm run install:auth && npm run install:vehicle && npm run install:reservation && npm run install:payment && npm run install:notification",
+    "install:gateway": "cd api-gateway && npm install",
+    "install:auth": "cd auth-service && npm install",
+    "install:vehicle": "cd vehicle-service && npm install",
+    "install:reservation": "cd reservation-service && npm install",
+    "install:payment": "cd payment-service && npm install",
+    "install:notification": "cd notification-service && npm install",
+    "db:init:all": "npm run db:init:auth && npm run db:init:vehicle && npm run db:init:reservation && npm run db:init:payment && npm run db:init:notification",
+    "db:init:auth": "cd auth-service && npm run db:init",
+    "db:init:vehicle": "cd vehicle-service && npm run db:init",
+    "db:init:reservation": "cd reservation-service && npm run db:init",
+    "db:init:payment": "cd payment-service && npm run db:init",
+    "db:init:notification": "cd notification-service && npm run db:init",
+    "start:all": "node scripts/start-all.js",
+    "dev:all": "node scripts/start-all.js --dev"
+  }
+}

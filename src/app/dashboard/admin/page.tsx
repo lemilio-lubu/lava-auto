@@ -1,370 +1,177 @@
-import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { Users, Briefcase, DollarSign, TrendingUp, Calendar, Star } from 'lucide-react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { Users, Briefcase, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { adminApi, reservationApi, paymentApi } from '@/lib/api-client';
 
-/**
- * Dashboard del ADMIN
- * 
- * Funciones del administrador:
- * 1. Ver métricas generales del negocio
- * 2. Gestionar usuarios (clientes, lavadores, admins)
- * 3. Ver todas las reservas del sistema
- * 4. Gestionar servicios y precios
- * 5. Asignar lavadores a trabajos manualmente
- * 6. Ver reportes de calificaciones
- * 7. Resolver problemas y disputas
- */
-export default async function AdminDashboard() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect('/login');
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+export default function AdminDashboard() {
+  const { user, token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalReservations: 0,
+    totalRevenue: 0,
   });
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!user || user.role !== 'ADMIN') {
-    redirect('/dashboard');
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user || user.role !== 'ADMIN') {
+      router.push('/dashboard');
+      return;
+    }
+
+    if (token) {
+      Promise.all([
+        adminApi.getUsers(token),
+        reservationApi.getAllReservations(token),
+        paymentApi.getAllAdmin(token),
+      ])
+        .then(([users, reservations, payments]) => {
+          // Build userId → name lookup map
+          const userMap = new Map<string, string>();
+          users.forEach((u: any) => userMap.set(u.id, u.name || u.email || 'Cliente'));
+
+          // Calculate revenue from confirmed payments only
+          const confirmedPayments = payments.filter((p: any) => p.status === 'COMPLETED');
+          const totalRevenue = confirmedPayments.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+          
+          setStats({
+            totalUsers: users.length,
+            totalReservations: reservations.length,
+            totalRevenue,
+          });
+
+          // Enrich each reservation with resolved client name
+          const enriched = reservations.slice(0, 5).map((r: any) => ({
+            ...r,
+            clientName: userMap.get(r.userId) || 'Cliente',
+          }));
+          setRecentActivity(enriched);
+        })
+        .catch(console.error)
+        .finally(() => setIsLoading(false));
+    }
+  }, [user, token, authLoading, router]);
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-600" />
+      </div>
+    );
   }
-
-  // Métricas generales
-  const [
-    totalClients,
-    totalWashers,
-    totalReservations,
-    activeReservations,
-    completedReservations,
-    totalRevenue,
-    averageRating,
-    recentReservations,
-    topWashers,
-  ] = await Promise.all([
-    // Total de clientes
-    prisma.user.count({ where: { role: 'CLIENT' } }),
-    
-    // Total de lavadores
-    prisma.user.count({ where: { role: 'WASHER' } }),
-    
-    // Total de reservas
-    prisma.reservation.count(),
-    
-    // Reservas activas (confirmadas o en proceso)
-    prisma.reservation.count({
-      where: {
-        status: {
-          in: ['CONFIRMED', 'IN_PROGRESS'],
-        },
-      },
-    }),
-    
-    // Reservas completadas
-    prisma.reservation.count({
-      where: { status: 'COMPLETED' },
-    }),
-    
-    // Ingresos totales
-    prisma.reservation.aggregate({
-      where: { status: 'COMPLETED' },
-      _sum: { totalAmount: true },
-    }),
-    
-    // Calificación promedio
-    prisma.rating.aggregate({
-      _avg: { stars: true },
-    }),
-    
-    // Últimas 10 reservas
-    prisma.reservation.findMany({
-      take: 10,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: { name: true, email: true },
-        },
-        washer: {
-          select: { name: true, rating: true },
-        },
-        service: {
-          select: { name: true },
-        },
-        vehicle: {
-          select: { brand: true, model: true, plate: true },
-        },
-      },
-    }),
-    
-    // Top 5 lavadores
-    prisma.user.findMany({
-      where: { role: 'WASHER' },
-      orderBy: { rating: 'desc' },
-      take: 5,
-      select: {
-        id: true,
-        name: true,
-        rating: true,
-        completedServices: true,
-        isAvailable: true,
-      },
-    }),
-  ]);
-
-  const revenueThisMonth = await prisma.reservation.aggregate({
-    where: {
-      status: 'COMPLETED',
-      completedAt: {
-        gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      },
-    },
-    _sum: { totalAmount: true },
-  });
 
   return (
     <div className="space-y-6">
-      {/* Header del Admin */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 text-white shadow-lg">
+      {/* Welcome Header */}
+      <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-6 text-white shadow-lg">
         <h1 className="text-3xl font-bold mb-2">Panel de Administración</h1>
-        <p className="text-purple-50 text-lg">
-          Vista general del negocio y gestión del sistema
+        <p className="text-purple-50">
+          Gestiona todo el sistema desde aquí
         </p>
       </div>
 
-      {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Total Clientes */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <Users className="w-8 h-8 text-blue-500" />
-            <span className="text-3xl font-bold text-slate-900 dark:text-white">
-              {totalClients}
-            </span>
-          </div>
-          <h3 className="font-semibold text-slate-900 dark:text-white">Clientes</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400">Registrados</p>
-        </div>
-
-        {/* Total Lavadores */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <Briefcase className="w-8 h-8 text-cyan-500" />
-            <span className="text-3xl font-bold text-slate-900 dark:text-white">
-              {totalWashers}
-            </span>
-          </div>
-          <h3 className="font-semibold text-slate-900 dark:text-white">Lavadores</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400">En la plataforma</p>
-        </div>
-
-        {/* Reservas activas */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <Calendar className="w-8 h-8 text-amber-500" />
-            <span className="text-3xl font-bold text-slate-900 dark:text-white">
-              {activeReservations}
-            </span>
-          </div>
-          <h3 className="font-semibold text-slate-900 dark:text-white">Activas</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            De {totalReservations} totales
-          </p>
-          <Link href="/dashboard/admin/reservas" className="text-amber-600 dark:text-amber-400 text-sm hover:underline mt-2 block">
-            Ver todas →
-          </Link>
-        </div>
-
-        {/* Ingresos totales */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <DollarSign className="w-8 h-8 text-green-500" />
-            <span className="text-3xl font-bold text-slate-900 dark:text-white">
-              ${(totalRevenue._sum.totalAmount || 0).toFixed(0)}
-            </span>
-          </div>
-          <h3 className="font-semibold text-slate-900 dark:text-white">Ingresos</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            ${(revenueThisMonth._sum.totalAmount || 0).toFixed(0)} este mes
-          </p>
-        </div>
-      </div>
-
-      {/* Grid de información adicional */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Calificación promedio */}
-        <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl shadow-md p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <Star className="w-10 h-10" />
-            <span className="text-4xl font-bold">
-              {averageRating._avg.stars?.toFixed(1) || '5.0'}
-            </span>
-          </div>
-          <h3 className="font-semibold text-lg">Calificación Promedio</h3>
-          <p className="text-amber-50 text-sm">Calidad del servicio</p>
-        </div>
-
-        {/* Tasa de finalización */}
-        <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl shadow-md p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <TrendingUp className="w-10 h-10" />
-            <span className="text-4xl font-bold">
-              {totalReservations > 0 
-                ? Math.round((completedReservations / totalReservations) * 100) 
-                : 0}%
-            </span>
-          </div>
-          <h3 className="font-semibold text-lg">Tasa de Finalización</h3>
-          <p className="text-green-50 text-sm">
-            {completedReservations} de {totalReservations} completadas
-          </p>
-        </div>
-      </div>
-
-      {/* Top Lavadores */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-200 dark:border-slate-700">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Top Lavadores
-          </h2>
-        </div>
-
-        <div className="space-y-3">
-          {topWashers.map((washer, index) => (
-            <div 
-              key={washer.id}
-              className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className={`
-                  w-10 h-10 rounded-full flex items-center justify-center font-bold text-white
-                  ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-slate-400' : index === 2 ? 'bg-orange-600' : 'bg-slate-300'}
-                `}>
-                  {index + 1}
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-900 dark:text-white">
-                    {washer.name}
-                  </p>
-                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                      {washer.rating?.toFixed(1) || '5.0'}
-                    </span>
-                    <span>• {washer.completedServices} servicios</span>
-                    <span className={`
-                      px-2 py-0.5 rounded-full text-xs font-semibold
-                      ${washer.isAvailable 
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                        : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-400'}
-                    `}>
-                      {washer.isAvailable ? 'Disponible' : 'No disponible'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Usuarios Totales</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.totalUsers}</p>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Últimas reservas */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 border border-slate-200 dark:border-slate-700">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            📋 Últimas Reservas
-          </h2>
-          <Link 
-            href="/dashboard/admin/reservas"
-            className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
-          >
-            Ver todas →
-          </Link>
+            <Users className="w-12 h-12 text-purple-500" />
+          </div>
         </div>
 
-        <div className="space-y-3">
-          {recentReservations.map((reservation) => (
-            <div 
-              key={reservation.id}
-              className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className={`
-                    w-3 h-3 rounded-full
-                    ${reservation.status === 'COMPLETED' ? 'bg-green-500' : 
-                      reservation.status === 'IN_PROGRESS' ? 'bg-blue-500' :
-                      reservation.status === 'CONFIRMED' ? 'bg-amber-500' :
-                      reservation.status === 'CANCELLED' ? 'bg-red-500' :
-                      'bg-slate-400'}
-                  `} />
-                  <span className="font-semibold text-slate-900 dark:text-white">
-                    {reservation.service.name}
-                  </span>
-                  <span className="text-slate-600 dark:text-slate-400">•</span>
-                  <span className="text-slate-600 dark:text-slate-400">
-                    {reservation.vehicle.brand} {reservation.vehicle.model} ({reservation.vehicle.plate})
-                  </span>
-                </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Cliente: {reservation.user.name}
-                  {reservation.washer && ` • Lavador: ${reservation.washer.name} ⭐ ${reservation.washer.rating?.toFixed(1)}`}
-                  {' • '}
-                  {new Date(reservation.scheduledDate).toLocaleDateString('es-ES')} a las {reservation.scheduledTime}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-green-600 dark:text-green-400">
-                  ${reservation.totalAmount.toFixed(0)}
-                </p>
-                <span className={`
-                  text-xs px-2 py-1 rounded-full font-semibold
-                  ${reservation.status === 'COMPLETED' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                    reservation.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                    reservation.status === 'CONFIRMED' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                    reservation.status === 'CANCELLED' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400'}
-                `}>
-                  {reservation.status === 'COMPLETED' ? 'Completado' :
-                   reservation.status === 'IN_PROGRESS' ? 'En proceso' :
-                   reservation.status === 'CONFIRMED' ? 'Confirmado' :
-                   reservation.status === 'CANCELLED' ? 'Cancelado' :
-                   'Pendiente'}
-                </span>
-              </div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Reservas Totales</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.totalReservations}</p>
             </div>
-          ))}
+            <Briefcase className="w-12 h-12 text-cyan-500" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Ingresos Totales</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">${stats.totalRevenue}</p>
+            </div>
+            <DollarSign className="w-12 h-12 text-green-500" />
+          </div>
         </div>
       </div>
 
-      {/* Acciones rápidas del admin */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Link
+          href="/dashboard/admin/usuarios"
+          className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all"
+        >
+          <Users className="w-8 h-8 mb-3 opacity-80" />
+          <h3 className="text-xl font-bold mb-1">Gestionar Usuarios</h3>
+          <p className="text-purple-100">Ver y administrar todos los usuarios</p>
+        </Link>
+
+        <Link
+          href="/dashboard/admin/reservas"
+          className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all"
+        >
+          <Briefcase className="w-8 h-8 mb-3 opacity-80" />
+          <h3 className="text-xl font-bold mb-1">Reservas</h3>
+          <p className="text-cyan-100">Monitorear todas las reservas</p>
+        </Link>
+
         <Link
           href="/dashboard/admin/servicios"
-          className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
+          className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all"
         >
-          <Briefcase className="w-10 h-10 text-cyan-500 mb-4" />
-          <h3 className="font-bold text-slate-900 dark:text-white mb-2">
-            Gestionar Servicios
-          </h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Crear, editar o desactivar servicios y precios
-          </p>
-        </Link>
-
-        <Link
-          href="/dashboard/admin/reportes"
-          className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
-        >
-          <TrendingUp className="w-10 h-10 text-green-500 mb-4" />
-          <h3 className="font-bold text-slate-900 dark:text-white mb-2">
-            Ver Reportes
-          </h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Análisis de ventas, calificaciones y métricas
-          </p>
+          <TrendingUp className="w-8 h-8 mb-3 opacity-80" />
+          <h3 className="text-xl font-bold mb-1">Servicios</h3>
+          <p className="text-pink-100">Administrar servicios disponibles</p>
         </Link>
       </div>
+
+      {/* Recent Activity */}
+      {recentActivity.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Actividad Reciente</h2>
+          </div>
+          <div className="divide-y divide-slate-200 dark:divide-slate-700">
+            {recentActivity.map((reservation) => (
+              <div key={reservation.id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-900 dark:text-white">
+                      {reservation.serviceName || 'Servicio'}
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Cliente: {reservation.clientName || 'N/A'}
+                    </p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    reservation.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                    reservation.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                    reservation.status === 'CONFIRMED' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400' :
+                    'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                  }`}>
+                    {reservation.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

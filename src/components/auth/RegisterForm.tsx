@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useModal } from '@/hooks/useModal';
 import Modal from '@/components/ui/Modal';
 import { Droplets, Mail, Lock, User, Phone, Loader2, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function RegisterForm() {
   const [name, setName] = useState('');
@@ -18,6 +19,7 @@ export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { modalState, showError, closeModal } = useModal();
+  const { register } = useAuth();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,25 +34,21 @@ export function RegisterForm() {
     }
 
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ ...parsed.data, role: 'CLIENT' }),
-        headers: { 'Content-Type': 'application/json' }
+      await register({
+        name: parsed.data.name,
+        email: parsed.data.email,
+        password: parsed.data.password,
+        phone: parsed.data.phone,
+        role: 'CLIENT'
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        showError('Error al registrar', data.error || 'No se pudo crear la cuenta. El email podría estar en uso.');
-        setIsLoading(false);
-        return;
-      }
 
       setSuccess(true);
       setTimeout(() => {
         router.push('/login');
       }, 2000);
     } catch (err) {
-      showError('Error', 'Ocurrió un error. Por favor, intenta más tarde.');
+      const errorMessage = err instanceof Error ? err.message : 'No se pudo crear la cuenta. El email podría estar en uso.';
+      showError('Error al registrar', errorMessage);
       setIsLoading(false);
     }
   }

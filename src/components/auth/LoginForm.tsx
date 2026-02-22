@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { loginSchema } from '@/lib/validations/auth.schema';
 import Link from 'next/link';
 import { Droplets, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Toast from '@/components/ui/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -18,6 +18,8 @@ export function LoginForm() {
     message: '',
     type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
+
+  const { login } = useAuth();
 
   // Nielsen: Prevención de errores - Validación en tiempo real
   const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
@@ -61,33 +63,25 @@ export function LoginForm() {
     }
 
     try {
-      const res = await signIn('credentials', { redirect: false, email, password });
+      await login(email, password);
       
-      if (res?.error) {
-        // Nielsen: Ayudar a reconocer y corregir errores
-        setToast({
-          isOpen: true,
-          title: 'Error de autenticación',
-          message: 'Credenciales inválidas. Verifica tu correo y contraseña.',
-          type: 'error',
-        });
-      } else {
-        // Nielsen: Visibilidad del estado del sistema
-        setToast({
-          isOpen: true,
-          title: '¡Bienvenido!',
-          message: 'Accediendo al sistema...',
-          type: 'success',
-        });
-        setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 1000);
-      }
-    } catch (err) {
+      // Nielsen: Visibilidad del estado del sistema
       setToast({
         isOpen: true,
-        title: 'Error del sistema',
-        message: 'No pudimos conectar con el servidor. Intenta de nuevo.',
+        title: '¡Bienvenido!',
+        message: 'Accediendo al sistema...',
+        type: 'success',
+      });
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1000);
+    } catch (err) {
+      // Nielsen: Ayudar a reconocer y corregir errores
+      const errorMessage = err instanceof Error ? err.message : 'Credenciales inválidas';
+      setToast({
+        isOpen: true,
+        title: 'Error de autenticación',
+        message: errorMessage,
         type: 'error',
       });
     } finally {

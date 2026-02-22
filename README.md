@@ -1,393 +1,317 @@
-# Sistema Digital de Reservas para Autolavado
+# Lava Auto — Sistema de Reservas de Autolavado
 
-Sistema web moderno y minimalista para la gestión de reservas de servicios de autolavado, desarrollado con **Next.js 16**, **TypeScript**, **Tailwind CSS 4** y **Prisma ORM**.
-
-## Características Principales
-
-### Diseño UX/UI de Clase Mundial
-- **10 Principios de Nielsen implementados** 
-- **Colorimetría temática**: Paleta cyan/emerald que evoca agua y limpieza
-- **Diseño responsive**: Optimizado para móvil, tablet y desktop
-- **Accesible**: WCAG AA compliant
-- **Animaciones suaves**: Transiciones fluidas con GPU acceleration
-
-### Autenticación y Seguridad
-- Sistema de login/registro con NextAuth.js
-- Recuperación de contraseña
-- Validación en tiempo real
-- Sesiones seguras con JWT
-
-### Gestión de Reservas
-- **Calendario interactivo** para selección de fechas
-- Vista de tarjetas con información detallada
-- Búsqueda y filtros avanzados
-- Estados visuales claros (Pendiente, Confirmada, En Proceso, Completada, Cancelada)
-- Feedback inmediato con Toast notifications
-
-### Gestión de Vehículos
-- Registro de múltiples vehículos
-- Tipos: Sedán, SUV, Camioneta, Moto
-- Información completa: marca, modelo, placa, propietario
-
-### Catálogo de Servicios
-- Servicios diferenciados por tipo de vehículo
-- Información de duración y precio
-- Selección visual con cards
-
-### Sistema de Pagos
-- Integración con Stripe (preparado)
-- Registro de transacciones
-- Estados de pago
-
-## Stack Tecnológico
-
-```json
-{
-  "Frontend": ["Next.js 16", "React 19", "TypeScript", "Tailwind CSS 4"],
-  "Backend": ["Next.js API Routes", "NextAuth.js"],
-  "Database": ["PostgreSQL", "Prisma ORM"],
-  "UI Components": ["Lucide React Icons", "Custom Components"],
-  "Pagos": ["Stripe"],
-  "Tiempo Real": ["Socket.io (preparado)"]
-}
-```
-
-## Componentes UI Reutilizables
-
-### Nuevos componentes creados:
-
-```typescript
-// Notificaciones
-<Toast type="success|error|warning|info" />
-
-// Botones versátiles
-<Button variant="primary|secondary|outline|ghost|danger" size="sm|md|lg" />
-
-// Etiquetas
-<Badge variant="primary|success|warning|error|info|neutral" />
-
-// Sistema de tarjetas
-<Card>
-  <CardHeader>
-    <CardTitle />
-    <CardDescription />
-  </CardHeader>
-  <CardContent />
-  <CardFooter />
-</Card>
-
-// Calendario interactivo
-<Calendar 
-  selectedDate={date}
-  onDateSelect={handleSelect}
-  minDate={new Date()}
-  highlightedDates={[...]}
-/>
-```
-
-## Inicio Rápido
-
-### Prerrequisitos
-- Node.js 18+ 
-- PostgreSQL
-- Docker (opcional)
-
-### Instalación
-
-1. **Clonar el repositorio**
-```bash
-git clone https://github.com/tu-usuario/lava-auto.git
-cd lava-auto
-```
-
-2. **Instalar dependencias**
-```bash
-npm install
-```
-
-3. **Configurar variables de entorno**
-```bash
-cp .env.example .env
-```
-
-Edita `.env` con tus credenciales reales (ver `.env.example` para referencia completa):
-```env
-# Base de datos
-DATABASE_URL="postgresql://usuario:contraseña@localhost:5432/autolavado?schema=public"
-
-# Autenticación
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="genera-secreto-con-openssl-rand-base64-32"
-
-# Stripe (Pagos)
-STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_PUBLISHABLE_KEY="pk_test_..."
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
-
-# Aplicación
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-
-# Google Maps
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="tu_api_key_aqui"
-```
-
-4. **Iniciar base de datos con Docker**
-```bash
-docker-compose up -d
-```
-
-5. **Ejecutar migraciones**
-```bash
-npx prisma migrate dev
-npx prisma generate
-```
-
-6. **Iniciar servidor de desarrollo**
-```bash
-npm run dev
-```
-
-7. **Abrir en navegador**
-```
-http://localhost:3000
-```
-
-## Estructura del Proyecto
-
-```
-lava-auto/
-├── prisma/
-│   ├── schema.prisma          # Modelo de datos
-│   ├── seed.ts                # Datos iniciales
-│   └── migrations/            # Migraciones SQL
-├── src/
-│   ├── app/
-│   │   ├── api/               # API Routes
-│   │   │   ├── auth/          # Autenticación y usuarios
-│   │   │   ├── chat/          # Chat en tiempo real
-│   │   │   ├── payments/      # Pagos con Stripe
-│   │   │   ├── reservations/  # Gestión de reservas
-│   │   │   ├── services/      # Servicios de autolavado
-│   │   │   └── vehicles/      # Vehículos
-│   │   ├── dashboard/         # Dashboards por rol
-│   │   │   ├── layout.tsx     # Layout con navegación
-│   │   │   ├── page.tsx       # Dashboard principal
-│   │   │   ├── chat/          # Chat
-│   │   │   ├── pagos/         # Checkout y pagos
-│   │   │   ├── reservas/      # Gestión de reservas
-│   │   │   ├── servicios/     # Catálogo de servicios
-│   │   │   ├── vehiculos/     # Gestión de vehículos
-│   │   │   └── admin/         # Panel administrador
-│   │   │       ├── usuarios/  # Gestión de usuarios
-│   │   │       └── configuracion/
-│   │   ├── login/             # Página de login
-│   │   ├── register/          # Registro de usuarios
-│   │   ├── reset-password/    # Recuperar contraseña
-│   │   ├── layout.tsx         # Layout principal
-│   │   ├── page.tsx           # Página de inicio
-│   │   └── globals.css        # Estilos globales + variables
-│   ├── components/
-│   │   ├── ui/                # Componentes reutilizables
-│   │   │   ├── Badge.tsx
-│   │   │   ├── Button.tsx
-│   │   │   ├── Card.tsx
-│   │   │   ├── Calendar.tsx
-│   │   │   ├── Toast.tsx
-│   │   │   ├── Modal.tsx
-│   │   │   ├── ConfirmModal.tsx
-│   │   │   └── ThemeToggle.tsx
-│   │   ├── auth/              # Componentes de autenticación
-│   │   │   ├── LoginForm.tsx
-│   │   │   ├── RegisterForm.tsx
-│   │   │   ├── ResetPasswordForm.tsx
-│   │   │   └── SessionProvider.tsx
-│   │   ├── maps/              # Mapas y geolocalización
-│   │   │   └── LocationPicker.tsx
-│   │   ├── reservas/          # Componentes de reservas
-│   │   │   └── ReservationsTable.tsx
-│   │   └── washer/            # Componentes de lavadores
-│   │       └── WasherLocationTracker.tsx
-│   ├── contexts/              # Contextos de React
-│   │   └── ThemeContext.tsx
-│   ├── hooks/                 # Custom hooks
-│   │   └── useModal.ts
-│   ├── lib/
-│   │   ├── auth.ts            # Configuración NextAuth
-│   │   ├── prisma.ts          # Cliente Prisma
-│   │   ├── stripe.ts          # Configuración Stripe
-│   │   └── validations/       # Schemas Zod
-│   │       ├── auth.schema.ts
-│   │       └── producto.schema.ts
-│   ├── services/              # Lógica de negocio
-│   │   ├── producto.service.ts
-│   │   └── user.service.ts
-│   └── types/                 # Definiciones de tipos
-│       └── next-auth.d.ts
-├── public/                    # Archivos estáticos
-├── scripts/                   # Scripts auxiliares
-├── .env                       # Variables de entorno (no subir)
-├── .env.example              # Plantilla de variables
-├── .gitignore                # Archivos ignorados por Git
-├── docker-compose.yml        # Configuración Docker
-├── next.config.ts            # Configuración Next.js
-├── package.json              # Dependencias
-├── server.js                 # Servidor Socket.io
-├── tsconfig.json             # Configuración TypeScript
-└── README.md                 # Este archivo
-```
-
-## Sistema de Diseño
-
-### Paleta de Colores
-
-```css
-/* Primarios */
---color-primary: #0891b2        /* Cyan-600 - Agua fresca */
---color-secondary: #10b981      /* Emerald-500 - Limpieza */
---color-accent: #06b6d4         /* Cyan-500 - Agua brillante */
-
-/* Estados */
---color-success: #10b981        /* Verde */
---color-warning: #f59e0b        /* Ámbar */
---color-error: #ef4444          /* Rojo */
---color-info: #3b82f6           /* Azul */
-```
-
-### Tipografía
-- **Font**: Inter (sistema)
-- **Escala**: 12px / 14px / 16px / 18px / 20px / 24px / 30px / 36px
-
-### Espaciado
-- Sistema basado en múltiplos de 4px: 4, 8, 12, 16, 20, 24, 32, 40, 48, 64px
-
-## Modelos de Datos
-
-```prisma
-model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
-  name          String?
-  password      String
-  createdAt     DateTime      @default(now())
-  vehicles      Vehicle[]
-  reservations  Reservation[]
-}
-
-model Vehicle {
-  id           String        @id @default(cuid())
-  ownerName    String
-  brand        String
-  model        String
-  plate        String        @unique
-  vehicleType  VehicleType
-  userId       String
-  user         User          @relation(...)
-  reservations Reservation[]
-}
-
-model Service {
-  id           String        @id @default(cuid())
-  name         String
-  description  String?
-  price        Float
-  duration     Int
-  vehicleType  VehicleType
-  reservations Reservation[]
-}
-
-model Reservation {
-  id             String           @id @default(cuid())
-  scheduledDate  DateTime
-  scheduledTime  String
-  totalAmount    Float
-  status         ReservationStatus @default(PENDING)
-  notes          String?
-  userId         String
-  vehicleId      String
-  serviceId      String
-  user           User             @relation(...)
-  vehicle        Vehicle          @relation(...)
-  service        Service          @relation(...)
-  payment        Payment?
-}
-```
-
-## Seguridad
-
-- Autenticación con bcrypt
-- Sesiones JWT seguras
-- Validación de entrada con Zod
-- Protección CSRF
-- Sanitización de datos
-- Rate limiting (pendiente)
-
-## Testing (Próximamente)
-
-```bash
-npm run test           # Unit tests
-npm run test:e2e       # E2E tests con Playwright
-npm run test:coverage  # Coverage report
-```
-
-## Roadmap
-
-### Fase 1: Core (Completado)
-- [x] Sistema de autenticación
-- [x] CRUD de vehículos
-- [x] CRUD de servicios
-- [x] Gestión de reservas
-- [x] Diseño UX/UI con principios de Nielsen
-- [x] Calendario interactivo
-- [x] Sistema de componentes reutilizables
-
-### Fase 2: Mejoras (En Progreso)
-- [ ] Integración completa de pagos con Stripe
-- [ ] Sistema de notificaciones push
-- [ ] Chat en tiempo real con Socket.io
-- [ ] Dashboard de estadísticas
-- [ ] Sistema de calificaciones
-
-### Fase 3: Avanzado (Planeado)
-- [ ] Modo oscuro
-- [ ] PWA (Progressive Web App)
-- [ ] Multi-idioma (i18n)
-- [ ] App móvil con React Native
-- [ ] Panel de administración avanzado
-- [ ] Reportes y analytics
-
-## Contribuir
-
-Las contribuciones son bienvenidas! Por favor:
-
-1. Fork el proyecto
-2. Crea una rama (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## Scripts Disponibles
-
-```bash
-npm run dev          # Desarrollo en localhost:3000
-npm run build        # Build de producción
-npm run start        # Iniciar servidor de producción
-npm run lint         # Linter ESLint
-npx prisma studio    # Interfaz visual de la BD
-npx prisma migrate   # Crear migración
-```
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT - ver [LICENSE](LICENSE) para más detalles.
-
-## Autor
-
-Desarrollado aplicando los principios de usabilidad de Jakob Nielsen.
-
-## Soporte
-
-¿Problemas o preguntas? Abre un [issue](https://github.com/tu-usuario/lava-auto/issues).
+Aplicación web full-stack para la gestión de servicios de autolavado a domicilio.  
+**Next.js 16** (frontend) + **Express.js modular** (backend) + **PostgreSQL** (una sola base de datos).
 
 ---
 
-**Última actualización**: Noviembre 2025
+## 🏗️ Arquitectura
+
+```
+┌───────────────────────────────────────┐
+│          Frontend (Next.js 16)         │
+│          http://localhost:3000         │
+└─────────────────┬─────────────────────┘
+                  │ HTTP REST / WebSocket
+                  ▼
+┌───────────────────────────────────────┐
+│        Backend monolítico (Express)    │
+│          http://localhost:4000         │
+│                                        │
+│  /api/auth          → módulo auth      │
+│  /api/vehicles      → módulo vehicles  │
+│  /api/reservations  → módulo reservas  │
+│  /api/payments      → módulo pagos     │
+│  /api/services      → módulo servicios │
+│  ws://              → Socket.IO chat   │
+└─────────────────┬─────────────────────┘
+                  │
+                  ▼
+┌───────────────────────────────────────┐
+│           PostgreSQL — lava_auto       │
+└───────────────────────────────────────┘
+```
+
+---
+
+## ✨ Funcionalidades
+
+### 👥 Roles
+
+| Rol | Capacidades |
+|-----|-------------|
+| **Cliente** | Solicitar servicios, gestionar vehículos, pagar (tarjeta o efectivo), ver historial |
+| **Lavador** | Ver trabajos disponibles, aceptar trabajos, actualizar estados, confirmar pago en efectivo |
+| **Admin** | Gestionar usuarios, lavadores, servicios, reservas y reportes |
+
+### 💳 Pagos
+- **Tarjeta** via Stripe (modo test)
+- **Efectivo** — cliente indica que pagará en mano; lavador confirma la recepción
+- Estado visual en reservas: badge **Pagado ✓** / **Pago en efectivo pendiente**
+
+### 💬 Chat en tiempo real
+- WebSockets con Socket.IO integrado en el backend
+- Cliente ↔ Admin · Lavador ↔ Admin
+- Indicadores de leído/no leído
+
+### 🎨 Diseño
+- Paleta cyan/emerald (agua y limpieza)
+- **Totalmente responsive** — drawer lateral en móvil, hamburguesa en header
+- Modo claro/oscuro con persistencia
+
+---
+
+## 🛠️ Stack
+
+| Capa | Tecnologías |
+|------|-------------|
+| **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| **Backend** | Node.js 18+, Express.js, Socket.IO 4 |
+| **Base de datos** | PostgreSQL (única instancia, base `lava_auto`) |
+| **Pagos** | Stripe SDK (modo test) |
+| **Contenedores** | Docker, Docker Compose |
+| **UI** | Lucide React, componentes propios |
+
+---
+
+## 🚀 Inicio rápido
+
+### Prerrequisitos
+- Node.js 18+
+- PostgreSQL corriendo (local o Docker)
+
+### 1. Base de datos con Docker (recomendado)
+
+```bash
+cd backend
+npm run db:up        # levanta PostgreSQL en Docker
+npm run migrate      # crea las tablas
+npm run seed         # carga datos de prueba
+```
+
+### 2. Backend
+
+```bash
+cd backend
+cp .env.example .env   # y edita los valores
+npm install
+npm run dev            # nodemon en :4000
+```
+
+### 3. Frontend
+
+```bash
+# en la raíz del proyecto
+cp .env.example .env.local   # NEXT_PUBLIC_API_URL=http://localhost:4000
+npm install
+npm run dev                  # Turbopack en :3000
+```
+
+### URLs
+
+| Servicio | URL |
+|----------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:4000 |
+| Swagger/Docs | http://localhost:4000/api-docs |
+
+### Usuarios de prueba (seed)
+
+| Rol | Email | Contraseña |
+|-----|-------|------------|
+| Admin | admin@lavauto.com | admin123 |
+| Cliente | cliente@test.com | client123 |
+| Lavador | lavador@test.com | washer123 |
+
+---
+
+## 📁 Estructura del proyecto
+
+```
+lava-auto/
+├── backend/                         # API REST + WebSocket
+│   ├── src/
+│   │   ├── index.js                 # Entry point (Express + Socket.IO)
+│   │   ├── config/                  # Configuración de BD, JWT, etc.
+│   │   ├── database/                # Pool de conexión PostgreSQL
+│   │   ├── middleware/              # Auth, error handler, rate limit
+│   │   ├── shared/                  # Base repository, utilidades
+│   │   └── modules/
+│   │       ├── auth/                # Registro, login, JWT
+│   │       ├── vehicles/            # CRUD vehículos
+│   │       ├── reservations/        # Reservas + catálogo de servicios
+│   │       ├── payments/            # Stripe + efectivo
+│   │       └── notifications/       # Chat en tiempo real
+│   ├── scripts/
+│   │   ├── migrate.js               # Crea tablas
+│   │   └── seed.js                  # Datos de prueba
+│   ├── docker-compose.dev.yml       # PostgreSQL local
+│   └── .env.example
+│
+├── src/                             # Frontend Next.js
+│   ├── app/
+│   │   ├── dashboard/
+│   │   │   ├── layout.tsx           # Sidebar responsive
+│   │   │   ├── admin/               # Panel administrador
+│   │   │   ├── client/
+│   │   │   │   ├── nueva-reserva/   # Solicitar servicio
+│   │   │   │   ├── reservas/        # Historial con estado de pago
+│   │   │   │   └── vehiculos/       # Garaje virtual
+│   │   │   ├── washer/
+│   │   │   │   ├── disponibles/     # Trabajos sin asignar
+│   │   │   │   ├── trabajos/        # Trabajos propios + confirmar efectivo
+│   │   │   │   └── estadisticas/    # Ganancias y rendimiento
+│   │   │   ├── pagos/[id]/          # Pago por tarjeta o efectivo
+│   │   │   └── chat/                # Chat en tiempo real
+│   │   ├── login/
+│   │   ├── register/
+│   │   └── reset-password/
+│   ├── components/
+│   │   ├── ui/                      # Button, Card, Badge, Toast, Modal...
+│   │   ├── auth/                    # LoginForm, RegisterForm
+│   │   ├── reservas/                # ReservationsTable (badges de pago)
+│   │   ├── vehicles/                # VehicleList, VehicleFormModal
+│   │   └── washer/                  # JobActions, WasherLocationTracker
+│   ├── contexts/                    # AuthContext, ThemeContext
+│   ├── hooks/                       # useApi, useModal
+│   └── lib/
+│       ├── api-client.ts            # Cliente HTTP + todos los módulos API
+│       └── validations/             # Schemas Zod
+│
+└── public/                          # Archivos estáticos
+```
+
+---
+
+## 🔌 API — Endpoints principales
+
+### Auth
+```
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/profile
+```
+
+### Vehículos
+```
+GET    /api/vehicles
+POST   /api/vehicles
+PUT    /api/vehicles/:id
+DELETE /api/vehicles/:id
+```
+
+### Reservas
+```
+GET  /api/reservations/my
+POST /api/reservations
+PUT  /api/reservations/:id/status
+DELETE /api/reservations/:id
+GET  /api/services
+```
+
+### Pagos
+```
+POST /api/payments/cash              # Iniciar pago en efectivo
+POST /api/payments/:id/confirm-cash  # Lavador confirma recepción
+POST /api/payments/create-intent     # Stripe PaymentIntent
+GET  /api/payments
+GET  /api/payments/reservation/:id
+```
+
+### Chat
+```
+GET  /api/messages/:roomId
+POST /api/messages
+WebSocket  (Socket.IO)
+```
+
+---
+
+## 💳 Flujo de pago
+
+```
+Cliente solicita servicio
+        │
+        ▼
+  Reserva creada (PENDING)
+        │
+   Lavador asignado (CONFIRMED)
+        │
+        ├── Pagar con tarjeta ──→ Stripe PaymentIntent ──→ COMPLETED
+        │
+        └── Pagar en efectivo ──→ badge "Pago en efectivo pendiente"
+                                        │
+                               Lavador confirma recepción
+                                        │
+                                   COMPLETED → badge "Pagado ✓"
+```
+
+---
+
+## 📊 Base de datos
+
+Una sola instancia PostgreSQL, base de datos `lava_auto`:
+
+| Tabla | Contenido |
+|-------|-----------|
+| `users` | Usuarios (CLIENT, WASHER, ADMIN) |
+| `vehicles` | Vehículos de los clientes |
+| `services` | Catálogo de servicios |
+| `reservations` | Reservas con estado |
+| `payments` | Pagos y transacciones |
+| `messages` | Mensajes del chat |
+
+---
+
+## 🔒 Seguridad
+
+- Contraseñas con bcrypt
+- JWT con expiración configurable (`JWT_EXPIRES_IN`)
+- Rate limiting en todos los endpoints
+- Helmet (headers HTTP seguros)
+- Validación de entrada con Zod (frontend) y Express (backend)
+
+---
+
+## 📝 Comandos útiles
+
+```bash
+# Backend
+cd backend
+npm run dev          # Desarrollo con nodemon
+npm run start        # Producción
+npm run migrate      # (Re)crear tablas
+npm run seed         # Cargar datos de prueba
+npm run db:up        # Iniciar PostgreSQL en Docker
+npm run db:down      # Detener PostgreSQL
+npm run db:reset     # Limpiar y reiniciar BD
+
+# Frontend
+npm run dev          # Turbopack dev server
+npm run build        # Build de producción
+npm run lint         # ESLint
+
+# Stripe (test)
+npm run stripe:listen   # Escuchar webhooks locales
+npm run stripe:login    # Autenticar Stripe CLI
+```
+
+---
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
+3. Commit: `git commit -m 'feat: descripción del cambio'`
+4. Push: `git push origin feature/nueva-funcionalidad`
+5. Abre un Pull Request
+
+---
+
+## 📄 Licencia
+
+MIT © 2026
+
+---
+
+**Última actualización**: Febrero 2026

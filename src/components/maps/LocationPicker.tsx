@@ -74,7 +74,7 @@ export default function LocationPicker({
   useEffect(() => {
     if (!mapLoaded || map) return;
 
-    const defaultCenter = coordinates || { lat: 19.4326, lng: -99.1332 }; // CDMX por defecto
+    const defaultCenter = coordinates || { lat: -0.1807, lng: -78.4678 }; // Quito por defecto
 
     const mapInstance = new window.google.maps.Map(
       document.getElementById('map') as HTMLElement,

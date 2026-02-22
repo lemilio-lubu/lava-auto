@@ -1,0 +1,299 @@
+# Lava Auto - Microservices Docker Compose
+# Ejecutar con: docker-compose -f docker-compose.microservices.yml up -d
+
+services:
+  # ===========================================
+  # DATABASES (One per microservice)
+  # ===========================================
+  
+  db-auth:
+    image: postgres:15-alpine
+    container_name: lava-db-auth
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lava_auto_auth
+    volumes:
+      - db_auth_data:/var/lib/postgresql/data
+      - ./microservices/auth-service/src/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./microservices/auth-service/src/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lava_auto_auth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lava-network
+
+  db-vehicles:
+    image: postgres:15-alpine
+    container_name: lava-db-vehicles
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lava_auto_vehicles
+    volumes:
+      - db_vehicles_data:/var/lib/postgresql/data
+      - ./microservices/vehicle-service/src/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./microservices/vehicle-service/src/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lava_auto_vehicles"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lava-network
+
+  db-reservations:
+    image: postgres:15-alpine
+    container_name: lava-db-reservations
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lava_auto_reservations
+    volumes:
+      - db_reservations_data:/var/lib/postgresql/data
+      - ./microservices/reservation-service/src/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./microservices/reservation-service/src/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lava_auto_reservations"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lava-network
+
+  db-payments:
+    image: postgres:15-alpine
+    container_name: lava-db-payments
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lava_auto_payments
+    volumes:
+      - db_payments_data:/var/lib/postgresql/data
+      - ./microservices/payment-service/src/database/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lava_auto_payments"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lava-network
+
+  db-notifications:
+    image: postgres:15-alpine
+    container_name: lava-db-notifications
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lava_auto_notifications
+    volumes:
+      - db_notifications_data:/var/lib/postgresql/data
+      - ./microservices/notification-service/src/database/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lava_auto_notifications"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lava-network
+
+  # ===========================================
+  # MICROSERVICES
+  # ===========================================
+
+  auth-service:
+    build:
+      context: ./microservices
+      dockerfile: auth-service/Dockerfile
+    container_name: lava-auth-service
+    restart: unless-stopped
+    environment:
+      PORT: 4001
+      NODE_ENV: production
+      DB_HOST: db-auth
+      DB_PORT: 5432
+      DB_NAME: lava_auto_auth
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-lava-auto-super-secret-jwt-key-2024}
+      JWT_EXPIRES_IN: 24h
+    depends_on:
+      db-auth:
+        condition: service_healthy
+    networks:
+      - lava-network
+
+  vehicle-service:
+    build:
+      context: ./microservices
+      dockerfile: vehicle-service/Dockerfile
+    container_name: lava-vehicle-service
+    restart: unless-stopped
+    environment:
+      PORT: 4002
+      NODE_ENV: production
+      DB_HOST: db-vehicles
+      DB_PORT: 5432
+      DB_NAME: lava_auto_vehicles
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RESERVATION_SERVICE_URL: http://reservation-service:4003
+    depends_on:
+      db-vehicles:
+        condition: service_healthy
+      reservation-service:
+        condition: service_started
+    networks:
+      - lava-network
+
+  reservation-service:
+    build:
+      context: ./microservices
+      dockerfile: reservation-service/Dockerfile
+    container_name: lava-reservation-service
+    restart: unless-stopped
+    environment:
+      PORT: 4003
+      NODE_ENV: production
+      DB_HOST: db-reservations
+      DB_PORT: 5432
+      DB_NAME: lava_auto_reservations
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      AUTH_SERVICE_URL: http://auth-service:4001
+      VEHICLE_SERVICE_URL: http://vehicle-service:4002
+      PAYMENT_SERVICE_URL: http://payment-service:4004
+      NOTIFICATION_SERVICE_URL: http://notification-service:4005
+    depends_on:
+      db-reservations:
+        condition: service_healthy
+    networks:
+      - lava-network
+
+  payment-service:
+    build:
+      context: ./microservices
+      dockerfile: payment-service/Dockerfile
+    container_name: lava-payment-service
+    restart: unless-stopped
+    environment:
+      PORT: 4004
+      NODE_ENV: production
+      DB_HOST: db-payments
+      DB_PORT: 5432
+      DB_NAME: lava_auto_payments
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      RESERVATION_SERVICE_URL: http://reservation-service:4003
+    depends_on:
+      db-payments:
+        condition: service_healthy
+    networks:
+      - lava-network
+
+  notification-service:
+    build:
+      context: ./microservices
+      dockerfile: notification-service/Dockerfile
+    container_name: lava-notification-service
+    restart: unless-stopped
+    environment:
+      PORT: 4005
+      NODE_ENV: production
+      DB_HOST: db-notifications
+      DB_PORT: 5432
+      DB_NAME: lava_auto_notifications
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      db-notifications:
+        condition: service_healthy
+    ports:
+      - "4005:4005"  # Exposed for Socket.IO
+    networks:
+      - lava-network
+
+  # ===========================================
+  # API GATEWAY
+  # ===========================================
+
+  api-gateway:
+    build:
+      context: ./microservices/api-gateway
+      dockerfile: Dockerfile
+    container_name: lava-api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-lava-auto-super-secret-jwt-key-2024}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      AUTH_SERVICE_URL: http://auth-service:4001
+      VEHICLE_SERVICE_URL: http://vehicle-service:4002
+      RESERVATION_SERVICE_URL: http://reservation-service:4003
+      PAYMENT_SERVICE_URL: http://payment-service:4004
+      NOTIFICATION_SERVICE_URL: http://notification-service:4005
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+    depends_on:
+      - auth-service
+      - vehicle-service
+      - reservation-service
+      - payment-service
+      - notification-service
+    ports:
+      - "4000:4000"
+    networks:
+      - lava-network
+
+  # ===========================================
+  # FRONTEND (Next.js)
+  # ===========================================
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_NOTIFICATION_URL: http://localhost:4005
+    container_name: lava-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - api-gateway
+    ports:
+      - "3000:3000"
+    networks:
+      - lava-network
+
+# ===========================================
+# VOLUMES (Persistent Data)
+# ===========================================
+
+volumes:
+  db_auth_data:
+  db_vehicles_data:
+  db_reservations_data:
+  db_payments_data:
+  db_notifications_data:
+
+# ===========================================
+# NETWORKS
+# ===========================================
+
+networks:
+  lava-network:
+    driver: bridge

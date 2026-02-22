@@ -1,47 +1,72 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { chatApi } from '@/lib/api-client';
 import io, { Socket } from 'socket.io-client';
-import { MessageCircle, Send, User, Clock, Check, CheckCheck } from 'lucide-react';
+import { MessageCircle, Send, User, Clock, Check, CheckCheck, Loader2, Users, Shield, Car, UserCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-interface User {
+interface ChatUser {
   id: string;
   name: string;
-  email: string;
+  role?: string;
+}
+
+interface AvailableUser {
+  id: string;
+  name: string;
+  role: string;
+  isAvailable?: boolean;
 }
 
 interface Message {
   id: string;
   content: string;
   senderId: string;
+  senderRole?: string;
   receiverId: string;
   createdAt: string;
   read: boolean;
-  sender: User;
-  receiver: User;
 }
 
 interface Conversation {
-  user: User;
-  lastMessage: Message;
-  unreadCount: number;
+  other_user_id: string;
+  other_user_name: string;
+  last_message_at: string;
+  unread_count: number;
 }
 
-let socket: Socket | null = null;
+const NOTIFICATION_SERVICE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function ChatPage() {
-  const { data: session } = useSession();
-  const [users, setUsers] = useState<User[]>([]);
+  const { user, token, isLoading: authLoading } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [sending, setSending] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Socket ref - managed within component lifecycle
+  const socketRef = useRef<Socket | null>(null);
+  
+  // Refs to access current values inside socket listeners
+  const userRef = useRef(user);
+  const selectedUserRef = useRef(selectedUser);
+  
+  // Keep refs updated
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+  
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,174 +76,178 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Inicializar Socket.IO y cargar datos
+  const loadConversations = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [convData, usersData] = await Promise.all([
+        chatApi.getConversations(token),
+        chatApi.getAvailableUsers(token)
+      ]);
+      setConversations(convData || []);
+      setAvailableUsers(usersData || []);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  }, [token]);
+
+  // Initialize Socket.IO and load data
   useEffect(() => {
-    if (!session?.user?.email) return;
+    if (authLoading || !user || !token) return;
 
     const initializeChat = async () => {
       try {
-        // Obtener usuario actual
-        const userRes = await fetch('/api/auth/users');
-        const userData = await userRes.json();
-        const currentUser = userData.users.find((u: User) => u.email === session.user?.email);
+        // Load conversations
+        await loadConversations();
         
-        if (!currentUser) return;
-        setCurrentUserId(currentUser.id);
-
-        // Inicializar Socket.IO
-        if (!socket) {
-          socket = io({
-            path: '/socket.io',
-          });
-
-          socket.on('connect', () => {
-            console.log('Conectado a Socket.IO');
-            socket?.emit('register', currentUser.id);
-          });
-
-              socket.on('new-message', (message: Message) => {
-            console.log('Mensaje recibido:', message);
-            
-            // Actualizar conversaciones siempre
-            loadConversations();
-            
-            // Actualizar mensajes si la conversación está activa
-            setSelectedUser((currentSelectedUser) => {
-              if (currentSelectedUser) {
-                const isRelevantMessage = 
-                  (message.senderId === currentUser.id && message.receiverId === currentSelectedUser.id) ||
-                  (message.senderId === currentSelectedUser.id && message.receiverId === currentUser.id);
-                
-                if (isRelevantMessage) {
-                  setMessages((prev) => {
-                    // Reemplazar mensaje temporal con el mensaje real del servidor
-                    const withoutTemp = prev.filter(m => !m.id.startsWith('temp-'));
-                    const exists = withoutTemp.some(m => m.id === message.id);
-                    
-                    if (exists) {
-                      return prev;
-                    }
-                    return [...withoutTemp, message];
-                  });
-                  
-                  // Si es un mensaje recibido (no propio), marcar como leído
-                  if (message.senderId === currentSelectedUser.id && socket) {
-                    socket.emit('mark-as-read', {
-                      senderId: currentSelectedUser.id,
-                      receiverId: currentUser.id,
-                    });
-                  }
-                }
-              }
-              return currentSelectedUser;
-            });
-          });          socket.on('messages-read', ({ senderId, receiverId }) => {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.senderId === senderId && m.receiverId === receiverId
-                  ? { ...m, read: true }
-                  : m
-              )
-            );
-          });
+        // Disconnect existing socket if any (cleanup from previous mount)
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
         }
+        
+        // Initialize new Socket.IO connection
+        const newSocket = io(NOTIFICATION_SERVICE_URL, {
+          path: '/socket.io',
+          auth: { token },
+          forceNew: true // Force new connection each time
+        });
+        
+        socketRef.current = newSocket;
 
-        // Cargar usuarios y conversaciones
-        await Promise.all([loadUsers(), loadConversations()]);
+        newSocket.on('connect', () => {
+          console.log('Connected to Socket.IO');
+          // userId y role se extraen del token en el servidor — no se envían datos desde el cliente
+        });
+
+        newSocket.on('connect_error', (err) => {
+          console.error('Socket.IO auth error:', err.message);
+        });
+
+        newSocket.on('new-message', (message: Message) => {
+          loadConversations();
+
+          // Solo agregar al estado si la conversación está activa y el mensaje es del otro usuario
+          const currentUser = userRef.current;
+          const currentSelectedUser = selectedUserRef.current;
+
+          if (
+            currentSelectedUser &&
+            currentUser &&
+            message.senderId !== currentUser.id &&
+            message.senderId === currentSelectedUser.id
+          ) {
+            setMessages((prev) => {
+              // Dedup por ID real de BD
+              if (prev.some((m) => m.id === message.id)) return prev;
+              return [...prev, message];
+            });
+          }
+        });
+
+        newSocket.on('messages-read', ({ senderId, receiverId }: { senderId: string; receiverId: string }) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.senderId === senderId && m.receiverId === receiverId
+                ? { ...m, read: true }
+                : m
+            )
+          );
+        });
+        
+        newSocket.on('disconnect', () => {
+          console.log('Disconnected from Socket.IO');
+        });
+
         setLoading(false);
       } catch (error) {
-        console.error('Error al inicializar chat:', error);
+        console.error('Error initializing chat:', error);
         setLoading(false);
       }
     };
 
     initializeChat();
 
+    // Cleanup on unmount - fully disconnect socket
     return () => {
-      if (socket) {
-        socket.off('new-message');
-        socket.off('messages-read');
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
-  }, [session]);
+  }, [authLoading, user, token, loadConversations]);
 
-  const loadUsers = async () => {
+  const loadMessages = async (otherUserId: string) => {
+    if (!token) return;
     try {
-      const res = await fetch('/api/chat/users');
-      const data = await res.json();
-      setUsers(data.users || []);
+      const data = await chatApi.getConversation(otherUserId, token);
+      setMessages(data || []);
     } catch (error) {
-      console.error('Error al cargar usuarios:', error);
+      console.error('Error loading messages:', error);
     }
   };
 
-  const loadConversations = async () => {
-    try {
-      const res = await fetch('/api/chat/conversations');
-      const data = await res.json();
-      setConversations(data.conversations || []);
-    } catch (error) {
-      console.error('Error al cargar conversaciones:', error);
-    }
+  const handleSelectConversation = (conversation: Conversation) => {
+    // Find user info from available users
+    const userInfo = availableUsers.find(u => u.id === conversation.other_user_id);
+    const chatUser: ChatUser = {
+      id: conversation.other_user_id,
+      name: userInfo?.name || conversation.other_user_name,
+      role: userInfo?.role
+    };
+    setSelectedUser(chatUser);
+    setShowNewChat(false);
+    loadMessages(conversation.other_user_id);
   };
 
-  const loadMessages = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/chat/messages?userId=${userId}`);
-      const data = await res.json();
-      setMessages(data.messages || []);
-
-      // Marcar mensajes como leídos
-      if (socket && currentUserId) {
-        socket.emit('mark-as-read', {
-          senderId: userId,
-          receiverId: currentUserId,
-        });
-      }
-    } catch (error) {
-      console.error('Error al cargar mensajes:', error);
-    }
+  const handleSelectNewUser = (availableUser: AvailableUser) => {
+    const chatUser: ChatUser = {
+      id: availableUser.id,
+      name: availableUser.name,
+      role: availableUser.role
+    };
+    setSelectedUser(chatUser);
+    setShowNewChat(false);
+    loadMessages(availableUser.id);
   };
 
-  const handleSelectUser = (user: User) => {
-    setSelectedUser(user);
-    loadMessages(user.id);
-  };
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedUser || !user || !token) return;
 
-  const handleSendMessage = () => {
-    if (!messageText.trim() || !selectedUser || !currentUserId || !socket) return;
-
+    const content = messageText.trim();
+    const tempId = `msg-${Date.now()}`;
     const tempMessage: Message = {
-      id: `temp-${Date.now()}`,
-      content: messageText.trim(),
-      senderId: currentUserId,
+      id: tempId,
+      content,
+      senderId: user.id,
       receiverId: selectedUser.id,
       createdAt: new Date().toISOString(),
       read: false,
-      sender: {
-        id: currentUserId,
-        name: session?.user?.name || '',
-        email: session?.user?.email || '',
-      },
-      receiver: {
-        id: selectedUser.id,
-        name: selectedUser.name,
-        email: selectedUser.email,
-      },
     };
 
-    // Agregar mensaje inmediatamente a la UI (optimistic update)
+    // Optimistic update
     setMessages((prev) => [...prev, tempMessage]);
-    
-    // Limpiar el input inmediatamente
     setMessageText('');
+    setSending(true);
 
-    // Enviar al servidor
-    socket.emit('send-message', {
-      senderId: currentUserId,
-      receiverId: selectedUser.id,
-      content: tempMessage.content,
-    });
+    try {
+      // Send via API: persiste en BD y el servidor emite el socket al receptor con el ID real
+      const savedMessage = await chatApi.sendMessage(selectedUser.id, content, token, selectedUser.role);
+
+      // Reemplazar el mensaje temporal con el guardado (ID real de BD)
+      if (savedMessage) {
+        setMessages((prev) => prev.map((m) => m.id === tempId ? savedMessage : m));
+      }
+
+      // Reload conversations to update last message time
+      loadConversations();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Remove temp message on error
+      setMessages((prev) => prev.filter(m => m.id !== tempId));
+      setMessageText(content);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -228,11 +257,25 @@ export default function ChatPage() {
     }
   };
 
-  if (loading) {
+  // Helper to get role icon and color
+  const getRoleInfo = (role?: string) => {
+    switch (role) {
+      case 'ADMIN':
+        return { icon: Shield, color: 'from-purple-400 to-indigo-400', label: 'Administrador' };
+      case 'WASHER':
+        return { icon: Car, color: 'from-emerald-400 to-teal-400', label: 'Lavador' };
+      case 'CLIENT':
+        return { icon: UserCircle, color: 'from-cyan-400 to-blue-400', label: 'Cliente' };
+      default:
+        return { icon: User, color: 'from-slate-400 to-slate-500', label: 'Usuario' };
+    }
+  };
+
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <Loader2 className="w-12 h-12 animate-spin text-cyan-500 mx-auto mb-4" />
           <p className="text-slate-600 dark:text-slate-400">Cargando chat...</p>
         </div>
       </div>
@@ -242,93 +285,187 @@ export default function ChatPage() {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-cyan-100 dark:border-slate-700 overflow-hidden">
       <div className="border-b border-cyan-100 dark:border-slate-700 bg-gradient-to-r from-cyan-50 to-emerald-50 dark:from-slate-700 dark:to-slate-700 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
-            <MessageCircle className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Chat</h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Comunícate con otros usuarios del sistema
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
+              <MessageCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Chat</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                {user?.role === 'ADMIN' 
+                  ? 'Comunícate con clientes y lavadores' 
+                  : 'Comunícate con el administrador'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="flex h-[calc(100vh-280px)]">
-        {/* Lista de usuarios / conversaciones */}
+        {/* Conversations and users list */}
         <div className="w-80 border-r border-cyan-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 overflow-y-auto">
-          {/* Usuarios disponibles */}
           <div className="p-4">
-            <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-              Usuarios Disponibles
-            </h2>
-            <div className="space-y-2">
-              {users.map((user) => {
-                const conversation = conversations.find(c => c.user.id === user.id);
-                const unreadCount = conversation?.unreadCount || 0;
+            {/* New Chat Button */}
+            <button
+              onClick={() => setShowNewChat(!showNewChat)}
+              className={`w-full mb-4 px-4 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-all ${
+                showNewChat 
+                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  : 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-white shadow-md hover:shadow-lg'
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              {showNewChat ? 'Ver Conversaciones' : 'Nueva Conversación'}
+            </button>
 
-                return (
-                  <button
-                    key={user.id}
-                    onClick={() => handleSelectUser(user)}
-                    className={`
-                      w-full text-left px-4 py-3 rounded-xl transition-all duration-200
-                      ${selectedUser?.id === user.id
-                        ? 'bg-cyan-500 text-white shadow-md'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`
-                        w-10 h-10 rounded-full flex items-center justify-center
-                        ${selectedUser?.id === user.id
-                          ? 'bg-white/20'
-                          : 'bg-gradient-to-br from-cyan-400 to-emerald-400'
-                        }
-                      `}>
-                        <User className={`w-5 h-5 ${selectedUser?.id === user.id ? 'text-white' : 'text-white'}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{user.name}</p>
-                        {conversation?.lastMessage && (
-                          <p className={`text-xs truncate ${selectedUser?.id === user.id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
-                            {conversation.lastMessage.content}
-                          </p>
-                        )}
-                      </div>
-                      {unreadCount > 0 && (
-                        <div className="bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                          {unreadCount}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            {showNewChat ? (
+              <>
+                <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+                  Usuarios Disponibles
+                </h2>
+                {availableUsers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      No hay usuarios disponibles
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {availableUsers.map((availableUser) => {
+                      const roleInfo = getRoleInfo(availableUser.role);
+                      const RoleIcon = roleInfo.icon;
+                      return (
+                        <button
+                          key={availableUser.id}
+                          onClick={() => handleSelectNewUser(availableUser)}
+                          className={`
+                            w-full text-left px-4 py-3 rounded-xl transition-all duration-200
+                            ${selectedUser?.id === availableUser.id
+                              ? 'bg-cyan-500 text-white shadow-md'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`
+                              w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br ${roleInfo.color}
+                            `}>
+                              <RoleIcon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate">
+                                {availableUser.name}
+                              </p>
+                              <p className={`text-xs ${selectedUser?.id === availableUser.id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                                {roleInfo.label}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+                  Conversaciones
+                </h2>
+                {conversations.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      No tienes conversaciones aún
+                    </p>
+                    <button
+                      onClick={() => setShowNewChat(true)}
+                      className="mt-3 text-sm text-cyan-600 dark:text-cyan-400 hover:underline"
+                    >
+                      Iniciar una conversación
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {conversations.map((conversation) => {
+                      const userInfo = availableUsers.find(u => u.id === conversation.other_user_id);
+                      const roleInfo = getRoleInfo(userInfo?.role);
+                      const RoleIcon = roleInfo.icon;
+                      const displayName = userInfo?.name || conversation.other_user_name;
+                      return (
+                        <button
+                          key={conversation.other_user_id}
+                          onClick={() => handleSelectConversation(conversation)}
+                          className={`
+                            w-full text-left px-4 py-3 rounded-xl transition-all duration-200
+                            ${selectedUser?.id === conversation.other_user_id
+                              ? 'bg-cyan-500 text-white shadow-md'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`
+                              w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br ${roleInfo.color}
+                            `}>
+                              <RoleIcon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate">
+                                {displayName}
+                              </p>
+                              <p className={`text-xs ${selectedUser?.id === conversation.other_user_id ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                                {format(new Date(conversation.last_message_at), 'dd/MM HH:mm', { locale: es })}
+                              </p>
+                            </div>
+                            {conversation.unread_count > 0 && (
+                              <div className="bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                                {conversation.unread_count}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
-        {/* Área de mensajes */}
+        {/* Messages area */}
         <div className="flex-1 flex flex-col">
           {selectedUser ? (
             <>
-              {/* Header del chat */}
+              {/* Chat header */}
               <div className="px-6 py-4 border-b border-cyan-100 dark:border-slate-700 bg-white dark:bg-slate-800">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{selectedUser.name}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{selectedUser.email}</p>
-                  </div>
+                  {(() => {
+                    const roleInfo = getRoleInfo(selectedUser.role);
+                    const RoleIcon = roleInfo.icon;
+                    return (
+                      <>
+                        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${roleInfo.color} flex items-center justify-center`}>
+                          <RoleIcon className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-white">
+                            {selectedUser.name}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {roleInfo.label}
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
-              {/* Mensajes */}
+              {/* Messages */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-slate-900/30">
                 {messages.length === 0 ? (
                   <div className="text-center py-12">
@@ -339,7 +476,7 @@ export default function ChatPage() {
                   </div>
                 ) : (
                   messages.map((message) => {
-                    const isOwn = message.senderId === currentUserId;
+                    const isOwn = message.senderId === user?.id;
                     const isTemporary = message.id.startsWith('temp-');
                     
                     return (
@@ -359,7 +496,10 @@ export default function ChatPage() {
                           <p className="text-sm break-words">{message.content}</p>
                           <div className={`flex items-center gap-1 mt-1 text-xs ${isOwn ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>
                             <span>
-                              {format(new Date(message.createdAt), 'HH:mm', { locale: es })}
+                              {(() => {
+                                const d = message.createdAt ? new Date(message.createdAt) : null;
+                                return d && !isNaN(d.getTime()) ? format(d, 'HH:mm', { locale: es }) : '';
+                              })()}
                             </span>
                             {isOwn && (
                               <>
@@ -368,7 +508,7 @@ export default function ChatPage() {
                                 ) : message.read ? (
                                   <CheckCheck className="w-3.5 h-3.5 ml-1 text-blue-200" />
                                 ) : (
-                                  <CheckCheck className="w-3.5 h-3.5 ml-1" />
+                                  <Check className="w-3.5 h-3.5 ml-1" />
                                 )}
                               </>
                             )}
@@ -381,7 +521,7 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input de mensaje */}
+              {/* Message input */}
               <div className="p-4 border-t border-cyan-100 dark:border-slate-700 bg-white dark:bg-slate-800">
                 <div className="flex gap-3">
                   <input
@@ -390,14 +530,19 @@ export default function ChatPage() {
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Escribe un mensaje..."
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                    disabled={sending}
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all disabled:opacity-50"
                   />
                   <button
                     onClick={handleSendMessage}
-                    disabled={!messageText.trim()}
+                    disabled={!messageText.trim() || sending}
                     className="px-6 py-3 bg-gradient-to-br from-cyan-500 to-emerald-500 text-white rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold flex items-center gap-2"
                   >
-                    <Send className="w-5 h-5" />
+                    {sending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
                     Enviar
                   </button>
                 </div>
@@ -408,10 +553,10 @@ export default function ChatPage() {
               <div className="text-center">
                 <MessageCircle className="w-24 h-24 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Selecciona un usuario
+                  Selecciona una conversación
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400">
-                  Elige un usuario de la lista para comenzar a chatear
+                  Elige una conversación de la lista para ver los mensajes
                 </p>
               </div>
             </div>

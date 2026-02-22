@@ -1,47 +1,46 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { 
   Calendar, Car, LogOut, Droplets, User, MessageCircle,
-  Briefcase, Users, Settings, BarChart, Home, Bell
+  Briefcase, Users, Settings, BarChart, Home, Bell, Loader2,
+  Menu, X
 } from 'lucide-react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ThemeToggle from '@/components/ui/ThemeToggle';
-import WasherLocationTracker from '@/components/washer/WasherLocationTracker';
-import prisma from '@/lib/prisma';
+import { useAuth } from '@/contexts/AuthContext';
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect('/login');
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [availableJobsCount] = useState(0); // TODO: fetch from API
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="w-12 h-12 animate-spin text-cyan-600" />
+      </div>
+    );
   }
-
-  // Obtener el usuario con su rol
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-    },
-  });
 
   if (!user) {
-    redirect('/login');
+    return null;
   }
 
-  // Contar trabajos disponibles para lavadores
-  let availableJobsCount = 0;
-  if (user.role === 'WASHER') {
-    availableJobsCount = await prisma.reservation.count({
-      where: {
-        status: 'PENDING',
-        washerId: null,
-      },
-    });
-  }
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   // Nielsen: Reconocer antes que recordar - Navegación según el rol del usuario
   const getNavItemsByRole = () => {
@@ -56,9 +55,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           },
           {
             icon: Calendar,
-            label: 'Solicitar Lavado',
+            label: 'Solicitar Servicio',
             href: '/dashboard/client/nueva-reserva',
-            description: 'Pide tu lavado',
+            description: 'Pide tu servicio',
           },
           {
             icon: Calendar,
@@ -76,7 +75,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             icon: MessageCircle,
             label: 'Chat',
             href: '/dashboard/chat',
-            description: 'Mensajes',
+            description: 'Mensajes con admin',
           },
         ];
 
@@ -93,7 +92,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             label: 'Disponibles',
             href: '/dashboard/washer/disponibles',
             description: 'Trabajos nuevos',
-            badge: true, // Para mostrar badge de notificación
+            badge: true,
           },
           {
             icon: Briefcase,
@@ -102,22 +101,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
             description: 'Trabajos asignados',
           },
           {
-            icon: Calendar,
-            label: 'Calendario',
-            href: '/dashboard/washer/calendario',
-            description: 'Agenda del día',
-          },
-          {
             icon: BarChart,
             label: 'Mis Estadísticas',
             href: '/dashboard/washer/estadisticas',
-            description: 'Ganancias y ratings',
+            description: 'Ganancias y rendimiento',
           },
           {
             icon: MessageCircle,
             label: 'Chat',
             href: '/dashboard/chat',
-            description: 'Mensajes',
+            description: 'Mensajes con admin',
           },
         ];
 
@@ -136,6 +129,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
             description: 'Clientes y lavadores',
           },
           {
+            icon: Briefcase,
+            label: 'Lavadores',
+            href: '/dashboard/admin/lavadores',
+            description: 'Gestionar lavadores',
+          },
+          {
             icon: Calendar,
             label: 'Reservas',
             href: '/dashboard/admin/reservas',
@@ -148,16 +147,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
             description: 'Gestionar servicios',
           },
           {
-            icon: BarChart,
-            label: 'Reportes',
-            href: '/dashboard/admin/reportes',
-            description: 'Análisis y métricas',
-          },
-          {
             icon: MessageCircle,
             label: 'Chat',
             href: '/dashboard/chat',
             description: 'Mensajes',
+          },
+          {
+            icon: BarChart,
+            label: 'Reportes',
+            href: '/dashboard/admin/reportes',
+            description: 'Análisis y métricas',
           },
           {
             icon: Settings,
@@ -192,22 +191,49 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <ThemeProvider>
     <div className="min-h-screen flex bg-gradient-to-br from-cyan-50 via-white to-emerald-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Nielsen: Consistencia y estándares - Sidebar fijo con navegación clara */}
-      <aside className="w-72 border-r border-cyan-100 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm flex flex-col shadow-sm">
+
+      {/* Backdrop mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 flex flex-col
+        border-r border-cyan-100 dark:border-slate-700
+        bg-white dark:bg-slate-800
+        backdrop-blur-sm shadow-sm
+        transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:relative lg:translate-x-0 lg:z-auto
+      `}>
         {/* Header del Sidebar */}
         <div className="p-6 border-b border-cyan-100 dark:border-slate-700">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
-              <Droplets className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
+                <Droplets className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Lava Auto</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Microservicios</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Autolavado</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Sistema Digital</p>
-            </div>
+            {/* Botón cerrar — solo mobile */}
+            <button
+              className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Cerrar menú"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        {/* Nielsen: Visibilidad del estado - Usuario actual visible con rol */}
+        {/* Usuario actual */}
         <div className="px-6 py-4 bg-cyan-50/50 dark:bg-slate-700/50 border-b border-cyan-100 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center shadow-sm">
@@ -224,29 +250,37 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </div>
 
-        {/* Nielsen: Diseño estético y minimalista - Navegación específica por rol */}
+        {/* Navegación */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <p className="px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
             {user.role === 'ADMIN' ? 'Administración' : user.role === 'WASHER' ? 'Lavador' : 'Cliente'}
           </p>
           {navItems.map((item) => {
             const Icon = item.icon;
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
             const showBadge = item.badge && user.role === 'WASHER' && availableJobsCount > 0;
             
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="
+                onClick={() => setSidebarOpen(false)}
+                className={`
                   flex items-center gap-3 px-4 py-3 rounded-xl
-                  text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400
-                  hover:bg-cyan-50 dark:hover:bg-slate-700
                   transition-all duration-200
                   group
                   relative
-                "
+                  ${isActive 
+                    ? 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300' 
+                    : 'text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-slate-700'
+                  }
+                `}
               >
-                <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/30 transition-colors relative">
+                <div className={`p-2 rounded-lg transition-colors relative ${
+                  isActive 
+                    ? 'bg-cyan-200 dark:bg-cyan-800' 
+                    : 'bg-slate-100 dark:bg-slate-700 group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/30'
+                }`}>
                   <Icon className="w-5 h-5" />
                   {showBadge && (
                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
@@ -258,58 +292,60 @@ export default async function DashboardLayout({ children }: { children: React.Re
                   <p className="font-semibold text-sm">{item.label}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{item.description}</p>
                 </div>
-                {showBadge && (
-                  <div className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                    {availableJobsCount}
-                  </div>
-                )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Nielsen: Control y libertad - Cerrar sesión claramente visible */}
+        {/* Footer con Theme Toggle y Logout */}
         <div className="p-4 border-t border-cyan-100 dark:border-slate-700 space-y-2">
           <div className="flex items-center justify-between px-4">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Tema</span>
             <ThemeToggle />
           </div>
           
-          <form action="/api/auth/signout" method="POST">
-            <button
-              type="submit"
-              className="
-                w-full flex items-center gap-3 px-4 py-3 rounded-xl
-                text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300
-                hover:bg-red-50 dark:hover:bg-red-900/20
-                transition-all duration-200
-                group
-              "
-            >
-              <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 group-hover:bg-red-100 dark:group-hover:bg-red-900/50 transition-colors">
-                <LogOut className="w-5 h-5" />
-              </div>
-              <span className="font-semibold text-sm">Cerrar Sesión</span>
-            </button>
-          </form>
+          <button
+            onClick={handleLogout}
+            className="
+              w-full flex items-center gap-3 px-4 py-3 rounded-xl
+              text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300
+              hover:bg-red-50 dark:hover:bg-red-900/20
+              transition-all duration-200
+              group
+            "
+          >
+            <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/30 group-hover:bg-red-100 dark:group-hover:bg-red-900/50 transition-colors">
+              <LogOut className="w-5 h-5" />
+            </div>
+            <span className="font-semibold text-sm">Cerrar Sesión</span>
+          </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {/* Nielsen: Visibilidad del estado - Header con información relevante */}
-        <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-cyan-100 dark:border-slate-700 px-8 py-6 shadow-sm sticky top-0 z-10">
+      <main className="flex-1 min-w-0 overflow-auto">
+        {/* Header */}
+        <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-cyan-100 dark:border-slate-700 px-4 md:px-8 py-4 md:py-6 shadow-sm sticky top-0 z-30">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <div className="flex items-center gap-3 justify-between">
+              {/* Hamburger button — solo mobile */}
+              <button
+                className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Abrir menú"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg md:text-2xl font-bold text-slate-900 dark:text-white truncate">
                   {user.role === 'ADMIN' 
                     ? 'Panel de Administración' 
                     : user.role === 'WASHER'
                     ? 'Panel del Lavador'
                     : 'Mi Panel'}
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
                   {user.role === 'ADMIN'
                     ? 'Gestiona todo el sistema de autolavado'
                     : user.role === 'WASHER'
@@ -318,8 +354,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 </p>
               </div>
               
-              {/* Nielsen: Visibilidad del estado - Indicador de tiempo */}
-              <div className="text-right">
+              <div className="text-right hidden md:block flex-shrink-0">
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {new Date().toLocaleDateString('es-ES', { 
                     weekday: 'long', 
@@ -328,24 +363,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
                     day: 'numeric' 
                   })}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Última actualización: ahora</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Conectado a microservicios</p>
               </div>
             </div>
           </div>
         </header>
 
         {/* Content Area */}
-        <div className="p-8">
+        <div className="p-4 md:p-8">
           <div className="max-w-7xl mx-auto animate-fadeIn">
             {children}
           </div>
         </div>
-
-        {/* Tracker de ubicación para lavadores */}
-        <WasherLocationTracker />
       </main>
     </div>
     </ThemeProvider>
   );
 }
-
