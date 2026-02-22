@@ -78,16 +78,20 @@ Aplicación web full-stack para la gestión de servicios de autolavado a domicil
 
 ### Prerrequisitos
 - Node.js 18+
-- PostgreSQL corriendo (local o Docker)
+- Docker y Docker Compose (para PostgreSQL)
 
-### 1. Base de datos con Docker (recomendado)
+### 1. Base de datos
 
 ```bash
 cd backend
-npm run db:up        # levanta PostgreSQL en Docker
-npm run migrate      # crea las tablas
-npm run seed         # carga datos de prueba
+docker-compose -f docker-compose.dev.yml up -d   # levanta PostgreSQL
 ```
+
+> Primera vez únicamente — crear tablas y cargar datos de prueba:
+> ```bash
+> node scripts/migrate.js
+> node scripts/seed.js
+> ```
 
 ### 2. Backend
 
@@ -95,7 +99,7 @@ npm run seed         # carga datos de prueba
 cd backend
 cp .env.example .env   # y edita los valores
 npm install
-npm run dev            # nodemon en :4000
+node src/index.js      # Express en :4000
 ```
 
 ### 3. Frontend
