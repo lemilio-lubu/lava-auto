@@ -31,12 +31,12 @@ jobs:
             npm install
             docker-compose -f docker-compose.dev.yml up -d
             node scripts/migrate.js
-            pm2 restart lava-api || pm2 start src/index.js --name "lava-api" --cwd /root/projects/lava-auto/backend
+            pm2 restart lava-api || pm2 start src/index.js --name "lava-api" --cwd /root/proyecto/lava-auto/backend
 
             # 4. FRONTEND: Build y Start
             cd ..
             npm install
             npm run build
-            pm2 restart lava-front || pm2 start npm --name "lava-front" --cwd /root/projects/lava-auto -- start
+            pm2 restart lava-front || pm2 start npm --name "lava-front" --cwd /root/proyecto/lava-auto -- start
 
             pm2 save
