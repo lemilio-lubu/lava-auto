@@ -1,2 +1,25 @@
-docker-compose.yml
-Dockerfile
+node_modules
+npm-debug.log*
+
+# Docker de desarrollo
+docker-compose*.yml
+Dockerfile*
+
+# Variables de entorno (se inyectan desde Railway)
+.env
+.env.*
+!.env.example
+
+# Git / IDE
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

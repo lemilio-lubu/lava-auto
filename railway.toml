@@ -1,0 +1,12 @@
+# railway.toml — Configuración del servicio Frontend (Next.js)
+# Documentación: https://docs.railway.app/reference/config-as-code
+
+[build]
+  dockerfilePath = "Dockerfile"
+
+[deploy]
+  # Railway inyecta PORT automáticamente; el servidor standalone de Next lo lee
+  healthcheckPath    = "/"
+  healthcheckTimeout = 120
+  restartPolicyType  = "ON_FAILURE"
+  restartPolicyMaxRetries = 3

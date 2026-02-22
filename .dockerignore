@@ -27,8 +27,9 @@ docker-compose*.yml
 .DS_Store
 Thumbs.db
 
-# Microservices (built separately)
+# Carpetas de otros servicios (se construyen por separado)
 microservices
+backend
 
 # Environment files (will be passed via docker-compose)
 .env
