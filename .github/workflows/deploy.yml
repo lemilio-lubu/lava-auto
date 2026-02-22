@@ -18,7 +18,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             # 1. Entrar y actualizar código
-            cd ~/projects/lava-auto
+            cd ~/proyecto/lava-auto
             git pull origin master
 
             # 2. Activar Node 20 (NVM)
