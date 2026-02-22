@@ -5,7 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Calendar, Car, LogOut, Droplets, User, MessageCircle,
-  Briefcase, Users, Settings, BarChart, Home, Bell, Loader2
+  Briefcase, Users, Settings, BarChart, Home, Bell, Loader2,
+  Menu, X
 } from 'lucide-react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ThemeToggle from '@/components/ui/ThemeToggle';
@@ -16,6 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [availableJobsCount] = useState(0); // TODO: fetch from API
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -189,18 +191,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ThemeProvider>
     <div className="min-h-screen flex bg-gradient-to-br from-cyan-50 via-white to-emerald-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+
+      {/* Backdrop mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-72 border-r border-cyan-100 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm flex flex-col shadow-sm">
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 flex flex-col
+        border-r border-cyan-100 dark:border-slate-700
+        bg-white dark:bg-slate-800
+        backdrop-blur-sm shadow-sm
+        transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:relative lg:translate-x-0 lg:z-auto
+      `}>
         {/* Header del Sidebar */}
         <div className="p-6 border-b border-cyan-100 dark:border-slate-700">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
-              <Droplets className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
+                <Droplets className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Lava Auto</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Microservicios</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Lava Auto</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Microservicios</p>
-            </div>
+            {/* Botón cerrar — solo mobile */}
+            <button
+              className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Cerrar menú"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -235,6 +264,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setSidebarOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-xl
                   transition-all duration-200
@@ -293,20 +323,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto">
         {/* Header */}
-        <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-cyan-100 dark:border-slate-700 px-8 py-6 shadow-sm sticky top-0 z-10">
+        <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-cyan-100 dark:border-slate-700 px-4 md:px-8 py-4 md:py-6 shadow-sm sticky top-0 z-30">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <div className="flex items-center gap-3 justify-between">
+              {/* Hamburger button — solo mobile */}
+              <button
+                className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-cyan-50 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Abrir menú"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg md:text-2xl font-bold text-slate-900 dark:text-white truncate">
                   {user.role === 'ADMIN' 
                     ? 'Panel de Administración' 
                     : user.role === 'WASHER'
                     ? 'Panel del Lavador'
                     : 'Mi Panel'}
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
                   {user.role === 'ADMIN'
                     ? 'Gestiona todo el sistema de autolavado'
                     : user.role === 'WASHER'
@@ -315,7 +354,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </p>
               </div>
               
-              <div className="text-right">
+              <div className="text-right hidden md:block flex-shrink-0">
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {new Date().toLocaleDateString('es-ES', { 
                     weekday: 'long', 
@@ -331,7 +370,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Content Area */}
-        <div className="p-8">
+        <div className="p-4 md:p-8">
           <div className="max-w-7xl mx-auto animate-fadeIn">
             {children}
           </div>

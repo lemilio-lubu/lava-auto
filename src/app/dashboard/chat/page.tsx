@@ -496,7 +496,10 @@ export default function ChatPage() {
                           <p className="text-sm break-words">{message.content}</p>
                           <div className={`flex items-center gap-1 mt-1 text-xs ${isOwn ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>
                             <span>
-                              {format(new Date(message.createdAt), 'HH:mm', { locale: es })}
+                              {(() => {
+                                const d = message.createdAt ? new Date(message.createdAt) : null;
+                                return d && !isNaN(d.getTime()) ? format(d, 'HH:mm', { locale: es }) : '';
+                              })()}
                             </span>
                             {isOwn && (
                               <>

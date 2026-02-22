@@ -1,111 +1,121 @@
-# Lava Auto - Sistema de Reservas de Autolavado
+# Lava Auto — Sistema de Reservas de Autolavado
 
-Sistema web completo para la gestión de reservas de servicios de autolavado, desarrollado con una **arquitectura de microservicios** usando **Next.js 16**, **TypeScript**, **Express.js** y **PostgreSQL**.
+Aplicación web full-stack para la gestión de servicios de autolavado a domicilio.  
+**Next.js 16** (frontend) + **Express.js modular** (backend) + **PostgreSQL** (una sola base de datos).
+
+---
 
 ## 🏗️ Arquitectura
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Frontend (Next.js)                       │
-│                    http://localhost:3000                      │
-│                    (Docker Container)                         │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     API Gateway                               │
-│                  http://localhost:4000                        │
-│  - Rate Limiting  - JWT Validation  - Request Routing         │
-└───────┬─────────┬─────────┬─────────┬─────────┬─────────────┘
-        │         │         │         │         │
-        ▼         ▼         ▼         ▼         ▼
-┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐
-│   Auth    │ │  Vehicle  │ │Reservation│ │  Payment  │ │Notification│
-│  Service  │ │  Service  │ │  Service  │ │  Service  │ │  Service  │
-│   :4001   │ │   :4002   │ │   :4003   │ │   :4004   │ │   :4005   │
-└─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
-      │             │             │             │             │
-      ▼             ▼             ▼             ▼             ▼
-┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐
-│  Auth DB  │ │Vehicles DB│ │Reserv. DB │ │Payments DB│ │  Notif DB │
-└───────────┘ └───────────┘ └───────────┘ └───────────┘ └───────────┘
+┌───────────────────────────────────────┐
+│          Frontend (Next.js 16)         │
+│          http://localhost:3000         │
+└─────────────────┬─────────────────────┘
+                  │ HTTP REST / WebSocket
+                  ▼
+┌───────────────────────────────────────┐
+│        Backend monolítico (Express)    │
+│          http://localhost:4000         │
+│                                        │
+│  /api/auth          → módulo auth      │
+│  /api/vehicles      → módulo vehicles  │
+│  /api/reservations  → módulo reservas  │
+│  /api/payments      → módulo pagos     │
+│  /api/services      → módulo servicios │
+│  ws://              → Socket.IO chat   │
+└─────────────────┬─────────────────────┘
+                  │
+                  ▼
+┌───────────────────────────────────────┐
+│           PostgreSQL — lava_auto       │
+└───────────────────────────────────────┘
 ```
 
-## ✨ Características
+---
 
-### 👥 Roles de Usuario
-- **Cliente**: Reserva servicios, gestiona vehículos, realiza pagos
-- **Lavador**: Visualiza trabajos asignados, actualiza estados, tracking GPS
-- **Administrador**: Gestiona usuarios, servicios, reservas y configuración
+## ✨ Funcionalidades
 
-### 🎨 Diseño UX/UI
-- Principios de Nielsen implementados
-- Paleta temática cyan/emerald (agua y limpieza)
-- Diseño responsive (móvil, tablet, desktop)
-- Modo claro/oscuro
-- Animaciones suaves
+### 👥 Roles
 
-### 💬 Chat en Tiempo Real
-- Comunicación via WebSockets (Socket.IO)
-- Cliente ↔ Admin
-- Lavador ↔ Admin
-- Indicadores de mensajes leídos/no leídos
+| Rol | Capacidades |
+|-----|-------------|
+| **Cliente** | Solicitar servicios, gestionar vehículos, pagar (tarjeta o efectivo), ver historial |
+| **Lavador** | Ver trabajos disponibles, aceptar trabajos, actualizar estados, confirmar pago en efectivo |
+| **Admin** | Gestionar usuarios, lavadores, servicios, reservas y reportes |
 
-### 💳 Sistema de Pagos
-- Integración mock de Stripe
-- Historial de transacciones
-- Estados de pago
+### 💳 Pagos
+- **Tarjeta** via Stripe (modo test)
+- **Efectivo** — cliente indica que pagará en mano; lavador confirma la recepción
+- Estado visual en reservas: badge **Pagado ✓** / **Pago en efectivo pendiente**
 
-### 📍 Geolocalización
-- Selector de ubicación con Google Maps
-- Tracking de lavadores en tiempo real
+### 💬 Chat en tiempo real
+- WebSockets con Socket.IO integrado en el backend
+- Cliente ↔ Admin · Lavador ↔ Admin
+- Indicadores de leído/no leído
 
-## 🛠️ Stack Tecnológico
+### 🎨 Diseño
+- Paleta cyan/emerald (agua y limpieza)
+- **Totalmente responsive** — drawer lateral en móvil, hamburguesa en header
+- Modo claro/oscuro con persistencia
+
+---
+
+## 🛠️ Stack
 
 | Capa | Tecnologías |
 |------|-------------|
 | **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
-| **Backend** | Node.js, Express.js, API Gateway Pattern |
-| **Base de Datos** | PostgreSQL (una por microservicio) |
-| **Tiempo Real** | Socket.IO |
+| **Backend** | Node.js 18+, Express.js, Socket.IO 4 |
+| **Base de datos** | PostgreSQL (única instancia, base `lava_auto`) |
+| **Pagos** | Stripe SDK (modo test) |
 | **Contenedores** | Docker, Docker Compose |
-| **UI** | Lucide Icons, Custom Components |
+| **UI** | Lucide React, componentes propios |
 
-## 🚀 Inicio Rápido
+---
+
+## 🚀 Inicio rápido
 
 ### Prerrequisitos
-- Docker y Docker Compose
-- Node.js 18+ (solo para desarrollo local)
+- Node.js 18+
+- PostgreSQL corriendo (local o Docker)
 
-### Ejecutar con Docker (Recomendado)
+### 1. Base de datos con Docker (recomendado)
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/tu-usuario/lava-auto.git
-cd lava-auto
-
-# Configurar Google Maps API Key (opcional)
-echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=tu_api_key" > .env
-
-# Iniciar todos los servicios
-docker-compose -f docker-compose.microservices.yml up -d --build
-
-# Ver logs
-docker-compose -f docker-compose.microservices.yml logs -f
-
-# Detener servicios
-docker-compose -f docker-compose.microservices.yml down
+cd backend
+npm run db:up        # levanta PostgreSQL en Docker
+npm run migrate      # crea las tablas
+npm run seed         # carga datos de prueba
 ```
 
-### URLs de Acceso
+### 2. Backend
+
+```bash
+cd backend
+cp .env.example .env   # y edita los valores
+npm install
+npm run dev            # nodemon en :4000
+```
+
+### 3. Frontend
+
+```bash
+# en la raíz del proyecto
+cp .env.example .env.local   # NEXT_PUBLIC_API_URL=http://localhost:4000
+npm install
+npm run dev                  # Turbopack en :3000
+```
+
+### URLs
 
 | Servicio | URL |
 |----------|-----|
 | Frontend | http://localhost:3000 |
-| API Gateway | http://localhost:4000 |
-| Socket.IO | http://localhost:4005 |
+| Backend API | http://localhost:4000 |
+| Swagger/Docs | http://localhost:4000/api-docs |
 
-### Usuarios de Prueba
+### Usuarios de prueba (seed)
 
 | Rol | Email | Contraseña |
 |-----|-------|------------|
@@ -113,169 +123,195 @@ docker-compose -f docker-compose.microservices.yml down
 | Cliente | cliente@test.com | client123 |
 | Lavador | lavador@test.com | washer123 |
 
-## 📁 Estructura del Proyecto
+---
+
+## 📁 Estructura del proyecto
 
 ```
 lava-auto/
-├── docker-compose.microservices.yml   # Orquestación de contenedores
-├── Dockerfile                         # Build del frontend
-├── .dockerignore                      # Archivos excluidos del build
-├── package.json                       # Dependencias del frontend
-├── next.config.ts                     # Configuración Next.js
-├── tsconfig.json                      # Configuración TypeScript
+├── backend/                         # API REST + WebSocket
+│   ├── src/
+│   │   ├── index.js                 # Entry point (Express + Socket.IO)
+│   │   ├── config/                  # Configuración de BD, JWT, etc.
+│   │   ├── database/                # Pool de conexión PostgreSQL
+│   │   ├── middleware/              # Auth, error handler, rate limit
+│   │   ├── shared/                  # Base repository, utilidades
+│   │   └── modules/
+│   │       ├── auth/                # Registro, login, JWT
+│   │       ├── vehicles/            # CRUD vehículos
+│   │       ├── reservations/        # Reservas + catálogo de servicios
+│   │       ├── payments/            # Stripe + efectivo
+│   │       └── notifications/       # Chat en tiempo real
+│   ├── scripts/
+│   │   ├── migrate.js               # Crea tablas
+│   │   └── seed.js                  # Datos de prueba
+│   ├── docker-compose.dev.yml       # PostgreSQL local
+│   └── .env.example
 │
-├── src/                               # Código fuente del frontend
-│   ├── app/                           # App Router (Next.js)
-│   │   ├── dashboard/                 # Dashboards por rol
-│   │   │   ├── admin/                 # Panel de administrador
-│   │   │   ├── client/                # Panel de cliente
-│   │   │   ├── washer/                # Panel de lavador
-│   │   │   └── chat/                  # Chat en tiempo real
-│   │   ├── login/                     # Autenticación
-│   │   ├── register/                  # Registro
-│   │   └── reset-password/            # Recuperación de contraseña
-│   ├── components/                    # Componentes React
-│   │   ├── ui/                        # Componentes base (Button, Card, etc.)
-│   │   ├── auth/                      # Login, Register forms
-│   │   ├── maps/                      # Google Maps integration
-│   │   ├── reservas/                  # Tabla de reservas
-│   │   └── vehicles/                  # Gestión de vehículos
-│   ├── contexts/                      # React Contexts
-│   ├── hooks/                         # Custom hooks
-│   ├── lib/                           # Utilidades y API client
-│   └── types/                         # Tipos TypeScript
+├── src/                             # Frontend Next.js
+│   ├── app/
+│   │   ├── dashboard/
+│   │   │   ├── layout.tsx           # Sidebar responsive
+│   │   │   ├── admin/               # Panel administrador
+│   │   │   ├── client/
+│   │   │   │   ├── nueva-reserva/   # Solicitar servicio
+│   │   │   │   ├── reservas/        # Historial con estado de pago
+│   │   │   │   └── vehiculos/       # Garaje virtual
+│   │   │   ├── washer/
+│   │   │   │   ├── disponibles/     # Trabajos sin asignar
+│   │   │   │   ├── trabajos/        # Trabajos propios + confirmar efectivo
+│   │   │   │   └── estadisticas/    # Ganancias y rendimiento
+│   │   │   ├── pagos/[id]/          # Pago por tarjeta o efectivo
+│   │   │   └── chat/                # Chat en tiempo real
+│   │   ├── login/
+│   │   ├── register/
+│   │   └── reset-password/
+│   ├── components/
+│   │   ├── ui/                      # Button, Card, Badge, Toast, Modal...
+│   │   ├── auth/                    # LoginForm, RegisterForm
+│   │   ├── reservas/                # ReservationsTable (badges de pago)
+│   │   ├── vehicles/                # VehicleList, VehicleFormModal
+│   │   └── washer/                  # JobActions, WasherLocationTracker
+│   ├── contexts/                    # AuthContext, ThemeContext
+│   ├── hooks/                       # useApi, useModal
+│   └── lib/
+│       ├── api-client.ts            # Cliente HTTP + todos los módulos API
+│       └── validations/             # Schemas Zod
 │
-├── microservices/                     # Backend - Microservicios
-│   ├── api-gateway/                   # Gateway central (:4000)
-│   ├── auth-service/                  # Autenticación (:4001)
-│   ├── vehicle-service/               # Vehículos (:4002)
-│   ├── reservation-service/           # Reservas y servicios (:4003)
-│   ├── payment-service/               # Pagos (:4004)
-│   ├── notification-service/          # Notificaciones y chat (:4005)
-│   ├── shared/                        # Código compartido
-│   └── scripts/                       # Scripts de utilidad
-│
-└── public/                            # Archivos estáticos
+└── public/                          # Archivos estáticos
 ```
 
-## 🔧 Microservicios
+---
 
-### API Gateway (Puerto 4000)
-- Punto de entrada único
-- Validación JWT centralizada
-- Rate limiting
-- Enrutamiento a servicios
+## 🔌 API — Endpoints principales
 
-### Auth Service (Puerto 4001)
-- Registro e inicio de sesión
-- Gestión de usuarios
-- Tokens JWT
-
-### Vehicle Service (Puerto 4002)
-- CRUD de vehículos
-- Tipos: Sedán, SUV, Camioneta, Moto
-
-### Reservation Service (Puerto 4003)
-- Gestión de reservas
-- Catálogo de servicios
-- Sistema de calificaciones
-
-### Payment Service (Puerto 4004)
-- Procesamiento de pagos (mock Stripe)
-- Historial de transacciones
-
-### Notification Service (Puerto 4005)
-- WebSocket con Socket.IO
-- Chat en tiempo real
-- Notificaciones push
-
-## 🎨 Componentes UI
-
-```tsx
-// Botones
-<Button variant="primary|secondary|outline|ghost|danger" size="sm|md|lg" />
-
-// Tarjetas
-<Card><CardHeader><CardTitle/></CardHeader><CardContent/></Card>
-
-// Badges
-<Badge variant="primary|success|warning|error|info" />
-
-// Notificaciones
-<Toast type="success|error|warning|info" />
-
-// Calendario interactivo
-<Calendar selectedDate={date} onDateSelect={fn} />
-
-// Modal de confirmación
-<ConfirmModal isOpen={bool} onConfirm={fn} />
+### Auth
 ```
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/profile
+```
+
+### Vehículos
+```
+GET    /api/vehicles
+POST   /api/vehicles
+PUT    /api/vehicles/:id
+DELETE /api/vehicles/:id
+```
+
+### Reservas
+```
+GET  /api/reservations/my
+POST /api/reservations
+PUT  /api/reservations/:id/status
+DELETE /api/reservations/:id
+GET  /api/services
+```
+
+### Pagos
+```
+POST /api/payments/cash              # Iniciar pago en efectivo
+POST /api/payments/:id/confirm-cash  # Lavador confirma recepción
+POST /api/payments/create-intent     # Stripe PaymentIntent
+GET  /api/payments
+GET  /api/payments/reservation/:id
+```
+
+### Chat
+```
+GET  /api/messages/:roomId
+POST /api/messages
+WebSocket  (Socket.IO)
+```
+
+---
+
+## 💳 Flujo de pago
+
+```
+Cliente solicita servicio
+        │
+        ▼
+  Reserva creada (PENDING)
+        │
+   Lavador asignado (CONFIRMED)
+        │
+        ├── Pagar con tarjeta ──→ Stripe PaymentIntent ──→ COMPLETED
+        │
+        └── Pagar en efectivo ──→ badge "Pago en efectivo pendiente"
+                                        │
+                               Lavador confirma recepción
+                                        │
+                                   COMPLETED → badge "Pagado ✓"
+```
+
+---
+
+## 📊 Base de datos
+
+Una sola instancia PostgreSQL, base de datos `lava_auto`:
+
+| Tabla | Contenido |
+|-------|-----------|
+| `users` | Usuarios (CLIENT, WASHER, ADMIN) |
+| `vehicles` | Vehículos de los clientes |
+| `services` | Catálogo de servicios |
+| `reservations` | Reservas con estado |
+| `payments` | Pagos y transacciones |
+| `messages` | Mensajes del chat |
+
+---
 
 ## 🔒 Seguridad
 
-- Autenticación con bcrypt + JWT
-- Validación de entrada
-- Comunicación entre servicios autenticada
-- Rate limiting en API Gateway
-- Headers X-User-* para identificación interna
+- Contraseñas con bcrypt
+- JWT con expiración configurable (`JWT_EXPIRES_IN`)
+- Rate limiting en todos los endpoints
+- Helmet (headers HTTP seguros)
+- Validación de entrada con Zod (frontend) y Express (backend)
 
-## 📝 Comandos Útiles
+---
+
+## 📝 Comandos útiles
 
 ```bash
-# Ver todos los contenedores
-docker-compose -f docker-compose.microservices.yml ps
+# Backend
+cd backend
+npm run dev          # Desarrollo con nodemon
+npm run start        # Producción
+npm run migrate      # (Re)crear tablas
+npm run seed         # Cargar datos de prueba
+npm run db:up        # Iniciar PostgreSQL en Docker
+npm run db:down      # Detener PostgreSQL
+npm run db:reset     # Limpiar y reiniciar BD
 
-# Logs de un servicio específico
-docker-compose -f docker-compose.microservices.yml logs -f frontend
-docker-compose -f docker-compose.microservices.yml logs -f api-gateway
+# Frontend
+npm run dev          # Turbopack dev server
+npm run build        # Build de producción
+npm run lint         # ESLint
 
-# Reconstruir un servicio
-docker-compose -f docker-compose.microservices.yml up -d --build frontend
-
-# Limpiar todo (incluyendo datos)
-docker-compose -f docker-compose.microservices.yml down -v
-
-# Desarrollo local del frontend (requiere microservicios corriendo)
-npm run dev
+# Stripe (test)
+npm run stripe:listen   # Escuchar webhooks locales
+npm run stripe:login    # Autenticar Stripe CLI
 ```
 
-## 📊 Base de Datos
-
-Cada microservicio tiene su propia base de datos PostgreSQL:
-
-| Base de Datos | Contenido |
-|---------------|-----------|
-| lava_auto_auth | Usuarios, roles |
-| lava_auto_vehicles | Vehículos |
-| lava_auto_reservations | Reservas, servicios, ratings |
-| lava_auto_payments | Pagos, transacciones |
-| lava_auto_notifications | Mensajes, notificaciones |
+---
 
 ## 🤝 Contribuir
 
 1. Fork el proyecto
-2. Crea una rama (`git checkout -b feature/NuevaFuncionalidad`)
-3. Commit tus cambios (`git commit -m 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/NuevaFuncionalidad`)
+2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
+3. Commit: `git commit -m 'feat: descripción del cambio'`
+4. Push: `git push origin feature/nueva-funcionalidad`
 5. Abre un Pull Request
-
-## � CI/CD
-
-El proyecto incluye un pipeline de GitHub Actions que se ejecuta en cada push y pull request:
-
-| Job | Descripción |
-|-----|-------------|
-| **Frontend** | Lint y build de Next.js |
-| **Microservices** | Build de imágenes Docker (en paralelo) |
-| **Integration** | Levanta todos los servicios y verifica health checks |
-| **Security** | Auditoría de dependencias (solo en PRs) |
-
-El workflow se encuentra en `.github/workflows/ci.yml`.
-
-## �📄 Licencia
-
-Este proyecto está bajo la Licencia MIT.
 
 ---
 
-**Última actualización**: Enero 2026
+## 📄 Licencia
+
+MIT © 2026
+
+---
+
+**Última actualización**: Febrero 2026
