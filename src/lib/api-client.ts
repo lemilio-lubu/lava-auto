@@ -242,6 +242,12 @@ export const paymentApi = {
 
   confirm: (id: string, token: string) =>
     apiRequest<Payment>(`/api/payments/${id}/confirm`, { method: 'POST', token }),
+
+  cashPayment: (reservationId: string, token: string) =>
+    apiRequest<Payment>('/api/payments/cash', { method: 'POST', body: { reservationId }, token }),
+
+  confirmCash: (paymentId: string, token: string) =>
+    apiRequest<Payment>(`/api/payments/${paymentId}/confirm-cash`, { method: 'POST', token }),
 };
 
 // Notification API

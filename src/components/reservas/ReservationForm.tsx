@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, Car as CarIcon } from 'lucide-react';
-import LocationPicker from '@/components/maps/LocationPicker';
 import { reservationApi } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,13 +27,11 @@ interface Service {
 interface ReservationFormProps {
   vehicles: Vehicle[];
   services: Service[];
-  defaultAddress: string;
 }
 
 export default function ReservationForm({
   vehicles,
   services,
-  defaultAddress,
 }: ReservationFormProps) {
   const router = useRouter();
   const { token } = useAuth();
@@ -67,9 +64,6 @@ export default function ReservationForm({
       serviceId: formData.get('serviceId') as string,
       scheduledDate: formData.get('scheduledDate') as string,
       scheduledTime: formData.get('scheduledTime') as string,
-      address: formData.get('address') as string,
-      latitude: formData.get('latitude') ? parseFloat(formData.get('latitude') as string) : undefined,
-      longitude: formData.get('longitude') ? parseFloat(formData.get('longitude') as string) : undefined,
       notes: formData.get('notes') as string || undefined,
     };
 
@@ -208,19 +202,15 @@ export default function ReservationForm({
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
-        <LocationPicker defaultAddress={defaultAddress} />
-        
-        <div className="mt-4">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Notas Adicionales (opcional)
-          </label>
-          <textarea
-            name="notes"
-            rows={3}
-            placeholder="Indica cualquier detalle importante (ej: portón de color azul, piso 3)"
-            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white"
-          />
-        </div>
+        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+          Notas Adicionales (opcional)
+        </label>
+        <textarea
+          name="notes"
+          rows={3}
+          placeholder="Indica cualquier detalle o instrucción especial para el servicio"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white"
+        />
       </div>
 
       <div className="flex gap-4">
@@ -237,7 +227,7 @@ export default function ReservationForm({
           disabled={isSubmitting}
           className="flex-1 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Procesando...' : 'Solicitar Lavado'}
+          {isSubmitting ? 'Procesando...' : 'Solicitar Servicio'}
         </button>
       </div>
     </form>

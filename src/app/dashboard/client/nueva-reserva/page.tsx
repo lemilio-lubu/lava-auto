@@ -56,10 +56,10 @@ export default function NuevaReservaPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Solicitar Nuevo Lavado
+            Solicitar Nuevo Servicio
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Completa el formulario para solicitar un servicio a domicilio
+            Completa el formulario para solicitar un servicio
           </p>
         </div>
       </div>
@@ -83,7 +83,6 @@ export default function NuevaReservaPage() {
         <ReservationForm
           vehicles={vehicles}
           services={services}
-          defaultAddress=""
         />
       )}
     </div>

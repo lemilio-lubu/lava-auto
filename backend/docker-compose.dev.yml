@@ -1,0 +1,36 @@
+# docker-compose.dev.yml
+# Solo levanta PostgreSQL para desarrollo local del backend monolítico.
+# El backend y frontend corren directamente con `npm run dev`.
+#
+# USO:
+#   docker-compose -f docker-compose.dev.yml up -d        # iniciar
+#   docker-compose -f docker-compose.dev.yml down         # detener
+#   docker-compose -f docker-compose.dev.yml down -v      # detener + borrar datos
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lava-auto-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lava_auto
+    ports:
+      - "5432:5432"
+    volumes:
+      - lava_auto_db_data:/var/lib/postgresql/data
+    command: >
+      postgres
+        -c shared_buffers=128MB
+        -c max_connections=25
+        -c work_mem=4MB
+        -c log_statement=none
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lava_auto"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  lava_auto_db_data:

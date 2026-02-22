@@ -87,14 +87,14 @@ export default function DisponiblesPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="font-bold text-lg text-slate-900 dark:text-white">
-                    {job.service?.name || 'Servicio de Lavado'}
+                    {job.serviceName || 'Servicio de Lavado'}
                   </h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {job.client?.name || 'Cliente'}
+                    Cliente
                   </p>
                 </div>
                 <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  ${job.service?.price || 0}
+                  ${job.totalAmount || 0}
                 </span>
               </div>
 

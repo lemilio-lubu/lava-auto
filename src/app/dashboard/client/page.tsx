@@ -102,8 +102,8 @@ export default function ClientDashboard() {
           className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all flex items-center justify-between"
         >
           <div>
-            <h3 className="text-xl font-bold mb-1">Solicitar Lavado</h3>
-            <p className="text-cyan-100">Programa un nuevo servicio a domicilio</p>
+            <h3 className="text-xl font-bold mb-1">Solicitar Servicio</h3>
+            <p className="text-cyan-100">Programa un nuevo servicio</p>
           </div>
           <Calendar className="w-12 h-12 opacity-80" />
         </Link>
@@ -132,10 +132,10 @@ export default function ClientDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-white">
-                      {reservation.service?.name || 'Servicio'}
+                      {reservation.serviceName || 'Servicio'}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {new Date(reservation.scheduledDate).toLocaleDateString('es-ES')} - {reservation.vehicle?.brand} {reservation.vehicle?.model}
+                      {new Date(reservation.scheduledDate).toLocaleDateString('es-ES')} {reservation.scheduledTime ? `- ${reservation.scheduledTime}` : ''}
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${

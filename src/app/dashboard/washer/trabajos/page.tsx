@@ -86,7 +86,7 @@ export default function TrabajosPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-slate-900 dark:text-white">
-                        {job.service?.name || 'Servicio'}
+                        {job.serviceName || 'Servicio'}
                       </h3>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         job.status === 'IN_PROGRESS' 
@@ -113,7 +113,7 @@ export default function TrabajosPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                      ${job.service?.price || 0}
+                      ${job.totalAmount || 0}
                     </p>
                   </div>
                 </div>
@@ -146,7 +146,7 @@ export default function TrabajosPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <CheckCircle className="w-4 h-4 text-green-500" />
                     <h3 className="font-semibold text-slate-900 dark:text-white">
-                      {job.service?.name || 'Servicio'}
+                        {job.serviceName || 'Servicio'}
                     </h3>
                   </div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -154,7 +154,7 @@ export default function TrabajosPage() {
                   </p>
                 </div>
                 <p className="font-bold text-green-600 dark:text-green-400">
-                  ${job.service?.price || 0}
+                  ${job.totalAmount || 0}
                 </p>
               </div>
             ))}

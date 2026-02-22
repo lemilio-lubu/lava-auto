@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import ReservationsTable from '@/components/reservas/ReservationsTable';
-import { reservationApi, vehicleApi, serviceApi, Vehicle, Service } from '@/lib/api-client';
+import { reservationApi, vehicleApi, serviceApi, paymentApi, Vehicle, Service } from '@/lib/api-client';
 
 export default function ReservasPage() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -13,6 +13,7 @@ export default function ReservasPage() {
   const [reservations, setReservations] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [paymentsMap, setPaymentsMap] = useState<Map<string, any>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -29,14 +30,25 @@ export default function ReservasPage() {
   const loadData = async () => {
     if (!token) return;
     try {
-      const [reservationsData, vehiclesData, servicesData] = await Promise.all([
+      const [reservationsData, vehiclesData, servicesData, paymentsData] = await Promise.all([
         reservationApi.getMyReservations(token),
         vehicleApi.getAll(token),
         serviceApi.getAll(token),
+        paymentApi.getAll(token).catch(() => []),
       ]);
       setReservations(reservationsData);
       setVehicles(vehiclesData);
       setServices(servicesData);
+      // Build map: reservationId → most relevant payment
+      const map = new Map<string, any>();
+      (paymentsData as any[]).forEach((p: any) => {
+        const existing = map.get(p.reservationId);
+        // Prefer COMPLETED over any other status
+        if (!existing || p.status === 'COMPLETED') {
+          map.set(p.reservationId, p);
+        }
+      });
+      setPaymentsMap(map);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -65,6 +77,7 @@ export default function ReservasPage() {
         reservations={reservations} 
         vehicles={vehicles}
         services={services}
+        paymentsMap={paymentsMap}
         onUpdate={loadData}
         showHeader={false}
       />

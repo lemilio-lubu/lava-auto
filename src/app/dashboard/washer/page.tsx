@@ -43,7 +43,7 @@ export default function WasherDashboard() {
             activeJobs: activeJobs.length,
             completedToday: completedToday.length,
             totalEarnings: jobs.filter((j: any) => j.status === 'COMPLETED')
-              .reduce((sum: number, j: any) => sum + (j.service?.price || 0), 0),
+              .reduce((sum: number, j: any) => sum + (j.totalAmount || 0), 0),
           });
           setRecentJobs(jobs.slice(0, 5));
         })
@@ -141,7 +141,7 @@ export default function WasherDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-white">
-                      {job.service?.name || 'Servicio'}
+                      {job.serviceName || 'Servicio'}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       {job.vehicle?.brand} {job.vehicle?.model} - {job.address}

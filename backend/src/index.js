@@ -30,28 +30,33 @@ const logger = require('./middleware/logger');
 const { rateLimiter } = require('./middleware/rate-limiter');
 const { notFoundHandler, errorHandler } = require('./middleware/error-handler');
 
+// Swagger UI (debe importarse antes de los routers que anotan los endpoints)
+const swaggerUi   = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+
 // ── Módulos de dominio (se agregan fase a fase) ──────────────────
 // Fase 1: auth
-// const authRoutes    = require('./modules/auth/auth.routes');
-// const userRoutes    = require('./modules/auth/user.routes');
-// const washerRoutes  = require('./modules/auth/washer.routes');
+const authRoutes   = require('./modules/auth/auth.routes');
+const userRoutes   = require('./modules/auth/user.routes');
+const washerRoutes = require('./modules/auth/washer.routes');
 
 // Fase 2: vehicles
-// const vehicleRoutes = require('./modules/vehicles/vehicle.routes');
+const vehicleRoutes = require('./modules/vehicles/vehicle.routes');
 
 // Fase 3: reservations
-// const reservationRoutes = require('./modules/reservations/reservation.routes');
-// const serviceRoutes     = require('./modules/reservations/service.routes');
-// const ratingRoutes      = require('./modules/reservations/rating.routes');
-// const jobRoutes         = require('./modules/reservations/job.routes');
+const reservationRoutes = require('./modules/reservations/reservation.routes');
+const serviceRoutes     = require('./modules/reservations/service.routes');
+const ratingRoutes      = require('./modules/reservations/rating.routes');
+const jobRoutes         = require('./modules/reservations/job.routes');
 
 // Fase 4: payments
-// const paymentRoutes = require('./modules/payments/payment.routes');
+const paymentRoutes = require('./modules/payments/payment.routes');
+const webhookRoutes = require('./modules/payments/webhook.routes');
 
 // Fase 5: notifications + Socket.IO
-// const notificationRoutes = require('./modules/notifications/notification.routes');
-// const chatRoutes         = require('./modules/notifications/chat.routes');
-// const socketHandler      = require('./modules/notifications/socket.handler');
+const notificationRoutes = require('./modules/notifications/notification.routes');
+const chatRoutes         = require('./modules/notifications/chat.routes');
+const socketHandler      = require('./modules/notifications/socket.handler');
 
 // ================================================================
 // Configuración de la aplicación
@@ -73,6 +78,11 @@ app.use(helmet());
 app.use(cors({ origin: config.server.frontendUrl, credentials: true }));
 app.use(compression());
 app.use(logger);
+
+// Stripe webhook necesita cuerpo RAW — debe montarse ANTES de express.json()
+// Si se montara después, el cuerpo ya estaría parseado y la firma fallaría.
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }), webhookRoutes);
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(rateLimiter);
@@ -85,31 +95,39 @@ app.use((req, _res, next) => {
   next();
 });
 
+// ── Documentación Swagger ──────────────────────────────────────────
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customSiteTitle: 'Lava Auto API',
+}));
+// Spec JSON (útil para herramientas externas como Postman)
+app.get('/api-docs.json', (_req, res) => res.json(swaggerSpec));
+
 // ── Rutas de dominio ─────────────────────────────────────────────
 // Los prefijos replican exactamente los endpoints de los microservicios
 // para que el frontend no requiera cambios.
 
 // Fase 1
-// app.use('/api',             authRoutes);
-// app.use('/api/users',       userRoutes);
-// app.use('/api/washers',     washerRoutes);
+app.use('/api/auth',    authRoutes);
+app.use('/api/users',   userRoutes);
+app.use('/api/washers', washerRoutes);
 
 // Fase 2
-// app.use('/api/vehicles',    vehicleRoutes);
+app.use('/api/vehicles', vehicleRoutes);
 
 // Fase 3
-// app.use('/api/reservations', reservationRoutes);
-// app.use('/api/services',     serviceRoutes);
-// app.use('/api/ratings',      ratingRoutes);
-// app.use('/api/jobs',         jobRoutes);
+app.use('/api/reservations', reservationRoutes);
+app.use('/api/services',     serviceRoutes);
+app.use('/api/ratings',      ratingRoutes);
+app.use('/api/jobs',         jobRoutes);
 
 // Fase 4
-// app.use('/api/payments',     paymentRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Fase 5
-// app.use('/api/notifications', notificationRoutes);
-// app.use('/api/chat',          chatRoutes);
-// socketHandler(io, db);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat',          chatRoutes);
+socketHandler(io, db);
 
 // ── Health check ─────────────────────────────────────────────────
 app.get('/health', async (_req, res) => {
@@ -136,6 +154,7 @@ server.listen(config.server.port, () => {
   console.log(`   Entorno  : ${config.nodeEnv}`);
   console.log(`   Frontend : ${config.server.frontendUrl}`);
   console.log(`   DB       : ${config.db.host}:${config.db.port}/${config.db.name}`);
+  console.log(`   Swagger  : http://localhost:${config.server.port}/api-docs`);
 });
 
 /**

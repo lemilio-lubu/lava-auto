@@ -53,9 +53,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           },
           {
             icon: Calendar,
-            label: 'Solicitar Lavado',
+            label: 'Solicitar Servicio',
             href: '/dashboard/client/nueva-reserva',
-            description: 'Pide tu lavado',
+            description: 'Pide tu servicio',
           },
           {
             icon: Calendar,

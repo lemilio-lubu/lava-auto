@@ -47,7 +47,9 @@ class BaseRepository {
       `SELECT * FROM ${this._table} WHERE id = $1`,
       [id]
     );
-    return rows[0] ?? null;
+    const row = rows[0] ?? null;
+    // Si la subclase define _toEntity, usarla para mapear la fila
+    return typeof this._toEntity === 'function' ? this._toEntity(row) : row;
   }
 
   /**

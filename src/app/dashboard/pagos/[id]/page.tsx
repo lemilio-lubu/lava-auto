@@ -17,6 +17,8 @@ export default function PaymentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isCashSubmitting, setIsCashSubmitting] = useState(false);
+  const [cashError, setCashError] = useState('');
 
   const reservationId = params.id as string;
 
@@ -55,7 +57,22 @@ export default function PaymentPage() {
     }
   };
 
+  const handleCashPayment = async () => {
+    if (!token) return;
+    setCashError('');
+    setIsCashSubmitting(true);
+    try {
+      const payment = await paymentApi.cashPayment(reservationId, token);
+      setPayments([payment, ...payments]);
+    } catch (err: any) {
+      setCashError(err.message || 'Error al registrar el pago en efectivo');
+    } finally {
+      setIsCashSubmitting(false);
+    }
+  };
+
   const isPaid = payments.some(p => p.status === 'COMPLETED');
+  const isPendingCash = !isPaid && payments.some(p => p.paymentMethod === 'CASH' && p.status === 'PENDING');
 
   if (authLoading || isLoading) {
     return (
@@ -97,7 +114,7 @@ export default function PaymentPage() {
       {/* Reservation Details */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="bg-gradient-to-r from-cyan-500 to-emerald-500 p-6 text-white">
-          <h2 className="text-xl font-bold mb-1">{reservation.serviceName || 'Servicio de Lavado'}</h2>
+          <h2 className="text-xl font-bold mb-1">{reservation.serviceName || 'Servicio'}</h2>
           <p className="text-cyan-100">Reserva #{reservation.id.slice(-8)}</p>
         </div>
         
@@ -157,11 +174,31 @@ export default function PaymentPage() {
             </div>
           </div>
         </div>
+      ) : isPendingCash ? (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-800 rounded-full flex items-center justify-center">
+              <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-amber-800 dark:text-amber-200">Pago en efectivo registrado</h3>
+              <p className="text-amber-700 dark:text-amber-300">
+                Entrega el dinero al lavador al finalizar el servicio. Él confirmará el pago.
+              </p>
+            </div>
+          </div>
+        </div>
       ) : (
         /* Payment Options */
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">Método de Pago</h3>
-          
+
+          {cashError && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <p className="text-red-800 dark:text-red-200 text-sm">{cashError}</p>
+            </div>
+          )}
+
           <button
             onClick={() => setShowPaymentModal(true)}
             className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:border-cyan-500 dark:hover:border-cyan-500 transition-colors text-left group"
@@ -174,28 +211,29 @@ export default function PaymentPage() {
                 <h4 className="text-lg font-bold text-slate-900 dark:text-white">Tarjeta de Crédito/Débito</h4>
                 <p className="text-slate-600 dark:text-slate-400">Paga de forma segura con tu tarjeta</p>
               </div>
-              <div className="text-cyan-500">
-                <span className="text-sm font-medium bg-cyan-100 dark:bg-cyan-900/30 px-3 py-1 rounded-full">
-                  Recomendado
-                </span>
-              </div>
+              <span className="text-sm font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 px-3 py-1 rounded-full">
+                Recomendado
+              </span>
             </div>
           </button>
 
-          <div className="w-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-6 opacity-60">
+          <button
+            onClick={handleCashPayment}
+            disabled={isCashSubmitting}
+            className="w-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Banknote className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                {isCashSubmitting
+                  ? <Loader2 className="w-7 h-7 text-white animate-spin" />
+                  : <Banknote className="w-7 h-7 text-white" />}
               </div>
               <div className="flex-1">
                 <h4 className="text-lg font-bold text-slate-900 dark:text-white">Pago en Efectivo</h4>
                 <p className="text-slate-600 dark:text-slate-400">Paga al lavador al finalizar el servicio</p>
               </div>
-              <div className="text-slate-400">
-                <span className="text-sm font-medium">Próximamente</span>
-              </div>
             </div>
-          </div>
+          </button>
         </div>
       )}
 
@@ -256,7 +294,7 @@ export default function PaymentPage() {
           onSuccess={handlePaymentSuccess}
           reservationId={reservationId}
           amount={Number(reservation.totalAmount)}
-          serviceName={reservation.serviceName || 'Servicio de Lavado'}
+          serviceName={reservation.serviceName || 'Servicio'}
           token={token}
         />
       )}

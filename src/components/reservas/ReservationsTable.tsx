@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Edit, DollarSign, Calendar, Clock, Car, User, Filter, Search } from 'lucide-react';
+import { Plus, Trash2, Edit, DollarSign, Calendar, Clock, Car, User, Filter, Search, CheckCircle, Banknote } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -34,22 +34,22 @@ const statusConfig = {
   PENDING: {
     variant: 'warning' as const,
     label: 'Pendiente',
-    description: 'Esperando confirmación',
+    description: 'En espera de lavador',
   },
   CONFIRMED: {
     variant: 'info' as const,
-    label: 'Confirmada',
-    description: 'Lista para el servicio',
+    label: 'Agendado',
+    description: 'Lavador asignado',
   },
   IN_PROGRESS: {
     variant: 'primary' as const,
-    label: 'En Proceso',
-    description: 'Servicio en curso',
+    label: 'En curso',
+    description: 'Servicio en progreso',
   },
   COMPLETED: {
     variant: 'success' as const,
-    label: 'Completada',
-    description: 'Servicio finalizado',
+    label: 'Finalizado',
+    description: 'Servicio completado',
   },
   CANCELLED: {
     variant: 'error' as const,
@@ -62,12 +62,14 @@ export default function ReservationsTable({
   reservations: initialReservations, 
   vehicles = [],
   services = [],
+  paymentsMap,
   onUpdate,
   showHeader = true
 }: { 
   reservations: any[]; 
   vehicles?: Vehicle[];
   services?: Service[];
+  paymentsMap?: Map<string, any>;
   onUpdate?: () => void;
   showHeader?: boolean;
 }) {
@@ -265,15 +267,32 @@ export default function ReservationsTable({
         <div className="grid gap-4 lg:grid-cols-2">
           {filteredReservations.map((reservation) => {
             const config = statusConfig[reservation.status];
+            const payment = paymentsMap?.get(reservation.id);
+            const isPaid = payment?.status === 'COMPLETED';
+            const isCashPending = payment?.status === 'PENDING' && payment?.paymentMethod === 'CASH';
             return (
               <Card key={reservation.id} hover className="group">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <Badge variant={config.variant} size="md">
                         {config.label}
                       </Badge>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{config.description}</span>
+                      {isPaid && (
+                        <Badge variant="success" size="md">
+                          <CheckCircle className="w-3 h-3 mr-1 inline" />
+                          Pagado
+                        </Badge>
+                      )}
+                      {isCashPending && (
+                        <Badge variant="warning" size="md">
+                          <Banknote className="w-3 h-3 mr-1 inline" />
+                          Pago en efectivo pendiente
+                        </Badge>
+                      )}
+                      {!isPaid && !isCashPending && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{config.description}</span>
+                      )}
                     </div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                       {reservation.serviceName || 'Servicio'}
@@ -323,9 +342,12 @@ export default function ReservationsTable({
                 {/* Nielsen: Control y libertad - Acciones claramente visibles */}
                 <div className="flex gap-2 pt-4 border-t border-cyan-100 dark:border-slate-600">
                   <Link href={`/dashboard/pagos/${reservation.id}`} className="flex-1">
-                    <Button variant="secondary" fullWidth size="sm">
-                      <DollarSign className="w-4 h-4" />
-                      Pagar
+                    <Button variant={isPaid ? 'ghost' : 'secondary'} fullWidth size="sm">
+                      {isPaid ? (
+                        <><CheckCircle className="w-4 h-4 text-green-500" /> Ver comprobante</>
+                      ) : (
+                        <><DollarSign className="w-4 h-4" /> {isCashPending ? 'Ver pago' : 'Pagar'}</>
+                      )}
                     </Button>
                   </Link>
                   

@@ -211,7 +211,7 @@ export default function VehicleList({ vehicles: initialVehicles }: VehicleListPr
                 href={`/dashboard/client/nueva-reserva?vehicleId=${vehicle.id}`}
                 className="block w-full text-center bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
               >
-                Solicitar Lavado
+                Solicitar Servicio
               </Link>
             </div>
           </div>

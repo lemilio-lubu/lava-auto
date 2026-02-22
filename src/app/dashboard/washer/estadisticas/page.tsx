@@ -36,9 +36,9 @@ export default function EstadisticasPage() {
           
           setStats({
             totalJobs: completed.length,
-            totalEarnings: completed.reduce((sum: number, j: any) => sum + (j.service?.price || 0), 0),
+            totalEarnings: completed.reduce((sum: number, j: any) => sum + (j.totalAmount || 0), 0),
             thisMonthJobs: thisMonthJobs.length,
-            thisMonthEarnings: thisMonthJobs.reduce((sum: number, j: any) => sum + (j.service?.price || 0), 0),
+            thisMonthEarnings: thisMonthJobs.reduce((sum: number, j: any) => sum + (j.totalAmount || 0), 0),
           });
         })
         .catch(console.error)
