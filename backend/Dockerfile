@@ -26,6 +26,11 @@ ENV NODE_ENV=production
 # Copiar node_modules ya instalados (sin devDeps)
 COPY --from=deps /app/node_modules ./node_modules
 
+# ARG CACHEBUST invalida el cache de Docker desde este punto hacia abajo
+# cada vez que se cambia su valor. Incrementar si Railway sigue usando cache viejo.
+ARG CACHEBUST=3
+RUN echo "Build cache bust: $CACHEBUST"
+
 # Copiar código fuente y scripts
 COPY src/      ./src/
 COPY scripts/  ./scripts/
