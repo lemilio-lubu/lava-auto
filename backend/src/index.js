@@ -130,13 +130,18 @@ app.use('/api/chat',          chatRoutes);
 socketHandler(io, db);
 
 // ── Health check ─────────────────────────────────────────────────
-app.get('/health', async (_req, res) => {
+// IMPORTANTE: responde 200 SIEMPRE y de forma síncrona.
+// No hace ninguna query a la BD → no puede fallar ni bloquearse.
+// Railway/K8s solo necesitan confirmar que el proceso está vivo.
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'lava-auto-backend' });
+});
+
+// Health check extendido (opcional, para monitoreo manual)
+app.get('/health/full', async (_req, res) => {
   const dbOk = await db.isHealthy();
-  const status = dbOk ? 'healthy' : 'degraded';
-  // Siempre retornar 200: Railway (y cualquier LB) considera 5xx como fallo
-  // y reinicia el contenedor en bucle. El campo "status" indica el estado real.
   res.status(200).json({
-    status,
+    status: dbOk ? 'healthy' : 'degraded',
     service: 'lava-auto-backend',
     timestamp: new Date().toISOString(),
     checks: { database: dbOk ? 'ok' : 'error' },

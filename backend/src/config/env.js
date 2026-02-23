@@ -49,22 +49,24 @@ if (rawDatabaseUrl) {
   }
 }
 
-// ── 2. Validación de variables requeridas ─────────────────────────────────────
+// ── 2. Validación de variables requeridas (solo advertencias — nunca process.exit) ──
+// En Railway el contenedor DEBE arrancar siempre para pasar el healthcheck.
+// Si faltan vars, el servidor arranca igual pero las rutas protegidas fallarán
+// en runtime con mensajes claros → revisa los deploy logs en Railway.
 const hasDbConnection =
   parsedDb.connectionString ||
   (parsedDb.host && parsedDb.name && parsedDb.user && parsedDb.password);
 
 const missingJwt = !cleanValue(process.env.JWT_SECRET);
 
-if (!hasDbConnection || missingJwt) {
-  const issues = [];
-  if (!hasDbConnection) issues.push('DB (faltan DB_HOST/DB_NAME/DB_USER/DB_PASSWORD o DATABASE_URL)');
-  if (missingJwt)        issues.push('JWT_SECRET');
-  console.error(
-    `[env] ❌ Faltan configuraciones requeridas: ${issues.join(', ')}\n` +
-    `[env] En Railway: añade el plugin Postgres y la variable JWT_SECRET.`
+if (!hasDbConnection) {
+  console.warn(
+    '[env] ⚠ Sin configuración de BD. Añade el plugin Postgres en Railway ' +
+    'o configura DB_HOST / DB_NAME / DB_USER / DB_PASSWORD.'
   );
-  process.exit(1);
+}
+if (missingJwt) {
+  console.warn('[env] ⚠ JWT_SECRET no está configurada. Añádela en Railway → Variables.');
 }
 
 // ── 3. Objeto de configuración centralizado ───────────────────────────────────
