@@ -76,7 +76,13 @@ const config = {
 
   server: {
     port:        parseInt(cleanValue(process.env.PORT) || '4000', 10),
-    frontendUrl: cleanValue(process.env.FRONTEND_URL) || 'http://localhost:3000',
+    // Garantizar que FRONTEND_URL siempre tenga protocolo.
+    // Railway a veces entrega la URL sin https:// dependiendo de cómo se escribió.
+    frontendUrl: (() => {
+      const raw = cleanValue(process.env.FRONTEND_URL) || 'http://localhost:3000';
+      if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+      return `https://${raw}`;
+    })(),
   },
 
   db: {

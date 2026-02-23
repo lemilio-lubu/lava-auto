@@ -89,17 +89,42 @@ app.get('/health', (_req, res) => {
 
 console.log('[startup] ✅ /health registrado');
 
+// Orígenes permitidos en CORS: la URL del frontend configurada + localhost para dev
+const allowedOrigins = [
+  config.server.frontendUrl,
+  'http://localhost:3000',
+  'http://localhost:3001',
+];
+
+console.log('[startup] CORS origins permitidos:', allowedOrigins);
+
+function corsOriginHandler(origin, callback) {
+  // Permitir requests sin origin (curl, Postman, mobile apps)
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  console.warn(`[cors] Origen bloqueado: ${origin}`);
+  callback(new Error(`CORS: origen no permitido: ${origin}`));
+}
+
+const corsOptions = {
+  origin: corsOriginHandler,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 const io = new Server(server, {
   cors: {
-    origin: config.server.frontendUrl,
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
 // ── Middleware global ────────────────────────────────────────────
 
 app.use(helmet());
-app.use(cors({ origin: config.server.frontendUrl, credentials: true }));
+app.use(cors(corsOptions));
 app.use(compression());
 app.use(logger);
 
