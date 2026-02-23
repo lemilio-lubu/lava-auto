@@ -2,61 +2,77 @@
 
 /**
  * index.js — Punto de entrada del backend monolítico.
- *
- * Responsabilidades de este archivo:
- *   1. Validar variables de entorno (fail fast).
- *   2. Crear el servidor HTTP + Socket.IO.
- *   3. Aplicar middleware global.
- *   4. Montar las rutas de cada módulo de dominio.
- *   5. Registrar el handler de Socket.IO.
- *   6. Iniciar el servidor con graceful shutdown.
- *
- * REGLA: este archivo solo orquesta — no contiene lógica de negocio.
  */
 
+// Log inmediato para confirmar que el proceso arrancó
+console.log('[startup] Iniciando proceso Node.js...');
+console.log(`[startup] NODE_ENV=${process.env.NODE_ENV} PORT=${process.env.PORT} CWD=${process.cwd()}`);
+
 // Paso 1: validar entorno ANTES de cualquier otro import
-const config = require('./config/env');
+let config;
+try {
+  config = require('./config/env');
+  console.log('[startup] ✅ env.js cargado');
+} catch (err) {
+  console.error('[startup] ❌ Fallo al cargar env.js:', err.message);
+  process.exit(1);
+}
 
-const http = require('node:http');
-const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
-const compression = require('compression');
-const { Server } = require('socket.io');
+let http, express, helmet, cors, compression, Server;
+let db, logger, rateLimiter, notFoundHandler, errorHandler;
+let swaggerUi, swaggerSpec;
+let authRoutes, userRoutes, washerRoutes;
+let vehicleRoutes;
+let reservationRoutes, serviceRoutes, ratingRoutes, jobRoutes;
+let paymentRoutes, webhookRoutes;
+let notificationRoutes, chatRoutes, socketHandler;
 
-// Config & shared
-const db = require('./config/database');
-const logger = require('./middleware/logger');
-const { rateLimiter } = require('./middleware/rate-limiter');
-const { notFoundHandler, errorHandler } = require('./middleware/error-handler');
+try {
+  http        = require('node:http');
+  express     = require('express');
+  helmet      = require('helmet');
+  cors        = require('cors');
+  compression = require('compression');
+  ({ Server } = require('socket.io'));
+  console.log('[startup] ✅ Dependencias core cargadas');
 
-// Swagger UI (debe importarse antes de los routers que anotan los endpoints)
-const swaggerUi   = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
+  db               = require('./config/database');
+  logger           = require('./middleware/logger');
+  ({ rateLimiter } = require('./middleware/rate-limiter'));
+  ({ notFoundHandler, errorHandler } = require('./middleware/error-handler'));
+  console.log('[startup] ✅ Middleware cargado');
 
-// ── Módulos de dominio (se agregan fase a fase) ──────────────────
-// Fase 1: auth
-const authRoutes   = require('./modules/auth/auth.routes');
-const userRoutes   = require('./modules/auth/user.routes');
-const washerRoutes = require('./modules/auth/washer.routes');
+  swaggerUi   = require('swagger-ui-express');
+  swaggerSpec = require('./config/swagger');
+  console.log('[startup] ✅ Swagger cargado');
 
-// Fase 2: vehicles
-const vehicleRoutes = require('./modules/vehicles/vehicle.routes');
+  authRoutes   = require('./modules/auth/auth.routes');
+  userRoutes   = require('./modules/auth/user.routes');
+  washerRoutes = require('./modules/auth/washer.routes');
+  console.log('[startup] ✅ Módulo auth cargado');
 
-// Fase 3: reservations
-const reservationRoutes = require('./modules/reservations/reservation.routes');
-const serviceRoutes     = require('./modules/reservations/service.routes');
-const ratingRoutes      = require('./modules/reservations/rating.routes');
-const jobRoutes         = require('./modules/reservations/job.routes');
+  vehicleRoutes = require('./modules/vehicles/vehicle.routes');
+  console.log('[startup] ✅ Módulo vehicles cargado');
 
-// Fase 4: payments
-const paymentRoutes = require('./modules/payments/payment.routes');
-const webhookRoutes = require('./modules/payments/webhook.routes');
+  reservationRoutes = require('./modules/reservations/reservation.routes');
+  serviceRoutes     = require('./modules/reservations/service.routes');
+  ratingRoutes      = require('./modules/reservations/rating.routes');
+  jobRoutes         = require('./modules/reservations/job.routes');
+  console.log('[startup] ✅ Módulo reservations cargado');
 
-// Fase 5: notifications + Socket.IO
-const notificationRoutes = require('./modules/notifications/notification.routes');
-const chatRoutes         = require('./modules/notifications/chat.routes');
-const socketHandler      = require('./modules/notifications/socket.handler');
+  paymentRoutes = require('./modules/payments/payment.routes');
+  webhookRoutes = require('./modules/payments/webhook.routes');
+  console.log('[startup] ✅ Módulo payments cargado');
+
+  notificationRoutes = require('./modules/notifications/notification.routes');
+  chatRoutes         = require('./modules/notifications/chat.routes');
+  socketHandler      = require('./modules/notifications/socket.handler');
+  console.log('[startup] ✅ Módulo notifications cargado');
+} catch (err) {
+  console.error('[startup] ❌ FALLO al cargar módulos:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+}
 
 // ================================================================
 // Configuración de la aplicación
@@ -64,6 +80,14 @@ const socketHandler      = require('./modules/notifications/socket.handler');
 
 const app = express();
 const server = http.createServer(app);
+
+// ── Health check mínimo — se monta PRIMERO antes de cualquier middleware ──────
+// De esta forma responde aunque algún middleware posterior falle.
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'lava-auto-backend' });
+});
+
+console.log('[startup] ✅ /health registrado');
 
 const io = new Server(server, {
   cors: {
@@ -129,15 +153,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat',          chatRoutes);
 socketHandler(io, db);
 
-// ── Health check ─────────────────────────────────────────────────
-// IMPORTANTE: responde 200 SIEMPRE y de forma síncrona.
-// No hace ninguna query a la BD → no puede fallar ni bloquearse.
-// Railway/K8s solo necesitan confirmar que el proceso está vivo.
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', service: 'lava-auto-backend' });
-});
-
-// Health check extendido (opcional, para monitoreo manual)
+// Health check extendido (opcional, para monitoreo manual con info de BD)
 app.get('/health/full', async (_req, res) => {
   const dbOk = await db.isHealthy();
   res.status(200).json({
@@ -156,8 +172,9 @@ app.use(errorHandler);
 // Inicio del servidor con graceful shutdown
 // ================================================================
 
+console.log(`[startup] Iniciando server.listen en puerto ${config.server.port}...`);
 server.listen(config.server.port, '0.0.0.0', () => {
-  console.log(`🚀 Backend corriendo en http://localhost:${config.server.port}`);
+  console.log(`[startup] ✅ Backend corriendo en http://0.0.0.0:${config.server.port}`);
   console.log(`   Entorno  : ${config.nodeEnv}`);
   console.log(`   Frontend : ${config.server.frontendUrl}`);
   console.log(`   DB       : ${config.db.host}:${config.db.port}/${config.db.name}`);

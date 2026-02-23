@@ -2,14 +2,9 @@
 
 /**
  * swagger.js — Configuración de Swagger (OpenAPI 3.0).
- *
- * La especificación se construye automáticamente a partir de los
- * comentarios JSDoc (@swagger) en cada archivo de rutas.
- *
- * UI disponible en: GET /api-docs
- * JSON spec en:     GET /api-docs.json
  */
 
+const path = require('node:path');
 const swaggerJSDoc = require('swagger-jsdoc');
 const config = require('./env');
 
@@ -355,7 +350,8 @@ const options = {
     ],
   },
   // Archivos que contienen anotaciones @swagger
-  apis: ['./src/modules/**/*.routes.js'],
+  // Usar __dirname para que funcione independientemente del CWD (Railway/Docker)
+  apis: [path.join(__dirname, '../modules/**/*.routes.js')],
 };
 
 const swaggerSpec = swaggerJSDoc(options);
