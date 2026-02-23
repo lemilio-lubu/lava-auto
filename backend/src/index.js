@@ -149,7 +149,7 @@ app.use(errorHandler);
 // Inicio del servidor con graceful shutdown
 // ================================================================
 
-server.listen(config.server.port, () => {
+server.listen(config.server.port, '0.0.0.0', () => {
   console.log(`🚀 Backend corriendo en http://localhost:${config.server.port}`);
   console.log(`   Entorno  : ${config.nodeEnv}`);
   console.log(`   Frontend : ${config.server.frontendUrl}`);
