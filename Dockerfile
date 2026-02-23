@@ -24,6 +24,17 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# NODE_ENV=production en build time evita que Next.js incluya HMR/fast-refresh
+# (el ws://localhost:8081 que aparece en el browser viene de omitir esto)
+ENV NODE_ENV=production
+
+# NEXT_PUBLIC_* se incrustan en el bundle JS durante el build (no en runtime).
+# Se leen como ARG para que Railway pueda pasarlos como build variables.
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
 COPY --from=deps /app/node_modules ./node_modules
 # Copiar todo el proyecto (src/, public/, config files)
