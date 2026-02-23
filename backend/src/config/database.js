@@ -14,18 +14,29 @@
 const { Pool } = require('pg');
 const config = require('./env');
 
-const pool = new Pool({
-  host: config.db.host,
-  port: config.db.port,
-  database: config.db.name,
-  user: config.db.user,
-  password: config.db.password,
-  max: config.db.poolMax,
-  idleTimeoutMillis: config.db.idleTimeoutMs,
-  connectionTimeoutMillis: config.db.connectTimeoutMs,
-  // Configuraciones de producción
-  ssl: config.isProduction ? { rejectUnauthorized: false } : false,
-});
+// Si DATABASE_URL está disponible (Railway Postgres plugin) se usa connectionString
+// directamente; libpq (pg) ignora el resto de las opciones en ese caso.
+const poolConfig = config.db.connectionString
+  ? {
+      connectionString: config.db.connectionString,
+      max: config.db.poolMax,
+      idleTimeoutMillis: config.db.idleTimeoutMs,
+      connectionTimeoutMillis: config.db.connectTimeoutMs,
+      ssl: { rejectUnauthorized: false }, // requerido por Railway Postgres
+    }
+  : {
+      host:     config.db.host,
+      port:     config.db.port,
+      database: config.db.name,
+      user:     config.db.user,
+      password: config.db.password,
+      max:      config.db.poolMax,
+      idleTimeoutMillis:     config.db.idleTimeoutMs,
+      connectionTimeoutMillis: config.db.connectTimeoutMs,
+      ssl: config.isProduction ? { rejectUnauthorized: false } : false,
+    };
+
+const pool = new Pool(poolConfig);
 
 // Log de errores en clientes idle (no termina el proceso)
 pool.on('error', (err) => {

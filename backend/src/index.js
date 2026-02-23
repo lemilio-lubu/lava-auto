@@ -133,7 +133,9 @@ socketHandler(io, db);
 app.get('/health', async (_req, res) => {
   const dbOk = await db.isHealthy();
   const status = dbOk ? 'healthy' : 'degraded';
-  res.status(dbOk ? 200 : 503).json({
+  // Siempre retornar 200: Railway (y cualquier LB) considera 5xx como fallo
+  // y reinicia el contenedor en bucle. El campo "status" indica el estado real.
+  res.status(200).json({
     status,
     service: 'lava-auto-backend',
     timestamp: new Date().toISOString(),

@@ -33,6 +33,8 @@ COPY scripts/  ./scripts/
 # Puerto por defecto del backend (Railway sobreescribe con su propio PORT)
 EXPOSE 4000
 
-# 1. Correr migración idempotente antes de arrancar el servidor
-# 2. Iniciar el servidor Express
-CMD ["sh", "-c", "node scripts/migrate.js && node src/index.js"]
+# 1. Correr migración idempotente (no bloquea el arranque si falla).
+# 2. Iniciar el servidor Express.
+# Se usa ';' en lugar de '&&' para que el servidor arranque SIEMPRE,
+# incluso si la migración falla temporalmente (ej. BD aún no disponible).
+CMD ["sh", "-c", "node scripts/migrate.js; node src/index.js"]

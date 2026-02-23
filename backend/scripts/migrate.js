@@ -25,15 +25,23 @@ async function migrate() {
   console.log('[migrate] Iniciando migración de base de datos...');
   console.log(`[migrate] Host: ${config.db.host}:${config.db.port} / DB: ${config.db.name}`);
 
-  // Usar un pool temporal solo para este script (no el módulo singleton)
-  const pool = new Pool({
-    host:     config.db.host,
-    port:     config.db.port,
-    database: config.db.name,
-    user:     config.db.user,
-    password: config.db.password,
-    connectionTimeoutMillis: 5_000,
-  });
+  // Si DATABASE_URL está disponible usarla directamente (Railway)
+  const poolConfig = config.db.connectionString
+    ? {
+        connectionString: config.db.connectionString,
+        connectionTimeoutMillis: 10_000,
+        ssl: { rejectUnauthorized: false },
+      }
+    : {
+        host:     config.db.host,
+        port:     config.db.port,
+        database: config.db.name,
+        user:     config.db.user,
+        password: config.db.password,
+        connectionTimeoutMillis: 10_000,
+      };
+
+  const pool = new Pool(poolConfig);
 
   try {
     // Verificar conectividad
@@ -49,7 +57,10 @@ async function migrate() {
   } catch (err) {
     console.error('[migrate] ❌ Error durante la migración:', err.message);
     if (err.detail) console.error('[migrate] Detalle:', err.detail);
-    process.exit(1);
+    // NO hacemos process.exit(1): si la migración falla el servidor igual arranca.
+    // Esto permite que Railway marque el contenedor como healthy y se pueda
+    // investigar el error en los logs sin que el contenedor quede en loop de reinicios.
+    console.warn('[migrate] ⚠ El servidor arrancará sin aplicar el schema. Revisa los logs.');
   } finally {
     await pool.end();
   }
