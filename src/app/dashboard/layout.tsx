@@ -214,11 +214,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-6 border-b border-cyan-100 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-xl p-2.5 shadow-md">
-                <Droplets className="w-6 h-6 text-white" />
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 rounded-xl p-2.5 shadow-md">
+                <Settings className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Lava Auto</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Taller Nexus</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Microservicios</p>
               </div>
             </div>

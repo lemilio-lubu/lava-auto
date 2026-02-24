@@ -55,10 +55,10 @@ export default function ClientDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-xl p-6 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 rounded-xl p-6 text-white shadow-lg">
         <h1 className="text-3xl font-bold mb-2">¡Bienvenido, {user?.name}!</h1>
-        <p className="text-cyan-50">
-          Gestiona tus vehículos y solicita servicios de lavado a domicilio
+        <p className="text-slate-300">
+          Gestiona tus vehículos y solicita servicios automotrices
         </p>
       </div>
 
@@ -99,22 +99,22 @@ export default function ClientDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Link
           href="/dashboard/client/nueva-reserva"
-          className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all flex items-center justify-between"
+          className="bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all flex items-center justify-between"
         >
           <div>
             <h3 className="text-xl font-bold mb-1">Solicitar Servicio</h3>
-            <p className="text-cyan-100">Programa un nuevo servicio</p>
+            <p className="text-slate-300">Programa un nuevo servicio</p>
           </div>
           <Calendar className="w-12 h-12 opacity-80" />
         </Link>
 
         <Link
           href="/dashboard/client/vehiculos"
-          className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all flex items-center justify-between"
+          className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all flex items-center justify-between"
         >
           <div>
             <h3 className="text-xl font-bold mb-1">Mis Vehículos</h3>
-            <p className="text-emerald-100">Administra tu garaje virtual</p>
+            <p className="text-slate-300">Administra tu garaje virtual</p>
           </div>
           <Car className="w-12 h-12 opacity-80" />
         </Link>
@@ -170,7 +170,7 @@ export default function ClientDashboard() {
             ¡Comienza registrando tu primer vehículo!
           </h3>
           <p className="text-amber-800 dark:text-amber-200 mb-4">
-            Para solicitar servicios de lavado, necesitas tener al menos un vehículo registrado
+            Para solicitar servicios, necesitas tener al menos un vehículo registrado
           </p>
           <Link
             href="/dashboard/client/vehiculos"
