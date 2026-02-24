@@ -58,7 +58,7 @@ export default function GarajeVirtual() {
                 Ver Historial
               </Button>
               <Button size="sm" className="flex-1">
-                Reservar Lavado
+                Solicitar Servicio
               </Button>
             </div>
           </Card>

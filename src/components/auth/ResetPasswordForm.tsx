@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Droplets, Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Settings, Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 import Toast from '@/components/ui/Toast';
 
 export function ResetPasswordForm() {
@@ -101,8 +101,8 @@ export function ResetPasswordForm() {
       <div className="w-full max-w-md mx-auto p-6 animate-fadeIn">
         <div className="glass-effect dark:bg-slate-800/90 rounded-2xl shadow-xl dark:shadow-slate-900/50 p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-2xl mb-4 shadow-lg">
-              <Droplets className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 rounded-2xl mb-4 shadow-lg">
+              <Settings className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
               Recuperar contraseña

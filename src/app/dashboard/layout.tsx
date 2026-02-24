@@ -126,13 +126,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             icon: Users,
             label: 'Usuarios',
             href: '/dashboard/admin/usuarios',
-            description: 'Clientes y lavadores',
+            description: 'Clientes y técnicos',
           },
           {
             icon: Briefcase,
-            label: 'Lavadores',
+            label: 'Técnicos',
             href: '/dashboard/admin/lavadores',
-            description: 'Gestionar lavadores',
+            description: 'Gestionar técnicos',
           },
           {
             icon: Calendar,
@@ -178,7 +178,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       case 'CLIENT':
         return { label: 'Cliente', color: 'bg-blue-500' };
       case 'WASHER':
-        return { label: 'Lavador', color: 'bg-green-500' };
+        return { label: 'Técnico', color: 'bg-green-500' };
       case 'ADMIN':
         return { label: 'Admin', color: 'bg-purple-500' };
       default:
@@ -253,7 +253,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Navegación */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <p className="px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-            {user.role === 'ADMIN' ? 'Administración' : user.role === 'WASHER' ? 'Lavador' : 'Cliente'}
+            {user.role === 'ADMIN' ? 'Administración' : user.role === 'WASHER' ? 'Técnico' : 'Cliente'}
           </p>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -342,15 +342,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {user.role === 'ADMIN' 
                     ? 'Panel de Administración' 
                     : user.role === 'WASHER'
-                    ? 'Panel del Lavador'
+                    ? 'Panel del Técnico'
                     : 'Mi Panel'}
                 </h1>
                 <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
                   {user.role === 'ADMIN'
-                    ? 'Gestiona todo el sistema de autolavado'
+                    ? 'Gestiona todo el sistema del taller'
                     : user.role === 'WASHER'
                     ? 'Gestiona tus trabajos y ganancias'
-                    : 'Solicita y gestiona tus servicios de lavado'}
+                    : 'Solicita y gestiona tus servicios'}
                 </p>
               </div>
               

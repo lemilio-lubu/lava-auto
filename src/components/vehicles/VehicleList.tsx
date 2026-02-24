@@ -108,7 +108,7 @@ export default function VehicleList({ vehicles: initialVehicles }: VehicleListPr
             No tienes vehículos registrados
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-6">
-            Agrega tu primer vehículo para poder solicitar servicios de lavado
+            Agrega tu primer vehículo para poder solicitar servicios
           </p>
           <button
             onClick={handleAdd}

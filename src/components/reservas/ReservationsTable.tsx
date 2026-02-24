@@ -191,7 +191,7 @@ export default function ReservationsTable({
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Mis Reservas</h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Gestiona y consulta todas tus reservas de autolavado
+            Gestiona y consulta todas tus reservas de servicio
           </p>
         </div>
         

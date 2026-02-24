@@ -6,7 +6,7 @@ import { registerSchema } from '@/lib/validations/auth.schema';
 import Link from 'next/link';
 import { useModal } from '@/hooks/useModal';
 import Modal from '@/components/ui/Modal';
-import { Droplets, Mail, Lock, User, Phone, Loader2, CheckCircle2 } from 'lucide-react';
+import { Settings, Mail, Lock, User, Phone, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function RegisterForm() {
@@ -75,11 +75,11 @@ export function RegisterForm() {
       <div className="w-full max-w-md mx-auto p-6 animate-fadeIn">
         <div className="glass-effect dark:bg-slate-800/90 rounded-2xl shadow-xl dark:shadow-slate-900/50 p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-2xl mb-4 shadow-lg">
-              <Droplets className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 rounded-2xl mb-4 shadow-lg">
+              <Settings className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Crear cuenta</h1>
-            <p className="text-slate-600 dark:text-slate-400">Únete a Autolavado Digital</p>
+            <p className="text-slate-600 dark:text-slate-400">Únete a Taller Nexus</p>
           </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

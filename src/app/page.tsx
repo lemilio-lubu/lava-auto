@@ -128,11 +128,11 @@ export default function Home() {
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-100 dark:bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-200 dark:group-hover:bg-cyan-500/20 transition-colors duration-500"></div>
               <div className="relative z-10">
                 <div className="bg-cyan-100 dark:bg-cyan-500/20 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-cyan-200 dark:border-cyan-500/30">
-                  <Droplets className="h-7 w-7 text-cyan-600 dark:text-cyan-400" />
+                  <CarFront className="h-7 w-7 text-cyan-600 dark:text-cyan-400" />
                 </div>
-                <h3 className="text-2xl font-bold mb-3 text-slate-900 dark:text-white">Spa Automotriz</h3>
+                <h3 className="text-2xl font-bold mb-3 text-slate-900 dark:text-white">Estética Automotriz</h3>
                 <p className="text-slate-600 dark:text-gray-400 leading-relaxed">
-                  Detallado interior y exterior, recubrimiento cerámico y desinfección.
+                  Detallado interior y exterior, recubrimiento cerámico y corrección de pintura.
                 </p>
               </div>
             </div>
@@ -246,7 +246,7 @@ export default function Home() {
                         <h5 className="font-semibold text-slate-900 dark:text-white text-sm">Servicio en Curso</h5>
                         <span className="text-xs text-blue-600 dark:text-blue-400">Ahora</span>
                       </div>
-                      <p className="text-xs text-slate-600 dark:text-gray-300">Lavado Premium en ejecución.</p>
+                      <p className="text-xs text-slate-600 dark:text-gray-300">Mantenimiento en ejecución.</p>
                     </div>
                   </div>
 

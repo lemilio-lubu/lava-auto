@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export const metadata: Metadata = {
-  title: "Recuperar contraseña | Autolavado Digital",
+  title: "Recuperar contraseña | Taller Nexus",
 };
 
 export default function ResetPasswordPage() {
