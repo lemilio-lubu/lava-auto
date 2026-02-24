@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'AutoFix - Cuidado Automotriz',
-    short_name: 'AutoFix',
+    name: 'Taller Nexus - Cuidado Automotriz',
+    short_name: 'Taller Nexus',
     description: 'La evolución del cuidado automotriz. Precisión, estética y tecnología en un solo lugar.',
     start_url: '/',
     display: 'standalone',

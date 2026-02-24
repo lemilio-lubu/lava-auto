@@ -15,12 +15,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "AutoFix",
+  title: "Taller Nexus",
   description: "La evolución del cuidado automotriz. Precisión, estética y tecnología en un solo lugar.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "AutoFix",
+    title: "Taller Nexus",
   },
   formatDetection: {
     telephone: false,

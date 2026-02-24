@@ -18,14 +18,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#000000] text-slate-900 dark:text-white font-sans selection:bg-blue-500/30 overflow-x-hidden transition-colors duration-300">
       {/* Navbar - Apple Style (Glassmorphism) */}
-      <nav className="fixed top-0 w-full z-50 bg-white/70 dark:bg-black/50 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2 group cursor-pointer">
-            <Settings className="h-5 w-5 text-slate-900 dark:text-white group-hover:rotate-90 transition-transform duration-700 ease-in-out" />
-            <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-              AutoFix
+      <nav className="fixed top-0 w-full z-50 bg-white/70 dark:bg-black/50 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/10 transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+            <Settings className="h-7 w-7 text-slate-900 dark:text-white group-hover:rotate-90 transition-transform duration-700 ease-in-out" strokeWidth={2.5} />
+            <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Taller Nexus
             </span>
-          </div>
+          </Link>
           <div className="flex items-center gap-6 text-sm font-medium">
             <ThemeToggle />
             <Link href="/login" className="text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white transition-colors">
@@ -293,10 +293,10 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-8 mb-16">
             {/* Brand (Takes up more space on desktop) */}
             <div className="md:col-span-5 flex flex-col items-center md:items-start gap-4">
-              <div className="flex items-center gap-2">
-                <Settings className="h-6 w-6 text-slate-900 dark:text-white" />
-                <span className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
-                  AutoFix
+              <div className="flex items-center gap-3">
+                <Settings className="h-7 w-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
+                <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  Taller Nexus
                 </span>
               </div>
               <p className="text-sm text-slate-500 dark:text-gray-400 text-center md:text-left max-w-xs leading-relaxed">
@@ -323,7 +323,7 @@ export default function Home() {
                 href="#" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="group relative h-12 w-32 flex items-center justify-center md:justify-end"
+                className="group relative h-20 w-48 flex items-center justify-center md:justify-end"
               >
                 {/* Glow effect on hover */}
                 <div className="absolute inset-0 bg-slate-400/10 dark:bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
@@ -349,7 +349,7 @@ export default function Home() {
 
           {/* Bottom Section: Legal & Copyright */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-slate-400 dark:text-gray-600 border-t border-slate-200 dark:border-white/10 pt-8">
-            <p>© {new Date().getFullYear()} AutoFix Inc. Todos los derechos reservados.</p>
+            <p>© {new Date().getFullYear()} Taller Nexus Inc. Todos los derechos reservados.</p>
             <div className="flex gap-6">
               <Link href="#" className="hover:text-slate-600 dark:hover:text-gray-300 transition-colors">Política de Privacidad</Link>
               <Link href="#" className="hover:text-slate-600 dark:hover:text-gray-300 transition-colors">Términos de Servicio</Link>
