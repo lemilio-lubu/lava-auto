@@ -11,7 +11,8 @@ import {
   Settings,
   ChevronRight,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  User
 } from 'lucide-react';
 
 export default function Home() {
@@ -26,17 +27,30 @@ export default function Home() {
               Taller Nexus
             </span>
           </Link>
-          <div className="flex items-center gap-6 text-sm font-medium">
+          <div className="flex items-center gap-4 sm:gap-6 text-sm font-medium">
             <ThemeToggle />
-            <Link href="/login" className="text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white transition-colors">
+            <Link href="/login" className="hidden sm:block text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white transition-colors">
               Iniciar Sesión
             </Link>
-            <Link href="/register" className="bg-slate-900 dark:bg-white text-white dark:text-black px-4 py-1.5 rounded-full hover:scale-105 transition-transform duration-300 shadow-sm dark:shadow-none">
+            <Link href="/register" className="hidden sm:block bg-slate-900 dark:bg-white text-white dark:text-black px-4 py-1.5 rounded-full hover:scale-105 transition-transform duration-300 shadow-sm dark:shadow-none">
               Registrarse
             </Link>
           </div>
         </div>
       </nav>
+
+      {/* Mobile Bottom Navigation (PWA Native Feel) */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/10 pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-center justify-around p-3">
+          <Link href="/login" className="flex flex-col items-center gap-1 text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+            <User className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Ingresar</span>
+          </Link>
+          <Link href="/register" className="flex items-center justify-center px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-full font-medium text-sm shadow-lg hover:scale-105 transition-transform">
+            Agendar Cita
+          </Link>
+        </div>
+      </div>
 
       {/* Hero Section - Cinematic & Minimalist */}
       <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
@@ -50,24 +64,24 @@ export default function Home() {
             <span>La evolución del cuidado automotriz</span>
           </div>
           
-          <h1 className="text-6xl md:text-8xl font-bold tracking-tighter mb-6 leading-[1.1] bg-clip-text text-transparent bg-gradient-to-b from-slate-900 via-slate-800 to-slate-500 dark:from-white dark:via-white dark:to-gray-500">
+          <h1 className="text-5xl sm:text-6xl md:text-8xl font-bold tracking-tighter mb-6 leading-[1.1] bg-clip-text text-transparent bg-gradient-to-b from-slate-900 via-slate-800 to-slate-500 dark:from-white dark:via-white dark:to-gray-500">
             Tu auto.<br />
             Nuestra obra maestra.
           </h1>
           
-          <p className="text-xl md:text-2xl text-slate-600 dark:text-gray-400 mb-12 max-w-2xl font-light leading-relaxed">
+          <p className="text-lg sm:text-xl md:text-2xl text-slate-600 dark:text-gray-400 mb-12 max-w-2xl font-light leading-relaxed">
             Mecánica de precisión, estética impecable y tecnología de punta. Todo gestionado desde la palma de tu mano.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-6 items-center mt-4">
-            <Link href="/register" className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-white dark:text-black bg-slate-900 dark:bg-white rounded-full overflow-hidden transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl dark:shadow-none dark:hover:shadow-[0_0_40px_rgba(255,255,255,0.3)]">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center mt-4 w-full sm:w-auto px-4 sm:px-0">
+            <Link href="/register" className="w-full sm:w-auto group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-white dark:text-black bg-slate-900 dark:bg-white rounded-full overflow-hidden transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl dark:shadow-none dark:hover:shadow-[0_0_40px_rgba(255,255,255,0.3)]">
               <span className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 dark:from-white dark:via-gray-200 dark:to-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
               <span className="relative flex items-center gap-2">
                 Agendar Cita <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
               </span>
             </Link>
             
-            <Link href="/dashboard/client" className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-slate-900 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-full overflow-hidden backdrop-blur-md transition-all duration-300 hover:bg-slate-900/10 dark:hover:bg-white/10 hover:border-slate-900/20 dark:hover:border-white/20 hover:scale-105">
+            <Link href="/dashboard/client" className="w-full sm:w-auto group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-slate-900 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-full overflow-hidden backdrop-blur-md transition-all duration-300 hover:bg-slate-900/10 dark:hover:bg-white/10 hover:border-slate-900/20 dark:hover:border-white/20 hover:scale-105">
               <span className="relative flex items-center gap-2">
                 Cotizar Choque <ArrowRight className="h-5 w-5 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
               </span>
@@ -287,7 +301,7 @@ export default function Home() {
       </section>
       
       {/* Footer - Clean & Apple Style */}
-      <footer className="border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black pt-20 pb-10 transition-colors duration-300">
+      <footer className="border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black pt-20 pb-24 sm:pb-10 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Top Section: Brand & Links */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-8 mb-16">
