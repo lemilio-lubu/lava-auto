@@ -286,23 +286,69 @@ export default function Home() {
         </div>
       </section>
       
-      {/* Footer - Clean */}
-      <footer className="border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black pt-16 pb-8 transition-colors duration-300">
+      {/* Footer - Clean & Apple Style */}
+      <footer className="border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black pt-20 pb-10 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-12">
-            <div className="flex items-center gap-2">
-              <Settings className="h-6 w-6 text-slate-900 dark:text-white" />
-              <span className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
-                AutoFix
-              </span>
+          {/* Top Section: Brand & Links */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-8 mb-16">
+            {/* Brand (Takes up more space on desktop) */}
+            <div className="md:col-span-5 flex flex-col items-center md:items-start gap-4">
+              <div className="flex items-center gap-2">
+                <Settings className="h-6 w-6 text-slate-900 dark:text-white" />
+                <span className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
+                  AutoFix
+                </span>
+              </div>
+              <p className="text-sm text-slate-500 dark:text-gray-400 text-center md:text-left max-w-xs leading-relaxed">
+                La evolución del cuidado automotriz. Precisión, estética y tecnología en un solo lugar.
+              </p>
             </div>
-            <div className="flex gap-8 text-sm text-slate-500 dark:text-gray-400">
-              <Link href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Servicios</Link>
-              <Link href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Cotizar</Link>
-              <Link href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Contacto</Link>
+
+            {/* Navigation Links (Centered) */}
+            <div className="md:col-span-3 flex flex-col items-center md:items-start gap-4">
+              <span className="text-xs font-semibold tracking-[0.2em] uppercase text-slate-900 dark:text-white">Plataforma</span>
+              <div className="flex flex-col items-center md:items-start gap-3 text-sm text-slate-500 dark:text-gray-400">
+                <Link href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Servicios</Link>
+                <Link href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Cotizar Choque</Link>
+                <Link href="/login" className="hover:text-slate-900 dark:hover:text-white transition-colors">Iniciar Sesión</Link>
+              </div>
+            </div>
+
+            {/* Elaborado por (Right aligned) */}
+            <div className="md:col-span-4 flex flex-col items-center md:items-end gap-4">
+              <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-slate-400 dark:text-gray-500">
+                Elaborado por
+              </span>
+              <a 
+                href="#" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="group relative h-12 w-32 flex items-center justify-center md:justify-end"
+              >
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 bg-slate-400/10 dark:bg-white/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                
+                {/* Logo container with smooth scale and slight lift */}
+                <div className="relative h-full w-full opacity-70 group-hover:opacity-100 group-hover:scale-105 group-hover:-translate-y-0.5 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]">
+                  {/* Logo para modo claro (logo oscuro) */}
+                  <img 
+                    src="/Exodo_logo_dark.svg" 
+                    alt="Exodo Logo" 
+                    className="h-full w-full object-contain object-center md:object-right dark:hidden drop-shadow-sm" 
+                  />
+                  {/* Logo para modo oscuro (logo claro) */}
+                  <img 
+                    src="/Exodo_logo_light.svg" 
+                    alt="Exodo Logo" 
+                    className="h-full w-full object-contain object-center md:object-right hidden dark:block drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]" 
+                  />
+                </div>
+              </a>
             </div>
           </div>
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 dark:text-gray-600 border-t border-slate-200 dark:border-white/10 pt-8">
+
+          {/* Bottom Section: Legal & Copyright */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-slate-400 dark:text-gray-600 border-t border-slate-200 dark:border-white/10 pt-8">
             <p>© {new Date().getFullYear()} AutoFix Inc. Todos los derechos reservados.</p>
             <div className="flex gap-6">
               <Link href="#" className="hover:text-slate-600 dark:hover:text-gray-300 transition-colors">Política de Privacidad</Link>
