@@ -324,6 +324,12 @@ export const washerApi = {
 
 // Admin API
 export const adminApi = {
+  createAdmin: (data: { name: string; email: string; password: string; phone?: string }, token: string) =>
+    apiRequest<{ message: string; admin: { id: string; name: string; email: string; role: string } }>('/api/users/admin', {
+      method: 'POST',
+      body: data,
+      token,
+    }),
   getUsers: (token: string, role?: string) =>
     apiRequest<User[]>(
       role ? `/api/users?role=${role}` : '/api/users',
