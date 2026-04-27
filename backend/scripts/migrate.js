@@ -53,6 +53,21 @@ async function migrate() {
       console.log(`[migrate] Ejecutando ${SCHEMA_PATH}...`);
       await pool.query(sql);
 
+      // Columnas CRM — garantizamos que existen independientemente del schema.sql
+      const crmColumns = [
+        `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS identification VARCHAR(20)`,
+        `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS city           VARCHAR(100)`,
+        `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS province       VARCHAR(100)`,
+        `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS company        VARCHAR(255)`,
+        `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false`,
+        `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS totp_secret    VARCHAR(255)`,
+        `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS totp_enabled   BOOLEAN NOT NULL DEFAULT false`,
+      ];
+      for (const stmt of crmColumns) {
+        await pool.query(stmt);
+      }
+      console.log('[migrate] ✅ Columnas extendidas verificadas.');
+
       console.log('[migrate] ✅ Migración completada exitosamente.');
       await pool.end();
       return;
