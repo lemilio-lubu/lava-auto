@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { loginSchema } from '@/lib/validations/auth.schema';
 import Link from 'next/link';
-import { Settings, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import ThemeLogo from '@/components/ui/ThemeLogo';
 import Toast from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -95,8 +96,8 @@ export function LoginForm() {
         <div className="glass-effect dark:bg-slate-800/90 rounded-2xl shadow-xl dark:shadow-slate-900/50 p-8">
           {/* Nielsen: Diseño estético y minimalista - Logo + Identidad visual */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 rounded-2xl mb-4 shadow-lg">
-              <Settings className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center mb-4">
+              <ThemeLogo width={72} height={72} className="object-contain" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
               Bienvenido

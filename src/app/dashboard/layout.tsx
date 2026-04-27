@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { 
+import {
   Calendar, Car, LogOut, Droplets, User, MessageCircle,
-  Briefcase, Users, Settings, BarChart, Home, Bell, Loader2,
+  Briefcase, Users, BarChart, Home, Bell, Loader2,
   Menu, X
 } from 'lucide-react';
+import ThemeLogo from '@/components/ui/ThemeLogo';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
@@ -214,9 +215,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-6 border-b border-cyan-100 dark:border-slate-700">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 rounded-xl p-2.5 shadow-md">
-                <Settings className="w-6 h-6 text-white" />
-              </div>
+              <ThemeLogo width={40} height={40} className="object-contain" />
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Body Shop</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Microservicios</p>

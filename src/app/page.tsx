@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import ThemeToggle from '@/components/ui/ThemeToggle';
-import { 
-  Wrench, 
-  Droplets, 
-  PaintBucket, 
-  CarFront, 
-  ShieldCheck, 
-  ArrowRight, 
+import ThemeLogo from '@/components/ui/ThemeLogo';
+import {
+  Wrench,
+  Droplets,
+  PaintBucket,
+  CarFront,
+  ShieldCheck,
+  ArrowRight,
   CheckCircle2,
-  Settings,
   ChevronRight,
   ChevronDown,
   Sparkles,
@@ -22,7 +22,7 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 bg-white/70 dark:bg-black/50 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/10 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group cursor-pointer">
-            <Settings className="h-7 w-7 text-slate-900 dark:text-white group-hover:rotate-90 transition-transform duration-700 ease-in-out" strokeWidth={2.5} />
+            <ThemeLogo width={36} height={36} className="group-hover:scale-105 transition-transform duration-300" />
             <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Body Shop
             </span>
@@ -308,7 +308,7 @@ export default function Home() {
             {/* Brand (Takes up more space on desktop) */}
             <div className="md:col-span-5 flex flex-col items-center md:items-start gap-4">
               <div className="flex items-center gap-3">
-                <Settings className="h-7 w-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
+                <ThemeLogo width={32} height={32} />
                 <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                   Body Shop
                 </span>
