@@ -1,7 +1,7 @@
 {
   "name": "payment-service",
   "version": "1.0.0",
-  "description": "Payment Microservice for Lava Auto",
+  "description": "Payment Microservice for Body Shop",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

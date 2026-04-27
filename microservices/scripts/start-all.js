@@ -37,7 +37,7 @@ const serviceColors = [
   colors.red,
 ];
 
-console.log('\n🚀 Starting Lava Auto Microservices...\n');
+console.log('\n🚀 Starting Body Shop Microservices...\n');
 
 const processes = [];
 

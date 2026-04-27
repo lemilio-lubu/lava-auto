@@ -12,13 +12,13 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Lava Auto API',
+      title: 'Body Shop API',
       version: '2.0.0',
       description:
-        'API REST del sistema de reservas de autolavado Lava Auto.\n\n' +
+        'API REST del sistema de reservas de autolavado Body Shop.\n\n' +
         '**Autenticación**: Bearer JWT en el header `Authorization`.\n\n' +
         'Obtén tu token en `POST /api/auth/login`.',
-      contact: { name: 'Lava Auto Dev Team' },
+      contact: { name: 'Body Shop Dev Team' },
     },
     servers: [
       {

@@ -218,7 +218,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Settings className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Taller Nexus</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Body Shop</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Microservicios</p>
               </div>
             </div>

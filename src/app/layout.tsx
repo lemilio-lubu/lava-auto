@@ -17,12 +17,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Taller Nexus",
+  title: "Body Shop",
   description: "La evolución del cuidado automotriz. Precisión, estética y tecnología en un solo lugar.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Taller Nexus",
+    title: "Body Shop",
   },
   formatDetection: {
     telephone: false,

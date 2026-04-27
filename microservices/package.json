@@ -1,7 +1,7 @@
 {
   "name": "lava-auto-microservices",
   "version": "1.0.0",
-  "description": "Lava Auto Microservices Architecture",
+  "description": "Body Shop Microservices Architecture",
   "scripts": {
     "install:all": "npm run install:gateway && npm run install:auth && npm run install:vehicle && npm run install:reservation && npm run install:payment && npm run install:notification",
     "install:gateway": "cd api-gateway && npm install",

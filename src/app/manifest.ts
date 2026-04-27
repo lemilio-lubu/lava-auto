@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Taller Nexus - Cuidado Automotriz',
-    short_name: 'Taller Nexus',
+    name: 'Body Shop - Cuidado Automotriz',
+    short_name: 'Body Shop',
     description: 'La evolución del cuidado automotriz. Precisión, estética y tecnología en un solo lugar.',
     start_url: '/',
     display: 'standalone',

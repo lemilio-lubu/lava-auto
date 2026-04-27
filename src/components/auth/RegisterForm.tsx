@@ -79,7 +79,7 @@ export function RegisterForm() {
               <Settings className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Crear cuenta</h1>
-            <p className="text-slate-600 dark:text-slate-400">Únete a Taller Nexus</p>
+            <p className="text-slate-600 dark:text-slate-400">Únete a Body Shop</p>
           </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

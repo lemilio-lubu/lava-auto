@@ -1,7 +1,7 @@
 {
   "name": "api-gateway",
   "version": "1.0.0",
-  "description": "API Gateway for Lava Auto Microservices",
+  "description": "API Gateway for Body Shop Microservices",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

@@ -1,7 +1,7 @@
 {
   "name": "reservation-service",
   "version": "1.0.0",
-  "description": "Reservation Microservice for Lava Auto",
+  "description": "Reservation Microservice for Body Shop",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

@@ -1,5 +1,5 @@
 -- ================================================================
--- Lava Auto — Schema Unificado v2.0
+-- Body Shop — Schema Unificado v2.0
 -- Base de datos: lava_auto
 -- ================================================================
 -- INSTRUCCIONES:

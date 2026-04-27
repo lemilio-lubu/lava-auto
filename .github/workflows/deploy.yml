@@ -1,4 +1,4 @@
-name: Deploy Lava Auto
+name: Deploy Body Shop
 on:
   push:
     branches: [ master ]

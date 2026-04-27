@@ -1,6 +1,6 @@
-# Microservicios - Lava Auto
+# Microservicios - Body Shop
 
-Esta carpeta contiene los microservicios backend de la aplicación Lava Auto.
+Esta carpeta contiene los microservicios backend de la aplicación Body Shop.
 
 ## 📋 Servicios
 

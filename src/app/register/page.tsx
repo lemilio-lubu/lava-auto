@@ -4,7 +4,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "Crear cuenta | Taller Nexus",
+  title: "Crear cuenta | Body Shop",
 };
 
 export default function RegisterPage() {

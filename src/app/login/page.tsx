@@ -4,7 +4,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "Ingresar | Taller Nexus",
+  title: "Ingresar | Body Shop",
 };
 
 export default function LoginPage() {

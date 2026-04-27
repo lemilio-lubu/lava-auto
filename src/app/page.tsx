@@ -24,7 +24,7 @@ export default function Home() {
           <Link href="/" className="flex items-center gap-3 group cursor-pointer">
             <Settings className="h-7 w-7 text-slate-900 dark:text-white group-hover:rotate-90 transition-transform duration-700 ease-in-out" strokeWidth={2.5} />
             <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Taller Nexus
+              Body Shop
             </span>
           </Link>
           <div className="flex items-center gap-4 sm:gap-6 text-sm font-medium">
@@ -310,7 +310,7 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <Settings className="h-7 w-7 text-slate-900 dark:text-white" strokeWidth={2.5} />
                 <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  Taller Nexus
+                  Body Shop
                 </span>
               </div>
               <p className="text-sm text-slate-500 dark:text-gray-400 text-center md:text-left max-w-xs leading-relaxed">
@@ -363,7 +363,7 @@ export default function Home() {
 
           {/* Bottom Section: Legal & Copyright */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-6 text-xs text-slate-400 dark:text-gray-600 border-t border-slate-200 dark:border-white/10 pt-8">
-            <p>© {new Date().getFullYear()} Taller Nexus Inc. Todos los derechos reservados.</p>
+            <p>© {new Date().getFullYear()} Body Shop Inc. Todos los derechos reservados.</p>
             <div className="flex gap-6">
               <Link href="#" className="hover:text-slate-600 dark:hover:text-gray-300 transition-colors">Política de Privacidad</Link>
               <Link href="#" className="hover:text-slate-600 dark:hover:text-gray-300 transition-colors">Términos de Servicio</Link>

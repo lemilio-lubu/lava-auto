@@ -147,7 +147,7 @@ app.use((req, _res, next) => {
 // ── Documentación Swagger ──────────────────────────────────────────
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
-  customSiteTitle: 'Lava Auto API',
+  customSiteTitle: 'Body Shop API',
 }));
 // Spec JSON (útil para herramientas externas como Postman)
 app.get('/api-docs.json', (_req, res) => res.json(swaggerSpec));

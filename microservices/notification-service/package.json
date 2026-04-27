@@ -1,7 +1,7 @@
 {
   "name": "notification-service",
   "version": "1.0.0",
-  "description": "Notification Microservice for Lava Auto",
+  "description": "Notification Microservice for Body Shop",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

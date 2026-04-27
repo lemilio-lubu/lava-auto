@@ -1,4 +1,4 @@
-# Lava Auto — Sistema de Reservas de Autolavado
+# Body Shop — Sistema de Reservas de Autolavado
 
 Aplicación web full-stack para la gestión de servicios de autolavado a domicilio.  
 **Next.js 16** (frontend) + **Express.js modular** (backend) + **PostgreSQL** (una sola base de datos).

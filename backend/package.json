@@ -1,7 +1,7 @@
 {
   "name": "lava-auto-backend",
   "version": "2.0.0",
-  "description": "Lava Auto — Backend monolítico modular (Express.js + PostgreSQL)",
+  "description": "Body Shop — Backend monolítico modular (Express.js + PostgreSQL)",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
