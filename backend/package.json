@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "build": "echo \"Backend: no build step required\"",
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "import:clients": "node scripts/import_excel_clients.js",
