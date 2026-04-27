@@ -91,7 +91,7 @@ console.log('[startup] ✅ /health registrado');
 
 // Orígenes permitidos en CORS: la URL del frontend configurada + localhost para dev
 const allowedOrigins = [
-  config.server.frontendUrl,
+  ...config.server.frontendUrl.split(',').map((u) => u.trim()),
   'http://localhost:3000',
   'http://localhost:3001',
 ];
