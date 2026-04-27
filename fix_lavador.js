@@ -1,5 +1,5 @@
 const fs = require('fs');
-const path = './src/app/dashboard/admin/lavadores/page.tsx';
+const path = './src/app/dashboard/admin/técnicos/page.tsx';
 let content = fs.readFileSync(path, 'utf8');
 
 // The file got messed up before with `import Modal from "@/components/ui/Modal";\nimport AdminForm from "@/components/admin/AdminForm";;`

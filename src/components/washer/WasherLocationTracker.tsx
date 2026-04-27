@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { MapPin, X } from 'lucide-react';
-import { washerApi } from '@/lib/api-client';
+import { employeeApi } from '@/lib/api-client';
 
 export default function WasherLocationTracker() {
   const { user, token } = useAuth();
@@ -12,8 +12,8 @@ export default function WasherLocationTracker() {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    // Solo ejecutar para lavadores autenticados
-    if (user?.role === 'WASHER' && token) {
+    // Solo ejecutar para técnicos autenticados
+    if (user?.role === 'EMPLOYEE' && token) {
       requestLocation();
     }
   }, [user, token]);
@@ -38,7 +38,7 @@ export default function WasherLocationTracker() {
           if (!token) throw new Error('No token');
           
           // Enviar ubicación al servidor usando la API
-          await washerApi.updateLocation({ latitude, longitude }, token);
+          await employeeApi.updateLocation({ latitude, longitude }, token);
 
           setLocationStatus('success');
           // Ocultar el mensaje después de 3 segundos
@@ -83,7 +83,7 @@ export default function WasherLocationTracker() {
   };
 
   // No mostrar nada si no es lavador o no hay nada que mostrar
-  if (status !== 'authenticated' || session?.user?.role !== 'WASHER' || !showPrompt) {
+  if (!user || user.role !== 'EMPLOYEE' || !showPrompt) {
     return null;
   }
 

@@ -13,8 +13,17 @@
 -- ================================================================
 
 DO $$ BEGIN
-    CREATE TYPE user_role AS ENUM ('ADMIN', 'CLIENT', 'WASHER');
+    CREATE TYPE user_role AS ENUM ('ADMIN', 'CLIENT', 'EMPLOYEE');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Migración: renombrar WASHER → EMPLOYEE (idempotente — falla silenciosamente si
+-- WASHER no existe o EMPLOYEE ya existe)
+DO $$ BEGIN
+    ALTER TYPE user_role RENAME VALUE 'WASHER' TO 'EMPLOYEE';
+EXCEPTION
+    WHEN invalid_parameter_value THEN NULL;  -- 'WASHER' ya no existe
+    WHEN duplicate_object        THEN NULL;  -- 'EMPLOYEE' ya existe
+END $$;
 
 DO $$ BEGIN
     CREATE TYPE vehicle_type AS ENUM ('SEDAN', 'SUV', 'HATCHBACK', 'PICKUP', 'VAN', 'MOTORCYCLE');
@@ -86,9 +95,24 @@ CREATE TABLE IF NOT EXISTS auth.users (
     is_available        BOOLEAN           NOT NULL DEFAULT false,
     rating              DOUBLE PRECISION  NOT NULL DEFAULT 5.0 CHECK (rating BETWEEN 0 AND 5),
     completed_services  INTEGER           NOT NULL DEFAULT 0 CHECK (completed_services >= 0),
+    must_change_password BOOLEAN          NOT NULL DEFAULT false,
+    totp_secret         VARCHAR(255),
+    totp_enabled        BOOLEAN          NOT NULL DEFAULT false,
     created_at          TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$ BEGIN
+    ALTER TABLE auth.users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE auth.users ADD COLUMN totp_secret VARCHAR(255);
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE auth.users ADD COLUMN totp_enabled BOOLEAN NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 CREATE INDEX IF NOT EXISTS idx_auth_users_email
     ON auth.users (email);
@@ -96,10 +120,10 @@ CREATE INDEX IF NOT EXISTS idx_auth_users_email
 CREATE INDEX IF NOT EXISTS idx_auth_users_role
     ON auth.users (role);
 
--- Índice parcial: solo indexa lavadores disponibles
-CREATE INDEX IF NOT EXISTS idx_auth_users_available_washers
+-- Índice parcial: solo indexa técnicos disponibles
+CREATE INDEX IF NOT EXISTS idx_auth_users_available_employees
     ON auth.users (is_available)
-    WHERE role = 'WASHER';
+    WHERE role = 'EMPLOYEE';
 
 CREATE INDEX IF NOT EXISTS idx_auth_users_reset_token
     ON auth.users (reset_token)

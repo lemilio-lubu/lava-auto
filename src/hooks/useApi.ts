@@ -14,7 +14,7 @@ import {
   paymentApi, 
   notificationApi,
   jobApi,
-  washerApi,
+  employeeApi,
   Vehicle, 
   Service, 
   Reservation, 
@@ -122,26 +122,32 @@ export function useUnreadNotificationCount() {
   return useApiCall((token) => notificationApi.getUnreadCount(token));
 }
 
-// Available jobs hook (for washers)
+// Available jobs hook (for employees)
 export function useAvailableJobs(): UseApiResult<Reservation[]> {
   return useApiCall((token) => jobApi.getAvailable(token));
 }
 
-// Washer's jobs hook
-export function useWasherJobs(status?: string): UseApiResult<Reservation[]> {
+// Employee's jobs hook
+export function useEmployeeJobs(status?: string): UseApiResult<Reservation[]> {
   return useApiCall(
     (token) => jobApi.getMyJobs(token, status),
     [status]
   );
 }
 
-// Washers list hook
-export function useWashers(available?: boolean): UseApiResult<unknown[]> {
+/** @deprecated Use useEmployeeJobs instead */
+export const useWasherJobs = useEmployeeJobs;
+
+// Employees list hook
+export function useEmployees(available?: boolean): UseApiResult<unknown[]> {
   return useApiCall(
-    (token) => washerApi.getAll(token, available),
+    (token) => employeeApi.getAll(token, available),
     [available]
   );
 }
+
+/** @deprecated Use useEmployees instead */
+export const useWashers = useEmployees;
 
 // Mutation hooks for actions
 export function useCreateReservation() {

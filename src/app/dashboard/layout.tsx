@@ -5,13 +5,14 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Calendar, Car, LogOut, Droplets, User, MessageCircle,
-  Briefcase, Users, BarChart, Home, Bell, Loader2,
+  Briefcase, Users, Settings, BarChart, Home, Bell, Loader2,
   Menu, X
 } from 'lucide-react';
 import ThemeLogo from '@/components/ui/ThemeLogo';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
+import ForcePasswordChangeModal from '@/components/auth/ForcePasswordChangeModal';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
@@ -80,7 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           },
         ];
 
-      case 'WASHER':
+      case 'EMPLOYEE':
         return [
           {
             icon: Home,
@@ -132,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {
             icon: Briefcase,
             label: 'Técnicos',
-            href: '/dashboard/admin/lavadores',
+            href: '/dashboard/admin/tecnicos',
             description: 'Gestionar técnicos',
           },
           {
@@ -178,7 +179,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     switch (user.role) {
       case 'CLIENT':
         return { label: 'Cliente', color: 'bg-blue-500' };
-      case 'WASHER':
+      case 'EMPLOYEE':
         return { label: 'Técnico', color: 'bg-green-500' };
       case 'ADMIN':
         return { label: 'Admin', color: 'bg-purple-500' };
@@ -191,6 +192,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ThemeProvider>
+    <ForcePasswordChangeModal />
     <div className="min-h-screen flex bg-gradient-to-br from-cyan-50 via-white to-emerald-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
 
       {/* Backdrop mobile */}
@@ -252,12 +254,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Navegación */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <p className="px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-            {user.role === 'ADMIN' ? 'Administración' : user.role === 'WASHER' ? 'Técnico' : 'Cliente'}
+            {user.role === 'ADMIN' ? 'Administración' : user.role === 'EMPLOYEE' ? 'Técnico' : 'Cliente'}
           </p>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-            const showBadge = item.badge && user.role === 'WASHER' && availableJobsCount > 0;
+            const showBadge = item.badge && user.role === 'EMPLOYEE' && availableJobsCount > 0;
             
             return (
               <Link
@@ -298,6 +300,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Footer con Theme Toggle y Logout */}
         <div className="p-4 border-t border-cyan-100 dark:border-slate-700 space-y-2">
+          <Link
+            href="/dashboard/perfil"
+            onClick={() => setSidebarOpen(false)}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-slate-700 transition-all"
+          >
+            <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700">
+              <User className="w-4 h-4" />
+            </div>
+            <span className="text-sm font-semibold">Mi perfil</span>
+          </Link>
           <div className="flex items-center justify-between px-4">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Tema</span>
             <ThemeToggle />
@@ -340,14 +352,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <h1 className="text-lg md:text-2xl font-bold text-slate-900 dark:text-white truncate">
                   {user.role === 'ADMIN' 
                     ? 'Panel de Administración' 
-                    : user.role === 'WASHER'
+                    : user.role === 'EMPLOYEE'
                     ? 'Panel del Técnico'
                     : 'Mi Panel'}
                 </h1>
                 <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block">
                   {user.role === 'ADMIN'
                     ? 'Gestiona todo el sistema del taller'
-                    : user.role === 'WASHER'
+                    : user.role === 'EMPLOYEE'
                     ? 'Gestiona tus trabajos y ganancias'
                     : 'Solicita y gestiona tus servicios'}
                 </p>

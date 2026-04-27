@@ -42,7 +42,7 @@ Aplicación web full-stack para la gestión de servicios de autolavado a domicil
 |-----|-------------|
 | **Cliente** | Solicitar servicios, gestionar vehículos, pagar (tarjeta o efectivo), ver historial |
 | **Lavador** | Ver trabajos disponibles, aceptar trabajos, actualizar estados, confirmar pago en efectivo |
-| **Admin** | Gestionar usuarios, lavadores, servicios, reservas y reportes |
+| **Admin** | Gestionar usuarios, técnicos, servicios, reservas y reportes |
 
 ### 💳 Pagos
 - **Tarjeta** via Stripe (modo test)

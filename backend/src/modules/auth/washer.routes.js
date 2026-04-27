@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * washer.routes.js — Gestión de lavadores.
+ * washer.routes.js — Gestión de empleadoes.
  *
- * GET  /api/washers                 → listar lavadores (con filtro ?available=true)
- * GET  /api/washers/:id             → perfil del lavador
- * GET  /api/washers/:id/stats       → estadísticas del lavador
- * PUT  /api/washers/availability    → toggle disponibilidad (propio WASHER)
- * PUT  /api/washers/location        → actualizar ubicación (propio WASHER)
- * POST /api/washers/register        → crear lavador (solo ADMIN)
+ * GET  /api/washers                 → listar empleadoes (con filtro ?available=true)
+ * GET  /api/washers/:id             → perfil del empleado
+ * GET  /api/washers/:id/stats       → estadísticas del empleado
+ * PUT  /api/washers/availability    → toggle disponibilidad (propio EMPLOYEE)
+ * PUT  /api/washers/location        → actualizar ubicación (propio EMPLOYEE)
+ * POST /api/washers/register        → crear empleado (solo ADMIN)
  */
 
 const express  = require('express');
@@ -45,7 +45,7 @@ const toWasherProfile = (w) => ({
  * /api/washers:
  *   get:
  *     tags: [Washers]
- *     summary: Lista todos los lavadores
+ *     summary: Lista todos los empleadoes
  *     parameters:
  *       - in: query
  *         name: available
@@ -54,7 +54,7 @@ const toWasherProfile = (w) => ({
  *         description: Filtrar solo los disponibles
  *     responses:
  *       200:
- *         description: Lista de lavadores
+ *         description: Lista de empleadoes
  *         content:
  *           application/json:
  *             schema:
@@ -64,13 +64,13 @@ const toWasherProfile = (w) => ({
  */
 router.get('/', authMiddleware, async (req, res, next) => {
   try {
-    const { available } = req.query;
+    const { available, limit } = req.query;
     const filterAvailable =
       available === 'true'  ? true  :
       available === 'false' ? false : undefined;
 
     const userRepo  = new UserRepository(req.db);
-    const washers   = await userRepo.findWashers({ available: filterAvailable });
+    const washers   = await userRepo.findWashers({ available: filterAvailable, limit: parseInt(limit, 10) || 50 });
 
     res.json(washers.map(toWasherProfile));
   } catch (err) { next(err); }
@@ -85,7 +85,7 @@ router.get('/', authMiddleware, async (req, res, next) => {
  * /api/washers/availability:
  *   put:
  *     tags: [Washers]
- *     summary: Activa/desactiva disponibilidad del lavador autenticado
+ *     summary: Activa/desactiva disponibilidad del empleado autenticado
  *     requestBody:
  *       required: true
  *       content:
@@ -99,11 +99,11 @@ router.get('/', authMiddleware, async (req, res, next) => {
  *       200:
  *         description: Disponibilidad actualizada
  *       403:
- *         description: Solo lavadores pueden usar este endpoint
+ *         description: Solo empleadoes pueden usar este endpoint
  */
 router.put('/availability',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER),
+  roleMiddleware(USER_ROLES.EMPLOYEE),
   async (req, res, next) => {
     try {
       const { isAvailable } = req.body;
@@ -128,7 +128,7 @@ router.put('/availability',
  * /api/washers/location:
  *   put:
  *     tags: [Washers]
- *     summary: Actualiza la ubicación GPS del lavador autenticado
+ *     summary: Actualiza la ubicación GPS del empleado autenticado
  *     requestBody:
  *       required: true
  *       content:
@@ -145,7 +145,7 @@ router.put('/availability',
  */
 router.put('/location',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER),
+  roleMiddleware(USER_ROLES.EMPLOYEE),
   async (req, res, next) => {
     try {
       const { latitude, longitude } = req.body;
@@ -170,7 +170,7 @@ router.put('/location',
  * /api/washers/register:
  *   post:
  *     tags: [Washers]
- *     summary: Registra un nuevo lavador (solo ADMIN)
+ *     summary: Registra un nuevo empleado (solo ADMIN)
  *     requestBody:
  *       required: true
  *       content:
@@ -186,7 +186,7 @@ router.put('/location',
  *               address:  { type: string }
  *     responses:
  *       201:
- *         description: Lavador registrado
+ *         description: Empleado registrado
  *       409:
  *         description: Email ya registrado
  */
@@ -211,11 +211,11 @@ router.post('/register',
       const hashed = await bcrypt.hash(password, 10);
       const washer = await userRepo.create({
         name, email, password: hashed, phone, address,
-        role: USER_ROLES.WASHER,
+        role: USER_ROLES.EMPLOYEE,
       });
 
       res.status(201).json({
-        message: 'Lavador registrado exitosamente.',
+        message: 'Empleado registrado exitosamente.',
         washer: toWasherProfile(washer),
       });
     } catch (err) { next(err); }
@@ -231,7 +231,7 @@ router.post('/register',
  * /api/washers/{id}:
  *   get:
  *     tags: [Washers]
- *     summary: Obtiene el perfil de un lavador
+ *     summary: Obtiene el perfil de un empleado
  *     parameters:
  *       - in: path
  *         name: id
@@ -240,21 +240,21 @@ router.post('/register',
  *           type: string
  *     responses:
  *       200:
- *         description: Perfil del lavador
+ *         description: Perfil del empleado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/WasherPublic'
  *       404:
- *         description: Lavador no encontrado
+ *         description: Empleado no encontrado
  */
 router.get('/:id', authMiddleware, async (req, res, next) => {
   try {
     const userRepo = new UserRepository(req.db);
     const washer   = await userRepo.findById(req.params.id);
 
-    if (!washer || washer.role !== USER_ROLES.WASHER) {
-      throw new AppError('Lavador no encontrado.', 404);
+    if (!washer || washer.role !== USER_ROLES.EMPLOYEE) {
+      throw new AppError('Empleado no encontrado.', 404);
     }
 
     res.json(toWasherProfile(washer));
@@ -270,7 +270,7 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
  * /api/washers/{id}/stats:
  *   get:
  *     tags: [Washers]
- *     summary: Estadísticas del lavador
+ *     summary: Estadísticas del empleado
  *     parameters:
  *       - in: path
  *         name: id
@@ -279,7 +279,7 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
  *           type: string
  *     responses:
  *       200:
- *         description: Estadísticas del lavador
+ *         description: Estadísticas del empleado
  *         content:
  *           application/json:
  *             schema:
@@ -289,15 +289,15 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
  *                 rating:            { type: number }
  *                 isAvailable:       { type: boolean }
  *       404:
- *         description: Lavador no encontrado
+ *         description: Empleado no encontrado
  */
 router.get('/:id/stats', authMiddleware, async (req, res, next) => {
   try {
     const userRepo = new UserRepository(req.db);
     const washer   = await userRepo.findById(req.params.id);
 
-    if (!washer || washer.role !== USER_ROLES.WASHER) {
-      throw new AppError('Lavador no encontrado.', 404);
+    if (!washer || washer.role !== USER_ROLES.EMPLOYEE) {
+      throw new AppError('Empleado no encontrado.', 404);
     }
 
     res.json({

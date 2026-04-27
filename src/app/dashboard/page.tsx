@@ -29,7 +29,7 @@ export default function DashboardPage() {
       case 'CLIENT':
         router.push('/dashboard/client');
         break;
-      case 'WASHER':
+      case 'EMPLOYEE':
         router.push('/dashboard/washer');
         break;
       case 'ADMIN':

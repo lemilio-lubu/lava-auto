@@ -13,7 +13,7 @@
 const USER_ROLES = Object.freeze({
   ADMIN: 'ADMIN',
   CLIENT: 'CLIENT',
-  WASHER: 'WASHER',
+  EMPLOYEE: 'EMPLOYEE',
 });
 
 /** Estados posibles de una reserva */
@@ -101,7 +101,7 @@ const SOCKET_EVENTS = Object.freeze({
   NOTIFICATION: 'notification',
   // Tracking
   LOCATION_UPDATE: 'location-update',
-  WASHER_LOCATION: 'washer-location',
+  EMPLOYEE_LOCATION: 'employee-location',
 });
 
 /** Límites de paginación */

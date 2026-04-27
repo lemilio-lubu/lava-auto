@@ -1,4 +1,8 @@
-# CLAUDE.md — Body Shop / Body Shop
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# CLAUDE.md — Body Shop
 
 ## Project Overview
 
@@ -32,19 +36,47 @@ lava-auto/
 ## Development Commands
 
 ```bash
-# Frontend
-npm run dev          # Next.js dev server (port 3000)
-npm run build        # Production build
-npm run lint         # ESLint check
+# ── Docker (todo en uno) ──────────────────────────────────────────
+cd backend
+docker-compose -f docker-compose.dev.yml up -d --build   # levanta postgres + backend + frontend
+docker-compose -f docker-compose.dev.yml down             # detener todo
+docker-compose -f docker-compose.dev.yml logs -f          # ver logs en vivo
 
-# Backend
-cd backend && npm run dev   # Nodemon dev server
-cd backend && npm run lint  # ESLint check
+# ── Manual (3 terminales) ────────────────────────────────────────
+cd backend && npm run db:up    # PostgreSQL en Docker (puerto 5433)
+cd backend && npm run dev      # Backend Express (puerto 4004)
+npm run dev                    # Frontend Next.js (puerto 3000, raíz)
 
-# Database
-cd backend && node scripts/migrate.js   # Run migrations
-cd backend && node scripts/seed.js      # Seed test data
+# ── Base de datos ─────────────────────────────────────────────────
+cd backend && npm run migrate          # Crear/actualizar tablas
+cd backend && npm run seed             # Usuarios de prueba
+cd backend && npm run import:clients   # Importar clientes desde Excel CRM
+cd backend && npm run import:clients:dry  # Dry-run (solo muestra, no inserta)
+cd backend && node scripts/migrate_client_fields.js  # Migración campos CRM
+
+# ── Lint ──────────────────────────────────────────────────────────
+npm run lint                   # Frontend
+cd backend && npm run lint     # Backend
 ```
+
+### URLs locales
+
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend | http://localhost:4004 |
+| Swagger | http://localhost:4004/api-docs |
+| PostgreSQL (DBeaver) | localhost:**5433** — user: postgres / pass: postgres |
+
+### Usuarios de prueba (seed)
+
+| Rol | Email | Contraseña |
+|---|---|---|
+| Admin | admin@lavauto.com | admin123 |
+| Cliente | cliente@test.com | client123 |
+| Lavador | lavador@test.com | washer123 |
+
+> La contraseña de clientes importados desde el Excel = primeros 6 dígitos de su cédula.
 
 ---
 
@@ -205,6 +237,42 @@ The project currently has **no test setup**. When adding tests:
 - Never mock the database in integration tests — test against a real PostgreSQL instance with a separate test schema.
 - Test files live next to the source file: `foo.ts` → `foo.test.ts`.
 - Priority order for coverage: authentication flows → reservation lifecycle → payment processing.
+
+---
+
+## Infrastructure & Deployment
+
+### Docker local
+- `backend/docker-compose.dev.yml` orquesta los 3 servicios: postgres (5433), backend (4004), frontend (3000).
+- El Dockerfile del backend corre `migrate.js → seed.js → index.js` al arrancar.
+- Puerto de PostgreSQL es **5433** (no 5432) porque hay un PostgreSQL nativo de macOS en 5432.
+
+### Railway (producción)
+- Deploy automático vía GitHub Actions (`.github/workflows/deploy.yml`) en push a `master`.
+- El workflow hace SSH al servidor, `git pull`, `npm install`, `pm2 restart`.
+- Variables requeridas en Railway backend: `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL=https://body-shop.up.railway.app`, `STRIPE_SECRET_KEY`.
+- Variable requerida en Railway frontend: `NEXT_PUBLIC_API_URL=https://backend-lavauto-production.up.railway.app`.
+
+### CORS
+- Los orígenes permitidos se leen de `FRONTEND_URL` (comma-separated para múltiples) + `localhost:3000` y `localhost:3001`.
+- El handler usa `callback(null, false)` para orígenes bloqueados — nunca `new Error()` (causaría 500 en preflight).
+- `app.options('*', cors(corsOptions))` se monta antes que helmet para responder preflights correctamente.
+
+---
+
+## Logo y Tema
+
+- Componente `src/components/ui/ThemeLogo.tsx` centraliza el logo con dark mode.
+- Modo claro → `/public/logo_claro.png`, modo oscuro → `/public/logo_oscuro.png`.
+- Bordes redondeados 8px, no circular. Tamaños: navbar 36px, footer 32px, auth forms 72px, sidebar 40px.
+
+---
+
+## Importación de Clientes (CRM Excel)
+
+- Script `backend/scripts/import_excel_clients.js` lee `OPORTUNIDADES SALE BY SERVICE_ 23 JUL 2025.xlsx` (raíz del proyecto).
+- Cabecera real en fila 3 del Excel (índice 2), datos desde fila 4.
+- Contraseña por defecto = primeros 6 dígitos de la cédula. Idempotente por `ON CONFLICT (email) DO NOTHING`.
 
 ---
 

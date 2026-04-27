@@ -7,8 +7,10 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'CLIENT' | 'WASHER';
+  role: 'ADMIN' | 'CLIENT' | 'EMPLOYEE';
   phone?: string;
+  mustChangePassword?: boolean;
+  totpEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -16,7 +18,9 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  requires2FA: boolean;
+  pendingCredentials: { email: string; password: string } | null;
+  login: (email: string, password: string, totpToken?: string) => Promise<void>;
   register: (data: { name: string; email: string; password: string; phone?: string; role?: string }) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -31,39 +35,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser]       = useState<User | null>(null);
   const [token, setToken]     = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
 
-  // Tracks whether the current token was just set by login/register
-  // (needs verification) vs loaded from storage (already trusted).
   const needsVerify = useRef(false);
 
-  /**
-   * Single initialization effect.
-   * - Reads localStorage once.
-   * - If both token AND user exist in storage → restore them immediately,
-   *   mark as NOT needing verification (skip the getMe round-trip).
-   * - If token exists but user is missing → verify with getMe.
-   * - Either way, isLoading becomes false as soon as we know the answer.
-   */
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_KEY);
     const storedUser  = localStorage.getItem(USER_KEY);
 
     if (!storedToken) {
-      // No session at all — done immediately
       setIsLoading(false);
       return;
     }
 
     if (storedUser) {
-      // We have a cached user — restore directly, no network call needed.
-      // The token will be re-verified lazily on the next mutation.
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
       setIsLoading(false);
       return;
     }
 
-    // Token exists but user cache is missing — verify once.
     authApi.getMe(storedToken)
       .then((userData) => {
         setToken(storedToken);
@@ -77,11 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  /**
-   * Verification effect — only runs when login/register explicitly
-   * flag a fresh token via needsVerify.current.
-   * This does NOT run on every token change (avoids the waterfall).
-   */
   useEffect(() => {
     if (!token || !needsVerify.current) return;
     needsVerify.current = false;
@@ -95,9 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const response = await authApi.login(email, password);
-    needsVerify.current = false; // login already returns trusted user data
+  const login = useCallback(async (email: string, password: string, totpToken?: string) => {
+    const response = await authApi.login(email, password, totpToken);
+
+    if ('requires2FA' in response) {
+      setRequires2FA(true);
+      setPendingCredentials({ email, password });
+      return;
+    }
+
+    setRequires2FA(false);
+    setPendingCredentials(null);
+    needsVerify.current = false;
     setToken(response.token);
     setUser(response.user as User);
     localStorage.setItem(TOKEN_KEY, response.token);
@@ -116,6 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    setRequires2FA(false);
+    setPendingCredentials(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   }, []);
@@ -132,6 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     token,
     isLoading,
     isAuthenticated: !!user && !!token,
+    requires2FA,
+    pendingCredentials,
     login,
     register,
     logout,

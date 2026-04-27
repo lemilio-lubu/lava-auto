@@ -4,7 +4,7 @@
  * user.repository.js — Acceso a datos de la tabla auth.users.
  *
  * Extiende BaseRepository para CRUD genérico y añade métodos
- * específicos del dominio de usuarios/lavadores.
+ * específicos del dominio de usuarios/técnicos.
  *
  * Tabla: auth.users  (schema 'auth', definido en DB_TABLES.USERS)
  */
@@ -58,7 +58,7 @@ class UserRepository extends BaseRepository {
     const { rows } = await this._db.query(
       `SELECT id, name, email, phone, role,
               is_available, rating, completed_services,
-              address, latitude, longitude, created_at
+              address, latitude, longitude, must_change_password, created_at
        FROM ${this._table}
        ${whereClause}
        ORDER BY created_at DESC
@@ -69,7 +69,7 @@ class UserRepository extends BaseRepository {
   }
 
   /**
-   * Lista lavadores sin exponer datos sensibles.
+   * Lista técnicos sin exponer datos sensibles.
    * @param {{ available?: boolean, limit?: number }} options
    */
   async findWashers({ available, limit = 50 } = {}) {
@@ -87,7 +87,7 @@ class UserRepository extends BaseRepository {
               is_available, rating, completed_services,
               address, latitude, longitude
        FROM ${this._table}
-       WHERE role = '${USER_ROLES.WASHER}' ${availableClause}
+       WHERE role = '${USER_ROLES.EMPLOYEE}' ${availableClause}
        ORDER BY rating DESC
        LIMIT $1`,
       params
@@ -106,7 +106,7 @@ class UserRepository extends BaseRepository {
   async create(data) {
     const rolePrefix = {
       [USER_ROLES.ADMIN]:  'admin',
-      [USER_ROLES.WASHER]: 'washer',
+      [USER_ROLES.EMPLOYEE]: 'employee',
       [USER_ROLES.CLIENT]: 'user',
     };
     const prefix = rolePrefix[data.role] ?? 'user';
@@ -135,7 +135,7 @@ class UserRepository extends BaseRepository {
         data.address ?? null,
         data.latitude ?? null,
         data.longitude ?? null,
-        data.role === USER_ROLES.WASHER,
+        data.role === USER_ROLES.EMPLOYEE,
       ]
     );
     return rows[0];
@@ -182,6 +182,53 @@ class UserRepository extends BaseRepository {
       `UPDATE ${this._table} SET password = $1, updated_at = NOW() WHERE id = $2`,
       [hashedPassword, id]
     );
+  }
+
+  async setPasswordByAdmin(id, hashedPassword) {
+    const { rows } = await this._db.query(
+      `UPDATE ${this._table}
+       SET password = $1, must_change_password = true, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, name, email, role`,
+      [hashedPassword, id]
+    );
+    return rows[0] ?? null;
+  }
+
+  async clearMustChangePassword(id) {
+    await this._db.query(
+      `UPDATE ${this._table} SET must_change_password = false, updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+  }
+
+  async setTotpSecret(id, secret) {
+    await this._db.query(
+      `UPDATE ${this._table} SET totp_secret = $1, totp_enabled = false, updated_at = NOW() WHERE id = $2`,
+      [secret, id]
+    );
+  }
+
+  async enableTotp(id) {
+    await this._db.query(
+      `UPDATE ${this._table} SET totp_enabled = true, updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+  }
+
+  async disableTotp(id) {
+    await this._db.query(
+      `UPDATE ${this._table} SET totp_secret = NULL, totp_enabled = false, updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+  }
+
+  async findByIdWithTotp(id) {
+    const { rows } = await this._db.query(
+      `SELECT *, totp_secret, totp_enabled FROM ${this._table} WHERE id = $1`,
+      [id]
+    );
+    return rows[0] ?? null;
   }
 
   async setResetToken(id, token, expiry) {

@@ -16,7 +16,7 @@ export default function TrabajosPage() {
   useEffect(() => {
     if (authLoading) return;
     
-    if (!user || user.role !== 'WASHER') {
+    if (!user || user.role !== 'EMPLOYEE') {
       router.push('/dashboard');
       return;
     }

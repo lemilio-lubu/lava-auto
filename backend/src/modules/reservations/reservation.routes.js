@@ -67,7 +67,7 @@ router.get('/', authMiddleware, async (req, res, next) => {
     let reservations;
     if (vehicleId) {
       reservations = await repo.findByVehicleId(vehicleId, { status });
-    } else if (req.user.role === USER_ROLES.WASHER) {
+    } else if (req.user.role === USER_ROLES.EMPLOYEE) {
       reservations = await repo.findByWasherId(req.user.id, {
         status,
         limit:  parseInt(limit,  10) || 50,
@@ -155,7 +155,7 @@ router.get('/stats', authMiddleware, async (req, res, next) => {
 
     if (req.user.role === USER_ROLES.ADMIN) {
       stats = await repo.getStats();
-    } else if (req.user.role === USER_ROLES.WASHER) {
+    } else if (req.user.role === USER_ROLES.EMPLOYEE) {
       stats = await repo.getStats(null, req.user.id);
     } else {
       stats = await repo.getStats(req.user.id);

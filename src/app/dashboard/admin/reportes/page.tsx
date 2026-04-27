@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, DollarSign, TrendingUp, Users, Briefcase, Star, CheckCircle } from 'lucide-react';
-import { adminApi, reservationApi, washerApi } from '@/lib/api-client';
+import { adminApi, reservationApi, employeeApi } from '@/lib/api-client';
 
 export default function ReportesPage() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -34,7 +34,7 @@ export default function ReportesPage() {
       Promise.all([
         adminApi.getUsers(token),
         reservationApi.getAllReservations(token),
-        washerApi.getAll(token),
+        employeeApi.getAll(token),
       ])
         .then(([users, reservations, washers]) => {
           // Build washer name lookup map (id â†’ name)
@@ -89,7 +89,7 @@ export default function ReportesPage() {
             completedReservations: completed.length,
             cancelledReservations: cancelled.length,
             pendingReservations: pending.length,
-            activeUsers: users.filter((u: any) => u.role !== 'WASHER').length,
+            activeUsers: users.filter((u: any) => u.role !== 'EMPLOYEE').length,
             totalWashers: washers.length,
             topWashers,
           });
@@ -123,9 +123,9 @@ export default function ReportesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reportes y AnalÃ­ticas</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reportes y Analíticas</h1>
         <p className="text-slate-600 dark:text-slate-400">
-          EstadÃ­sticas y mÃ©tricas del negocio
+          Estadísticas y métricas del negocio
         </p>
       </div>
 
@@ -164,7 +164,7 @@ export default function ReportesPage() {
         <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-amber-100 text-sm">Usuarios / Lavadores</p>
+              <p className="text-amber-100 text-sm">Usuarios / Técnicos</p>
               <p className="text-3xl font-bold">{stats.activeUsers} / {stats.totalWashers}</p>
             </div>
             <Users className="w-12 h-12 opacity-80" />
@@ -229,7 +229,7 @@ export default function ReportesPage() {
       <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
         <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
           <Star className="w-5 h-5 text-amber-500" />
-          Top 5 Lavadores por Ingresos Generados
+          Top 5 Técnicos por Ingresos Generados
         </h2>
         <div className="space-y-3">
           {stats.topWashers.map((item, index) => (
@@ -266,7 +266,7 @@ export default function ReportesPage() {
                 No hay servicios completados aÃºn
               </p>
               <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">
-                Los datos aparecerán cuando los lavadores completen trabajos
+                Los datos aparecerán cuando los técnicos completen trabajos
               </p>
             </div>
           )}

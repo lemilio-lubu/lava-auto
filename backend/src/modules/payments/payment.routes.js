@@ -454,7 +454,7 @@ router.post('/cash', authMiddleware, async (req, res, next) => {
  */
 router.post('/:id/confirm-cash',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER, USER_ROLES.ADMIN),
+  roleMiddleware(USER_ROLES.EMPLOYEE, USER_ROLES.ADMIN),
   async (req, res, next) => {
     try {
       const repo    = new PaymentRepository(req.db);
@@ -470,7 +470,7 @@ router.post('/:id/confirm-cash',
       }
 
       // Verificar que es el lavador asignado a la reserva (o un admin)
-      if (req.user.role === USER_ROLES.WASHER) {
+      if (req.user.role === USER_ROLES.EMPLOYEE) {
         const resRepo     = new ReservationRepository(req.db);
         const reservation = await resRepo.findById(payment.reservationId);
         if (reservation?.washerId !== req.user.id) {
