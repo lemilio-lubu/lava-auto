@@ -2,7 +2,7 @@
 # Documentación: https://docs.railway.app/reference/config-as-code
 
 [build]
-  dockerfilePath = "Dockerfile"
+  dockerfilePath = "backend/Dockerfile"
 
 [deploy]
   # Railway inyecta PORT automáticamente; env.js usa process.env.PORT || 4000
