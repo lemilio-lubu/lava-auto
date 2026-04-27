@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Calendar, Car, LogOut, Droplets, User, MessageCircle,
   Briefcase, Users, BarChart, Home, Bell, Loader2,
-  Menu, X
+  Menu, X, Settings
 } from 'lucide-react';
 import ThemeLogo from '@/components/ui/ThemeLogo';
 import { ThemeProvider } from '@/contexts/ThemeContext';
