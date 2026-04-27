@@ -47,3 +47,6 @@ next-env.d.ts
 
 .qoder/repowiki*
 MIGRATION_PLAN.md
+
+# Excel files
+*.xlsx

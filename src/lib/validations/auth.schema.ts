@@ -8,6 +8,13 @@ export const registerSchema = z.object({
     .min(10, 'Teléfono debe tener al menos 10 dígitos')
     .regex(/^[0-9]+$/, 'Teléfono debe contener solo números')
     .regex(/^0[2-9][0-9]{8}$/, 'Formato inválido. Ej: 0991234567'),
+  identification: z.string()
+    .min(10, 'Cédula/RUC debe tener al menos 10 dígitos')
+    .max(13, 'Cédula/RUC no puede superar 13 dígitos')
+    .regex(/^[0-9]+$/, 'Solo números'),
+  city: z.string().min(2, 'Ciudad requerida'),
+  province: z.string().min(2, 'Provincia requerida'),
+  company: z.string().optional(),
 });
 
 export const loginSchema = z.object({

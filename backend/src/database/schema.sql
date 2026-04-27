@@ -79,6 +79,10 @@ CREATE TABLE IF NOT EXISTS auth.users (
     -- Campos específicos del lavador (is_available, rating)
     -- Se almacenan en el mismo registro para evitar JOINs innecesarios.
     -- Solo son relevantes cuando role = 'WASHER'.
+    identification      VARCHAR(20),
+    city                VARCHAR(100),
+    province            VARCHAR(100),
+    company             VARCHAR(255),
     is_available        BOOLEAN           NOT NULL DEFAULT false,
     rating              DOUBLE PRECISION  NOT NULL DEFAULT 5.0 CHECK (rating BETWEEN 0 AND 5),
     completed_services  INTEGER           NOT NULL DEFAULT 0 CHECK (completed_services >= 0),

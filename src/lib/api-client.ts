@@ -62,7 +62,17 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
 
 // Auth API
 export const authApi = {
-  register: (data: { name: string; email: string; password: string; phone?: string; role?: string }) =>
+  register: (data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    role?: string;
+    identification?: string;
+    city?: string;
+    province?: string;
+    company?: string;
+  }) =>
     apiRequest<{ user: { id: string; name: string; email: string; role: string }; token: string }>(
       '/api/auth/register',
       { method: 'POST', body: data }

@@ -36,6 +36,10 @@ const toPublicUser = (u) => ({
   email:             u.email,
   role:              u.role,
   phone:             u.phone ?? null,
+  identification:    u.identification ?? null,
+  city:              u.city ?? null,
+  province:          u.province ?? null,
+  company:           u.company ?? null,
   address:           u.address ?? null,
   isAvailable:       u.is_available ?? false,
   rating:            parseFloat(u.rating) || 5.0,
@@ -81,7 +85,7 @@ const toPublicUser = (u) => ({
  */
 router.post('/register', authRateLimiter, async (req, res, next) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone, role, identification, city, province, company } = req.body;
 
     if (!name?.trim() || !email?.trim() || !password) {
       throw new AppError('Nombre, email y contraseña son requeridos.', 400);
@@ -100,7 +104,13 @@ router.post('/register', authRateLimiter, async (req, res, next) => {
     if (existing) throw new AppError('El email ya está registrado.', 409);
 
     const hashed = await bcrypt.hash(password, 10);
-    const user   = await userRepo.create({ name, email, password: hashed, phone, role: assignedRole });
+    const user   = await userRepo.create({
+      name, email, password: hashed, phone, role: assignedRole,
+      identification: identification ?? null,
+      city: city ?? null,
+      province: province ?? null,
+      company: company ?? null,
+    });
 
     const token  = generateToken({ id: user.id, email: user.email, role: user.role, name: user.name });
 
