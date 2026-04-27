@@ -102,6 +102,11 @@ CREATE TABLE IF NOT EXISTS auth.users (
     updated_at          TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS identification    VARCHAR(20);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS city             VARCHAR(100);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS province         VARCHAR(100);
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS company          VARCHAR(255);
+
 DO $$ BEGIN
     ALTER TABLE auth.users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT false;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
