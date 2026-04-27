@@ -13,32 +13,44 @@ jobs:
         uses: actions/checkout@v4.2.2
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
           script: |
+            set -e
+
             # 1. Entrar y actualizar código
-            cd ~/proyecto/lava-auto
-            git pull origin master
+            APP_DIR="$HOME/proyecto/lava-auto"
+            cd "$APP_DIR"
+            git fetch origin master
+            git pull --ff-only origin master
 
             # 2. Activar Node 20 (NVM)
             export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            nvm use 20
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              . "$NVM_DIR/nvm.sh"
+              nvm install 20
+              nvm use 20
+            fi
 
             # 3. BACKEND: Levantar Docker y API
             cd backend
-            npm install
-            docker-compose -f docker-compose.dev.yml up -d
-            node scripts/migrate.js
-            pm2 restart lava-api || pm2 start src/index.js --name "lava-api" --cwd /root/proyecto/lava-auto/backend
+            npm ci --no-audit --no-fund
+            if command -v docker-compose >/dev/null 2>&1; then
+              docker-compose -f docker-compose.dev.yml up -d --build
+            else
+              docker compose -f docker-compose.dev.yml up -d --build
+            fi
+            npm run migrate
+            pm2 restart lava-api || pm2 start src/index.js --name "lava-api" --cwd "$APP_DIR/backend"
 
             # 4. FRONTEND: Build y Start
             cd ..
-            npm install
+            npm ci --no-audit --no-fund
             npm run build
-            pm2 restart lava-front || pm2 start npm --name "lava-front" --cwd /root/proyecto/lava-auto -- start
+            pm2 restart lava-front || pm2 start npm --name "lava-front" --cwd "$APP_DIR" -- start
 
             pm2 save
