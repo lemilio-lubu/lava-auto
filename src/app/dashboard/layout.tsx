@@ -374,7 +374,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     day: 'numeric' 
                   })}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Conectado a microservicios</p>
               </div>
             </div>
           </div>

@@ -153,7 +153,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.get('/api-docs.json', (_req, res) => res.json(swaggerSpec));
 
 // ── Rutas de dominio ─────────────────────────────────────────────
-// Los prefijos replican exactamente los endpoints de los microservicios
+// Los prefijos replican exactamente los endpoints de los 
 // para que el frontend no requiera cambios.
 
 // Fase 1
