@@ -14,9 +14,10 @@
  *   POST /api/auth/refresh
  */
 
-const crypto   = require('node:crypto');
-const express  = require('express');
-const bcrypt   = require('bcryptjs');
+const crypto        = require('node:crypto');
+const express       = require('express');
+const bcrypt        = require('bcryptjs');
+const { authenticator } = require('otplib');
 
 const UserRepository         = require('./user.repository');
 const { generateToken }      = require('../../middleware/auth');
@@ -31,19 +32,20 @@ const router = express.Router();
 
 /** Campos públicos del usuario (sin password ni tokens) */
 const toPublicUser = (u) => ({
-  id:                u.id,
-  name:              u.name,
-  email:             u.email,
-  role:              u.role,
-  phone:             u.phone ?? null,
-  identification:    u.identification ?? null,
-  city:              u.city ?? null,
-  province:          u.province ?? null,
-  company:           u.company ?? null,
-  address:           u.address ?? null,
-  isAvailable:       u.is_available ?? false,
-  rating:            parseFloat(u.rating) || 5.0,
-  completedServices: parseInt(u.completed_services, 10) || 0,
+  id:                  u.id,
+  name:                u.name,
+  email:               u.email,
+  role:                u.role,
+  phone:               u.phone ?? null,
+  identification:      u.identification ?? null,
+  city:                u.city ?? null,
+  province:            u.province ?? null,
+  company:             u.company ?? null,
+  address:             u.address ?? null,
+  isAvailable:         u.is_available ?? false,
+  rating:              parseFloat(u.rating) || 5.0,
+  completedServices:   parseInt(u.completed_services, 10) || 0,
+  mustChangePassword:  u.must_change_password ?? false,
 });
 
 // ================================================================
@@ -96,7 +98,7 @@ router.post('/register', authRateLimiter, async (req, res, next) => {
     }
 
     // Solo se permite registrar CLIENT; WASHER/ADMIN los crea un admin
-    const assignedRole = role === USER_ROLES.WASHER ? USER_ROLES.CLIENT : (role ?? USER_ROLES.CLIENT);
+    const assignedRole = role === USER_ROLES.EMPLOYEE ? USER_ROLES.CLIENT : (role ?? USER_ROLES.CLIENT);
 
     const userRepo = new UserRepository(req.db);
 
@@ -163,6 +165,16 @@ router.post('/login', authRateLimiter, async (req, res, next) => {
     // Mensaje genérico para no revelar si el email existe
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new AppError('Credenciales inválidas.', 401);
+    }
+
+    // Si tiene 2FA activo, verificar el código antes de emitir JWT
+    if (user.totp_enabled) {
+      const { totpToken } = req.body;
+      if (!totpToken) {
+        return res.status(200).json({ requires2FA: true });
+      }
+      const isValid = authenticator.verify({ token: totpToken, secret: user.totp_secret });
+      if (!isValid) throw new AppError('Código 2FA incorrecto.', 401);
     }
 
     const token = generateToken({ id: user.id, email: user.email, role: user.role, name: user.name });

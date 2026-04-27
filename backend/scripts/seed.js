@@ -29,7 +29,7 @@ const config = require('../src/config/env');
 // Contraseñas bcrypt hasheadas:
 //   admin123   → $2a$10$nHEhFGJoW3D79y8XhbK1vO1p7UCSqSoZUW.526DrbeTAYpJ8xYZRS
 //   client123  → $2a$10$gt/Bwmj5OD8qG.qoeMDBC.NB7w1c3Z3yaMHKdeldvF2lOM0YMGoaq
-//   washer123  → $2a$10$EtJOcltQ4wmtA.JkGsDoSOu8I7j9fQ.RuMQXaL6w3QUPAo3NMhcza
+//   employee123 → $2a$10$EtJOcltQ4wmtA.JkGsDoSOu8I7j9fQ.RuMQXaL6w3QUPAo3NMhcza
 const USERS_SQL = `
 INSERT INTO auth.users
   (id, email, name, password, phone, role, is_available)
@@ -39,7 +39,7 @@ VALUES
   ('550e8400-e29b-41d4-a716-446655440002',
    'cliente@test.com',     'Cliente de Prueba',  '$2a$10$gt/Bwmj5OD8qG.qoeMDBC.NB7w1c3Z3yaMHKdeldvF2lOM0YMGoaq', '0988888888', 'CLIENT', false),
   ('550e8400-e29b-41d4-a716-446655440003',
-   'lavador@test.com',     'Lavador de Prueba',  '$2a$10$EtJOcltQ4wmtA.JkGsDoSOu8I7j9fQ.RuMQXaL6w3QUPAo3NMhcza', '0977777777', 'WASHER', true)
+   'empleado@test.com',    'Empleado de Prueba', '$2a$10$EtJOcltQ4wmtA.JkGsDoSOu8I7j9fQ.RuMQXaL6w3QUPAo3NMhcza', '0977777777', 'EMPLOYEE', true)
 ON CONFLICT (id) DO NOTHING;
 `;
 
@@ -113,7 +113,7 @@ async function seed() {
     console.log('[seed] Usuarios disponibles:');
     console.log('[seed]   admin@lavauto.com   / admin123  (ADMIN)');
     console.log('[seed]   cliente@test.com    / client123 (CLIENT)');
-    console.log('[seed]   lavador@test.com    / washer123 (WASHER)');
+    console.log('[seed]   empleado@test.com   / employee123 (EMPLOYEE)');
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('[seed] ❌ Error durante el seed. Se hizo ROLLBACK.', err.message);

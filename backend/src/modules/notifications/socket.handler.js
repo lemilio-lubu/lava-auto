@@ -82,8 +82,8 @@ function socketHandler(io, db) {
       if (!reservationId || lat == null || lng == null) return;
 
       // El cliente se une a la sala de la reserva desde el frontend
-      io.to(`reservation:${reservationId}`).emit(SOCKET_EVENTS.WASHER_LOCATION, {
-        washerId: userId,
+      io.to(`reservation:${reservationId}`).emit(SOCKET_EVENTS.EMPLOYEE_LOCATION, {
+        employeeId: userId,
         lat,
         lng,
         ts: Date.now(),

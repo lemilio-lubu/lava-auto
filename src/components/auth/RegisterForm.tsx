@@ -62,7 +62,7 @@ export function RegisterForm() {
 
     const parsed = registerSchema.safeParse(form);
     if (!parsed.success) {
-      const firstError = parsed.error.errors[0]?.message ?? 'Por favor, verifica todos los campos';
+      const firstError = parsed.error.issues[0]?.message ?? 'Por favor, verifica todos los campos';
       setError(firstError);
       setIsLoading(false);
       return;

@@ -1,5 +1,8 @@
 'use strict';
 
+const { authenticator } = require('otplib');
+const QRCode            = require('qrcode');
+
 /**
  * user.routes.js — Gestión de usuarios.
  *
@@ -12,6 +15,7 @@
  */
 
 const express = require('express');
+const bcrypt  = require('bcryptjs');
 
 const UserRepository     = require('./user.repository');
 const { authMiddleware, roleMiddleware } = require('../../middleware/auth');
@@ -23,16 +27,18 @@ const router = express.Router();
 // ── Helpers ──────────────────────────────────────────────────────
 
 const toPublicProfile = (u) => ({
-  id:                u.id,
-  name:              u.name,
-  email:             u.email,
-  phone:             u.phone ?? null,
-  role:              u.role,
-  address:           u.address ?? null,
-  isAvailable:       u.is_available ?? false,
-  rating:            parseFloat(u.rating) || 5.0,
-  completedServices: parseInt(u.completed_services, 10) || 0,
-  createdAt:         u.created_at,
+  id:                  u.id,
+  name:                u.name,
+  email:               u.email,
+  phone:               u.phone ?? null,
+  role:                u.role,
+  address:             u.address ?? null,
+  isAvailable:         u.is_available ?? false,
+  rating:              parseFloat(u.rating) || 5.0,
+  completedServices:   parseInt(u.completed_services, 10) || 0,
+  mustChangePassword:  u.must_change_password ?? false,
+  totpEnabled:         u.totp_enabled ?? false,
+  createdAt:           u.created_at,
 });
 
 // ================================================================
@@ -102,7 +108,7 @@ router.get('/',
  *     tags: [Users]
  *     summary: Usuarios disponibles para iniciar un chat según el rol
  *     description: >
- *       ADMIN ve a todos los clientes y lavadores.
+ *       ADMIN ve a todos los clientes y técnicos.
  *       CLIENT y WASHER solo ven a los admins.
  *     responses:
  *       200:
@@ -116,7 +122,7 @@ router.get('/chat/available', authMiddleware, async (req, res, next) => {
     if (req.user.role === USER_ROLES.ADMIN) {
       const [clients, washers] = await Promise.all([
         userRepo.findAll({ role: USER_ROLES.CLIENT }),
-        userRepo.findAll({ role: USER_ROLES.WASHER }),
+        userRepo.findAll({ role: USER_ROLES.EMPLOYEE }),
       ]);
       users = [...clients, ...washers];
     } else {
@@ -271,6 +277,69 @@ router.delete('/:id',
 );
 
 // ================================================================
+// PUT /api/users/:id/password  (ADMIN cambia contraseña de otro usuario)
+// ================================================================
+
+router.put('/:id/password',
+  authMiddleware,
+  roleMiddleware(USER_ROLES.ADMIN),
+  async (req, res, next) => {
+    try {
+      const { password } = req.body;
+
+      if (!password || password.length < 6) {
+        throw new AppError('La contraseña debe tener al menos 6 caracteres.', 400);
+      }
+
+      const userRepo = new UserRepository(req.db);
+      const target   = await userRepo.findById(req.params.id);
+      if (!target) throw new AppError('Usuario no encontrado.', 404);
+
+      if (target.role === USER_ROLES.ADMIN && req.user.id !== req.params.id) {
+        throw new AppError('No puedes cambiar la contraseña de otro administrador.', 403);
+      }
+
+      const hashed = await bcrypt.hash(password, 10);
+      const result = await userRepo.setPasswordByAdmin(req.params.id, hashed);
+
+      res.json({ message: 'Contraseña actualizada. El usuario deberá cambiarla en su próximo inicio de sesión.', user: result });
+    } catch (err) { next(err); }
+  }
+);
+
+// ================================================================
+// PUT /api/users/:id/password/self  (usuario cambia su propia contraseña)
+// ================================================================
+
+router.put('/:id/password/self', authMiddleware, async (req, res, next) => {
+  try {
+    if (req.user.id !== req.params.id) throw new AppError('No autorizado.', 403);
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      throw new AppError('Contraseña actual y nueva son requeridas.', 400);
+    }
+    if (newPassword.length < 6) {
+      throw new AppError('La nueva contraseña debe tener al menos 6 caracteres.', 400);
+    }
+
+    const userRepo = new UserRepository(req.db);
+    const user     = await userRepo.findByEmail(req.user.email);
+
+    if (!(await bcrypt.compare(currentPassword, user.password))) {
+      throw new AppError('Contraseña actual incorrecta.', 401);
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await userRepo.updatePassword(req.params.id, hashed);
+    await userRepo.clearMustChangePassword(req.params.id);
+
+    res.json({ message: 'Contraseña actualizada exitosamente.' });
+  } catch (err) { next(err); }
+});
+
+// ================================================================
 // PUT /api/users/:id/location
 // ================================================================
 
@@ -315,6 +384,71 @@ router.put('/:id/location', authMiddleware, async (req, res, next) => {
     const result   = await userRepo.updateLocation(req.params.id, latitude, longitude);
 
     res.json(result);
+  } catch (err) { next(err); }
+});
+
+// ================================================================
+// POST /api/users/:id/2fa/setup  — genera secreto TOTP y QR
+// ================================================================
+
+router.post('/:id/2fa/setup', authMiddleware, async (req, res, next) => {
+  try {
+    if (req.user.id !== req.params.id) throw new AppError('No autorizado.', 403);
+
+    const secret = authenticator.generateSecret();
+    const otpAuthUrl = authenticator.keyuri(req.user.email, 'Body Shop', secret);
+    const qrDataUrl  = await QRCode.toDataURL(otpAuthUrl);
+
+    const userRepo = new UserRepository(req.db);
+    await userRepo.setTotpSecret(req.params.id, secret);
+
+    res.json({ secret, qrDataUrl });
+  } catch (err) { next(err); }
+});
+
+// ================================================================
+// POST /api/users/:id/2fa/verify  — verifica token y activa 2FA
+// ================================================================
+
+router.post('/:id/2fa/verify', authMiddleware, async (req, res, next) => {
+  try {
+    if (req.user.id !== req.params.id) throw new AppError('No autorizado.', 403);
+
+    const { token } = req.body;
+    if (!token) throw new AppError('Token TOTP requerido.', 400);
+
+    const userRepo = new UserRepository(req.db);
+    const user     = await userRepo.findByIdWithTotp(req.params.id);
+    if (!user?.totp_secret) throw new AppError('Configura el 2FA primero.', 400);
+
+    const isValid = authenticator.verify({ token, secret: user.totp_secret });
+    if (!isValid) throw new AppError('Código incorrecto. Verifica tu app autenticadora.', 401);
+
+    await userRepo.enableTotp(req.params.id);
+    res.json({ message: '2FA activado exitosamente.' });
+  } catch (err) { next(err); }
+});
+
+// ================================================================
+// DELETE /api/users/:id/2fa  — desactiva 2FA
+// ================================================================
+
+router.delete('/:id/2fa', authMiddleware, async (req, res, next) => {
+  try {
+    if (req.user.id !== req.params.id) throw new AppError('No autorizado.', 403);
+
+    const { token } = req.body;
+    const userRepo  = new UserRepository(req.db);
+    const user      = await userRepo.findByIdWithTotp(req.params.id);
+
+    if (user?.totp_enabled) {
+      if (!token) throw new AppError('Ingresa tu código 2FA para desactivarlo.', 400);
+      const isValid = authenticator.verify({ token, secret: user.totp_secret });
+      if (!isValid) throw new AppError('Código incorrecto.', 401);
+    }
+
+    await userRepo.disableTotp(req.params.id);
+    res.json({ message: '2FA desactivado.' });
   } catch (err) { next(err); }
 });
 

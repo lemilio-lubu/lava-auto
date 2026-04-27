@@ -262,7 +262,7 @@ export default function ChatPage() {
     switch (role) {
       case 'ADMIN':
         return { icon: Shield, color: 'from-purple-400 to-indigo-400', label: 'Administrador' };
-      case 'WASHER':
+      case 'EMPLOYEE':
         return { icon: Car, color: 'from-emerald-400 to-teal-400', label: 'Lavador' };
       case 'CLIENT':
         return { icon: UserCircle, color: 'from-cyan-400 to-blue-400', label: 'Cliente' };
@@ -294,7 +294,7 @@ export default function ChatPage() {
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Chat</h1>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 {user?.role === 'ADMIN' 
-                  ? 'Comunícate con clientes y lavadores' 
+                  ? 'Comunícate con clientes y técnicos' 
                   : 'Comunícate con el administrador'}
               </p>
             </div>

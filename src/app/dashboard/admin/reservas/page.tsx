@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Calendar, User, Car, UserCheck, X } from 'lucide-react';
-import { reservationApi, washerApi, adminApi } from '@/lib/api-client';
+import { reservationApi, employeeApi, adminApi } from '@/lib/api-client';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
@@ -43,7 +43,7 @@ export default function ReservasAdminPage() {
     try {
       const [reservationsData, washersData, clientsData] = await Promise.all([
         reservationApi.getAllReservations(token),
-        washerApi.getAll(token),
+        employeeApi.getAll(token),
         adminApi.getUsers(token, 'CLIENT')
       ]);
       
@@ -310,7 +310,7 @@ export default function ReservasAdminPage() {
                 </select>
                 {getAvailableWashers(selectedReservation).length === 0 && (
                   <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-                    No hay lavadores disponibles en este momento
+                    No hay técnicos disponibles en este momento
                   </p>
                 )}
               </div>

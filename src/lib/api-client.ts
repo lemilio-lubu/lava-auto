@@ -78,10 +78,10 @@ export const authApi = {
       { method: 'POST', body: data }
     ),
 
-  login: (email: string, password: string) =>
-    apiRequest<{ user: { id: string; name: string; email: string; role: string }; token: string }>(
+  login: (email: string, password: string, totpToken?: string) =>
+    apiRequest<{ user: { id: string; name: string; email: string; role: string }; token: string } | { requires2FA: true }>(
       '/api/auth/login',
-      { method: 'POST', body: { email, password } }
+      { method: 'POST', body: { email, password, ...(totpToken ? { totpToken } : {}) } }
     ),
 
   getMe: (token: string) =>
@@ -100,6 +100,30 @@ export const authApi = {
     apiRequest<{ message: string }>(
       '/api/auth/reset-password/confirm',
       { method: 'POST', body: { token: resetToken, password } }
+    ),
+
+  changeSelfPassword: (userId: string, currentPassword: string, newPassword: string, token: string) =>
+    apiRequest<{ message: string }>(
+      `/api/users/${userId}/password/self`,
+      { method: 'PUT', body: { currentPassword, newPassword }, token }
+    ),
+
+  setup2FA: (userId: string, token: string) =>
+    apiRequest<{ secret: string; qrDataUrl: string }>(
+      `/api/users/${userId}/2fa/setup`,
+      { method: 'POST', token }
+    ),
+
+  verify2FA: (userId: string, totpToken: string, token: string) =>
+    apiRequest<{ message: string }>(
+      `/api/users/${userId}/2fa/verify`,
+      { method: 'POST', body: { token: totpToken }, token }
+    ),
+
+  disable2FA: (userId: string, totpToken: string, token: string) =>
+    apiRequest<{ message: string }>(
+      `/api/users/${userId}/2fa`,
+      { method: 'DELETE', body: { token: totpToken }, token }
     ),
 };
 
@@ -305,16 +329,16 @@ export const chatApi = {
     ),
 };
 
-// Washer API
-export const washerApi = {
+// Employee API
+export const employeeApi = {
   getAll: (token: string, available?: boolean) =>
-    apiRequest<Washer[]>(
-      available !== undefined ? `/api/washers?available=${available}` : '/api/washers',
+    apiRequest<Employee[]>(
+      available !== undefined ? `/api/washers?available=${available}&limit=500` : '/api/washers?limit=500',
       { token }
     ),
 
   getById: (id: string, token: string) =>
-    apiRequest<Washer>(`/api/washers/${id}`, { token }),
+    apiRequest<Employee>(`/api/washers/${id}`, { token }),
 
   toggleAvailability: (isAvailable: boolean, token: string) =>
     apiRequest<{ isAvailable: boolean }>('/api/washers/availability', { method: 'PUT', body: { isAvailable }, token }),
@@ -326,11 +350,14 @@ export const washerApi = {
     ),
 
   register: (data: { name: string; email: string; password: string; phone?: string; address?: string }, token: string) =>
-    apiRequest<{ message: string; washer: { id: string; name: string; email: string; phone?: string; role: string } }>(
+    apiRequest<{ message: string; employee: { id: string; name: string; email: string; phone?: string; role: string } }>(
       '/api/washers/register',
       { method: 'POST', body: data, token }
     ),
 };
+
+/** @deprecated Use employeeApi instead */
+export const washerApi = employeeApi;
 
 // Admin API
 export const adminApi = {
@@ -342,7 +369,7 @@ export const adminApi = {
     }),
   getUsers: (token: string, role?: string) =>
     apiRequest<User[]>(
-      role ? `/api/users?role=${role}` : '/api/users',
+      role ? `/api/users?role=${role}&limit=500` : '/api/users?limit=500',
       { token }
     ),
 
@@ -354,6 +381,9 @@ export const adminApi = {
 
   deleteUser: (id: string, token: string) =>
     apiRequest<{ message: string }>(`/api/users/${id}`, { method: 'DELETE', token }),
+
+  setUserPassword: (id: string, password: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/users/${id}/password`, { method: 'PUT', body: { password }, token }),
 };
 
 // Types
@@ -362,10 +392,12 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  role: 'ADMIN' | 'CLIENT' | 'WASHER';
+  role: 'ADMIN' | 'CLIENT' | 'EMPLOYEE';
   isAvailable?: boolean;
   rating?: number;
   completedServices?: number;
+  mustChangePassword?: boolean;
+  totpEnabled?: boolean;
   createdAt?: string;
 }
 
@@ -413,7 +445,7 @@ export interface Reservation {
   serviceId: string;
   serviceName?: string;
   serviceDuration?: number;
-  washerId?: string;
+  employeeId?: string;
   scheduledDate: string;
   scheduledTime: string;
   status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
@@ -452,7 +484,7 @@ export interface Rating {
   id: string;
   reservationId: string;
   userId: string;
-  washerId: string;
+  employeeId: string;
   stars: number;
   comment?: string;
   createdAt: string;
@@ -489,7 +521,7 @@ export interface Message {
   createdAt: string;
 }
 
-export interface Washer {
+export interface Employee {
   id: string;
   name: string;
   email?: string;
@@ -501,5 +533,8 @@ export interface Washer {
   latitude?: number;
   longitude?: number;
 }
+
+/** @deprecated Use Employee instead */
+export type Washer = Employee;
 
 export { ApiError };

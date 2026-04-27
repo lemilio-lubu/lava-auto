@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * job.routes.js — Panel de trabajo para lavadores.
+ * job.routes.js — Panel de trabajo para técnicos.
  *
  * GET  /api/jobs/available          → pool de trabajos PENDING sin asignar
  * GET  /api/jobs/my-jobs            → trabajos propios del lavador
@@ -75,7 +75,7 @@ async function enrichWithVehicle(db, jobs) {
  */
 router.get('/available',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER, USER_ROLES.ADMIN),
+  roleMiddleware(USER_ROLES.EMPLOYEE, USER_ROLES.ADMIN),
   async (req, res, next) => {
     try {
       const repo = new ReservationRepository(req.db);
@@ -114,7 +114,7 @@ router.get('/available',
  */
 router.get('/my-jobs',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER),
+  roleMiddleware(USER_ROLES.EMPLOYEE),
   async (req, res, next) => {
     try {
       const { status } = req.query;
@@ -151,7 +151,7 @@ router.get('/my-jobs',
  */
 router.post('/:id/accept',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER),
+  roleMiddleware(USER_ROLES.EMPLOYEE),
   async (req, res, next) => {
     try {
       const repo        = new ReservationRepository(req.db);
@@ -197,7 +197,7 @@ router.post('/:id/accept',
  */
 router.post('/:id/start',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER),
+  roleMiddleware(USER_ROLES.EMPLOYEE),
   async (req, res, next) => {
     try {
       const repo        = new ReservationRepository(req.db);
@@ -240,7 +240,7 @@ router.post('/:id/start',
  */
 router.post('/:id/complete',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER),
+  roleMiddleware(USER_ROLES.EMPLOYEE),
   async (req, res, next) => {
     try {
       const repo        = new ReservationRepository(req.db);
@@ -293,7 +293,7 @@ router.post('/:id/complete',
  */
 router.put('/:id/eta',
   authMiddleware,
-  roleMiddleware(USER_ROLES.WASHER),
+  roleMiddleware(USER_ROLES.EMPLOYEE),
   async (req, res, next) => {
     try {
       const { estimatedArrival } = req.body;

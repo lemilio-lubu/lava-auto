@@ -4,15 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Plus, User, CheckCircle, XCircle, X, Phone, Mail, MapPin } from 'lucide-react';
-import { washerApi, Washer } from '@/lib/api-client';
+import { employeeApi, Employee } from '@/lib/api-client';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 
-export default function LavadoresAdminPage() {
+export default function TécnicosAdminPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [washers, setWashers] = useState<Washer[]>([]);
+  const [washers, setWashers] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,7 +44,7 @@ export default function LavadoresAdminPage() {
   const loadWashers = async () => {
     if (!token) return;
     try {
-      const data = await washerApi.getAll(token);
+      const data = await employeeApi.getAll(token);
       setWashers(data);
     } catch (error) {
       console.error('Error loading washers:', error);
@@ -70,7 +70,7 @@ export default function LavadoresAdminPage() {
 
     setIsSubmitting(true);
     try {
-      await washerApi.register({
+      await employeeApi.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -110,9 +110,9 @@ export default function LavadoresAdminPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Gestión de Lavadores</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Gestión de técnicos</h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Administra los lavadores del sistema
+            Administra los técnicos del sistema
           </p>
         </div>
         <Button onClick={handleOpenModal}>
@@ -129,7 +129,7 @@ export default function LavadoresAdminPage() {
               <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Total Lavadores</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Total Técnicos</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">{washers.length}</p>
             </div>
           </div>
@@ -212,7 +212,7 @@ export default function LavadoresAdminPage() {
         <div className="text-center py-12">
           <User className="w-12 h-12 mx-auto text-slate-400 mb-4" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-            No hay lavadores registrados
+            No hay técnicos registrados
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-4">
             Registra tu primer lavador para comenzar
