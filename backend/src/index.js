@@ -99,11 +99,10 @@ const allowedOrigins = [
 console.log('[startup] CORS origins permitidos:', allowedOrigins);
 
 function corsOriginHandler(origin, callback) {
-  // Permitir requests sin origin (curl, Postman, mobile apps)
   if (!origin) return callback(null, true);
   if (allowedOrigins.includes(origin)) return callback(null, true);
   console.warn(`[cors] Origen bloqueado: ${origin}`);
-  callback(new Error(`CORS: origen no permitido: ${origin}`));
+  callback(null, false);
 }
 
 const corsOptions = {
@@ -124,6 +123,7 @@ const io = new Server(server, {
 // ── Middleware global ────────────────────────────────────────────
 
 app.use(helmet());
+app.options('*', cors(corsOptions)); // responde preflight antes de helmet y demás
 app.use(cors(corsOptions));
 app.use(compression());
 app.use(logger);
