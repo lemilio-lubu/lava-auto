@@ -42,4 +42,4 @@ EXPOSE 4000
 # 2. Iniciar el servidor Express.
 # Se usa ';' en lugar de '&&' para que el servidor arranque SIEMPRE,
 # incluso si la migración falla temporalmente (ej. BD aún no disponible).
-CMD ["sh", "-c", "node scripts/migrate.js; node src/index.js"]
+CMD ["sh", "-c", "node scripts/migrate.js; node scripts/seed.js; node src/index.js"]

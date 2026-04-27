@@ -114,9 +114,13 @@ class UserRepository extends BaseRepository {
 
     const { rows } = await this._db.query(
       `INSERT INTO ${this._table}
-         (id, name, email, password, phone, role, address, latitude, longitude, is_available)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING id, name, email, phone, role, is_available, rating, completed_services, created_at`,
+         (id, name, email, password, phone, role,
+          identification, city, province, company,
+          address, latitude, longitude, is_available)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       RETURNING id, name, email, phone, role,
+                 identification, city, province, company,
+                 is_available, rating, completed_services, created_at`,
       [
         id,
         data.name.trim(),
@@ -124,10 +128,14 @@ class UserRepository extends BaseRepository {
         data.password,
         data.phone ?? null,
         data.role ?? USER_ROLES.CLIENT,
+        data.identification ?? null,
+        data.city ?? null,
+        data.province ?? null,
+        data.company ?? null,
         data.address ?? null,
         data.latitude ?? null,
         data.longitude ?? null,
-        data.role === USER_ROLES.WASHER, // los lavadores inician disponibles
+        data.role === USER_ROLES.WASHER,
       ]
     );
     return rows[0];
@@ -139,6 +147,7 @@ class UserRepository extends BaseRepository {
    */
   async update(id, data) {
     const ALLOWED = ['name', 'phone', 'address', 'latitude', 'longitude',
+                     'identification', 'city', 'province', 'company',
                      'is_available', 'rating', 'completed_services'];
 
     const fields = [];

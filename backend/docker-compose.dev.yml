@@ -1,13 +1,15 @@
 # docker-compose.dev.yml
-# Solo levanta PostgreSQL para desarrollo local del backend monolítico.
-# El backend y frontend corren directamente con `npm run dev`.
+# Levanta PostgreSQL + Backend + Frontend para desarrollo local.
 #
 # USO:
-#   docker-compose -f docker-compose.dev.yml up -d        # iniciar
-#   docker-compose -f docker-compose.dev.yml down         # detener
+#   docker-compose -f docker-compose.dev.yml up -d        # iniciar todo
+#   docker-compose -f docker-compose.dev.yml down         # detener todo
 #   docker-compose -f docker-compose.dev.yml down -v      # detener + borrar datos
+#   docker-compose -f docker-compose.dev.yml logs -f      # ver logs en vivo
 
 services:
+
+  # ── Base de datos ─────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: lava-auto-db
@@ -17,7 +19,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: lava_auto
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - lava_auto_db_data:/var/lib/postgresql/data
     command: >
@@ -31,6 +33,48 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # ── Backend Express.js ────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lava-auto-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4004:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: lava_auto
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: dev_secret_local_123
+      JWT_REFRESH_SECRET: dev_refresh_secret_local_123
+      JWT_EXPIRES_IN: 24h
+      FRONTEND_URL: http://localhost:3000
+
+  # ── Frontend Next.js ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4004
+    container_name: lava-auto-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
 
 volumes:
   lava_auto_db_data:
