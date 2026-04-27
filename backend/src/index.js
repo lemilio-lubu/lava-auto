@@ -81,6 +81,10 @@ try {
 const app = express();
 const server = http.createServer(app);
 
+// Railway (y cualquier proxy inverso) pone X-Forwarded-For; sin esto
+// express-rate-limit lanza ValidationError y no puede identificar IPs.
+app.set('trust proxy', 1);
+
 // ── Health check mínimo — se monta PRIMERO antes de cualquier middleware ──────
 // De esta forma responde aunque algún middleware posterior falle.
 app.get('/health', (_req, res) => {

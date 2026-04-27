@@ -25,7 +25,6 @@ async function migrate() {
   console.log('[migrate] Iniciando migración de base de datos...');
   console.log(`[migrate] Host: ${config.db.host}:${config.db.port} / DB: ${config.db.name}`);
 
-  // Si DATABASE_URL está disponible usarla directamente (Railway)
   const poolConfig = config.db.connectionString
     ? {
         connectionString: config.db.connectionString,
@@ -41,28 +40,32 @@ async function migrate() {
         connectionTimeoutMillis: 10_000,
       };
 
-  const pool = new Pool(poolConfig);
+  const MAX_RETRIES = 5;
+  const RETRY_DELAY_MS = 3_000;
 
-  try {
-    // Verificar conectividad
-    await pool.query('SELECT 1');
-    console.log('[migrate] Conexión exitosa.');
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const pool = new Pool(poolConfig);
+    try {
+      await pool.query('SELECT 1');
+      console.log(`[migrate] Conexión exitosa (intento ${attempt}).`);
 
-    // Leer e ejecutar el schema
-    const sql = fs.readFileSync(SCHEMA_PATH, 'utf8');
-    console.log(`[migrate] Ejecutando ${SCHEMA_PATH}...`);
-    await pool.query(sql);
+      const sql = fs.readFileSync(SCHEMA_PATH, 'utf8');
+      console.log(`[migrate] Ejecutando ${SCHEMA_PATH}...`);
+      await pool.query(sql);
 
-    console.log('[migrate] ✅ Migración completada exitosamente.');
-  } catch (err) {
-    console.error('[migrate] ❌ Error durante la migración:', err.message);
-    if (err.detail) console.error('[migrate] Detalle:', err.detail);
-    // NO hacemos process.exit(1): si la migración falla el servidor igual arranca.
-    // Esto permite que Railway marque el contenedor como healthy y se pueda
-    // investigar el error en los logs sin que el contenedor quede en loop de reinicios.
-    console.warn('[migrate] ⚠ El servidor arrancará sin aplicar el schema. Revisa los logs.');
-  } finally {
-    await pool.end();
+      console.log('[migrate] ✅ Migración completada exitosamente.');
+      await pool.end();
+      return;
+    } catch (err) {
+      await pool.end().catch(() => {});
+      console.error(`[migrate] ❌ Intento ${attempt}/${MAX_RETRIES} fallido: ${err.message}`);
+      if (attempt < MAX_RETRIES) {
+        console.log(`[migrate] Reintentando en ${RETRY_DELAY_MS / 1000}s...`);
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      } else {
+        console.warn('[migrate] ⚠ Todos los intentos fallaron. El servidor arrancará sin migración.');
+      }
+    }
   }
 }
 
