@@ -219,9 +219,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-3">
               <ThemeLogo width={40} height={40} className="object-contain" />
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Body Shop</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Microservicios</p>
-              </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Body Shop</h3>              </div>
             </div>
             {/* Botón cerrar — solo mobile */}
             <button
