@@ -198,6 +198,36 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // ================================================================
+// Migración inline — columnas críticas antes de arrancar
+// ================================================================
+
+(async () => {
+  const { Pool } = require('pg');
+  const poolCfg = config.db.connectionString
+    ? { connectionString: config.db.connectionString, ssl: { rejectUnauthorized: false } }
+    : { host: config.db.host, port: config.db.port, database: config.db.name,
+        user: config.db.user, password: config.db.password };
+  const p = new Pool({ ...poolCfg, connectionTimeoutMillis: 8000 });
+  const cols = [
+    `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS identification       VARCHAR(20)`,
+    `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS city                VARCHAR(100)`,
+    `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS province            VARCHAR(100)`,
+    `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS company             VARCHAR(255)`,
+    `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false`,
+    `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS totp_secret         VARCHAR(255)`,
+    `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS totp_enabled        BOOLEAN NOT NULL DEFAULT false`,
+  ];
+  try {
+    for (const sql of cols) await p.query(sql);
+    console.log('[startup] ✅ Columnas críticas verificadas.');
+  } catch (e) {
+    console.error('[startup] ⚠ Migración inline falló:', e.message);
+  } finally {
+    await p.end().catch(() => {});
+  }
+})();
+
+// ================================================================
 // Inicio del servidor con graceful shutdown
 // ================================================================
 
