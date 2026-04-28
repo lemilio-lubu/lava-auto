@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Full-stack car wash management platform. Frontend: Next.js 16 (App Router) + React 19 + TypeScript 5. Backend: Express.js 4 (modular monolith) + PostgreSQL + Socket.IO. Roles: ADMIN, CLIENT, WASHER.
+Full-stack car wash management platform. Frontend: Next.js 16 (App Router) + React 19 + TypeScript 5. Backend: Express.js 4 (modular monolith) + PostgreSQL + Socket.IO. Roles: ADMIN, CLIENT, EMPLOYEE.
 
 ---
 
@@ -74,7 +74,7 @@ cd backend && npm run lint     # Backend
 |---|---|---|
 | Admin | admin@lavauto.com | admin123 |
 | Cliente | cliente@test.com | client123 |
-| Lavador | lavador@test.com | washer123 |
+| Empleado | empleado@test.com | employee123 |
 
 > La contraseña de clientes importados desde el Excel = primeros 6 dígitos de su cédula.
 

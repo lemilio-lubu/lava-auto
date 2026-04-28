@@ -264,7 +264,7 @@ export default function TécnicosAdminPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                placeholder="lavador@ejemplo.com"
+                placeholder="empleado@ejemplo.com"
               />
             </div>
 

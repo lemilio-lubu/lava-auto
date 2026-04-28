@@ -7,7 +7,7 @@ Aplicación web full-stack para la gestión de servicios de autolavado a domicil
 
 ## 🏗️ Arquitectura
 
-```
+```text
 ┌───────────────────────────────────────┐
 │          Frontend (Next.js 16)         │
 │          http://localhost:3000         │
@@ -41,17 +41,17 @@ Aplicación web full-stack para la gestión de servicios de autolavado a domicil
 | Rol | Capacidades |
 |-----|-------------|
 | **Cliente** | Solicitar servicios, gestionar vehículos, pagar (tarjeta o efectivo), ver historial |
-| **Lavador** | Ver trabajos disponibles, aceptar trabajos, actualizar estados, confirmar pago en efectivo |
-| **Admin** | Gestionar usuarios, técnicos, servicios, reservas y reportes |
+| **Empleado** | Ver trabajos disponibles, aceptar trabajos, actualizar estados, confirmar pago en efectivo |
+| **Admin** | Gestionar usuarios, empleados, servicios, reservas y reportes |
 
 ### 💳 Pagos
 - **Tarjeta** via Stripe (modo test)
-- **Efectivo** — cliente indica que pagará en mano; lavador confirma la recepción
+- **Efectivo** — cliente indica que pagará en mano; empleado confirma la recepción
 - Estado visual en reservas: badge **Pagado ✓** / **Pago en efectivo pendiente**
 
 ### 💬 Chat en tiempo real
 - WebSockets con Socket.IO integrado en el backend
-- Cliente ↔ Admin · Lavador ↔ Admin
+- Cliente ↔ Admin · Empleado ↔ Admin
 - Indicadores de leído/no leído
 
 ### 🎨 Diseño
@@ -125,13 +125,13 @@ npm run dev                  # Turbopack en :3000
 |-----|-------|------------|
 | Admin | admin@lavauto.com | admin123 |
 | Cliente | cliente@test.com | client123 |
-| Lavador | lavador@test.com | washer123 |
+| Empleado | empleado@test.com | employee123 |
 
 ---
 
 ## 📁 Estructura del proyecto
 
-```
+```text
 lava-auto/
 ├── backend/                         # API REST + WebSocket
 │   ├── src/
@@ -190,14 +190,14 @@ lava-auto/
 ## 🔌 API — Endpoints principales
 
 ### Auth
-```
+```http
 POST /api/auth/register
 POST /api/auth/login
 GET  /api/auth/profile
 ```
 
 ### Vehículos
-```
+```http
 GET    /api/vehicles
 POST   /api/vehicles
 PUT    /api/vehicles/:id
@@ -205,7 +205,7 @@ DELETE /api/vehicles/:id
 ```
 
 ### Reservas
-```
+```http
 GET  /api/reservations/my
 POST /api/reservations
 PUT  /api/reservations/:id/status
@@ -214,16 +214,16 @@ GET  /api/services
 ```
 
 ### Pagos
-```
+```http
 POST /api/payments/cash              # Iniciar pago en efectivo
-POST /api/payments/:id/confirm-cash  # Lavador confirma recepción
+POST /api/payments/:id/confirm-cash  # Empleado confirma recepción
 POST /api/payments/create-intent     # Stripe PaymentIntent
 GET  /api/payments
 GET  /api/payments/reservation/:id
 ```
 
 ### Chat
-```
+```http
 GET  /api/messages/:roomId
 POST /api/messages
 WebSocket  (Socket.IO)
@@ -233,19 +233,19 @@ WebSocket  (Socket.IO)
 
 ## 💳 Flujo de pago
 
-```
+```text
 Cliente solicita servicio
         │
         ▼
   Reserva creada (PENDING)
         │
-   Lavador asignado (CONFIRMED)
+   Empleado asignado (CONFIRMED)
         │
         ├── Pagar con tarjeta ──→ Stripe PaymentIntent ──→ COMPLETED
         │
         └── Pagar en efectivo ──→ badge "Pago en efectivo pendiente"
                                         │
-                               Lavador confirma recepción
+                               Empleado confirma recepción
                                         │
                                    COMPLETED → badge "Pagado ✓"
 ```
