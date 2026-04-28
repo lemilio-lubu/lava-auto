@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Plus, User, CheckCircle, XCircle, X, Phone, Mail, MapPin } from 'lucide-react';
+import { Loader2, Plus, User, CheckCircle, XCircle, X, Phone, MapPin } from 'lucide-react';
 import { employeeApi, Employee } from '@/lib/api-client';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -229,9 +229,11 @@ export default function TécnicosAdminPage() {
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-              Registrar Nuevo Lavador
+              Registrar Nuevo Empleado
             </h2>
             <button
+              type="button"
+              aria-label="Cerrar modal"
               onClick={() => setShowModal(false)}
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             >
