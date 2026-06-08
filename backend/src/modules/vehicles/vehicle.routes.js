@@ -15,6 +15,7 @@
 const express = require('express');
 
 const VehicleRepository = require('./vehicle.repository');
+const CatalogRepository = require('../catalog/catalog.repository');
 const { authMiddleware, roleMiddleware } = require('../../middleware/auth');
 const { AppError }  = require('../../middleware/error-handler');
 const { USER_ROLES, VEHICLE_TYPES } = require('../../config/constants');
@@ -24,6 +25,27 @@ const router = express.Router();
 // ── Helpers ──────────────────────────────────────────────────────
 
 const VALID_TYPES = new Set(Object.values(VEHICLE_TYPES));
+
+/**
+ * Resolves brand/model text fields from catalog FKs when the caller
+ * provides IDs but omits the text values. Mutates the data object in place.
+ * Returns { brand, model } with final resolved values.
+ */
+async function resolveCatalogText(db, data) {
+  const catalog = new CatalogRepository(db);
+
+  if (data.brandId && !data.brand?.trim()) {
+    const brand = await catalog.findBrandById(data.brandId);
+    if (!brand) throw new AppError(`Marca con id '${data.brandId}' no encontrada en el catálogo.`, 400);
+    data.brand = brand.name;
+  }
+
+  if (data.modelId && !data.model?.trim()) {
+    const model = await catalog.findModelById(data.modelId);
+    if (!model) throw new AppError(`Modelo con id '${data.modelId}' no encontrado en el catálogo.`, 400);
+    data.model = model.name;
+  }
+}
 
 // ================================================================
 // GET /api/vehicles  — vehículos del usuario actual
@@ -205,11 +227,23 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
  */
 router.post('/', authMiddleware, async (req, res, next) => {
   try {
-    const { brand, model, plate, vehicleType, color, year, ownerName, ownerPhone } = req.body;
+    const {
+      brand, model, plate, vehicleType, color, year, ownerName, ownerPhone,
+      brandId, modelId, fuelTypeId,
+    } = req.body;
 
-    if (!brand?.trim() || !model?.trim() || !plate?.trim() ||
-        !vehicleType?.trim() || !ownerName?.trim()) {
-      throw new AppError('brand, model, plate, vehicleType y ownerName son requeridos.', 400);
+    // brand/model text required unless a catalog FK is provided
+    const hasBrandText  = brand?.trim();
+    const hasModelText  = model?.trim();
+
+    if (!plate?.trim() || !vehicleType?.trim() || !ownerName?.trim()) {
+      throw new AppError('plate, vehicleType y ownerName son requeridos.', 400);
+    }
+    if (!hasBrandText && !brandId) {
+      throw new AppError('brand o brandId es requerido.', 400);
+    }
+    if (!hasModelText && !modelId) {
+      throw new AppError('model o modelId es requerido.', 400);
     }
 
     if (!VALID_TYPES.has(vehicleType)) {
@@ -218,6 +252,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
       );
     }
 
+    const payload = {
+      brand: brand ?? null,
+      model: model ?? null,
+      brandId: brandId ?? null,
+      modelId: modelId ?? null,
+    };
+    await resolveCatalogText(req.db, payload);
+
     const repo = new VehicleRepository(req.db);
 
     const existing = await repo.findByPlate(plate);
@@ -225,8 +267,17 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
     const vehicle = await repo.create({
       userId: req.user.id,
-      brand, model, plate, vehicleType,
-      color, year, ownerName, ownerPhone,
+      brand: payload.brand,
+      model: payload.model,
+      plate,
+      vehicleType,
+      color,
+      year,
+      ownerName,
+      ownerPhone,
+      brandId:    payload.brandId,
+      modelId:    payload.modelId,
+      fuelTypeId: fuelTypeId ?? null,
     });
 
     res.status(201).json(vehicle);
@@ -295,7 +346,16 @@ router.put('/:id', authMiddleware, async (req, res, next) => {
       );
     }
 
-    const updated = await repo.update(req.params.id, req.body);
+    // Resolve catalog text from FKs when provided without text counterpart
+    const { brandId, modelId, fuelTypeId } = req.body;
+    if (brandId !== undefined || modelId !== undefined) {
+      await resolveCatalogText(req.db, req.body);
+    }
+
+    const updateData = { ...req.body };
+    if (fuelTypeId !== undefined) updateData.fuelTypeId = fuelTypeId;
+
+    const updated = await repo.update(req.params.id, updateData);
     res.json(updated);
   } catch (err) { next(err); }
 });

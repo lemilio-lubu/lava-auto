@@ -23,7 +23,20 @@ const UPDATABLE_FIELDS = Object.freeze({
   ownerName:   'owner_name',
   ownerPhone:  'owner_phone',
   isActive:    'is_active',
+  brandId:     'brand_id',
+  modelId:     'model_id',
+  fuelTypeId:  'fuel_type_id',
 });
+
+/** Shared SELECT with LEFT JOINs to resolve catalog names */
+const VEHICLE_SELECT = `
+  SELECT v.*,
+         b.name AS brand_name,
+         m.name AS model_name
+  FROM vehicles.vehicles v
+  LEFT JOIN catalog.brands b ON b.id = v.brand_id
+  LEFT JOIN catalog.models m ON m.id = v.model_id
+`;
 
 class VehicleRepository extends BaseRepository {
   constructor(db) {
@@ -35,11 +48,22 @@ class VehicleRepository extends BaseRepository {
   // ------------------------------------------------------------------
 
   /**
+   * Override de BaseRepository — usa JOIN con catalog para devolver brandName/modelName.
+   */
+  async findById(id) {
+    const { rows } = await this._db.query(
+      `${VEHICLE_SELECT} WHERE v.id = $1`,
+      [id]
+    );
+    return this._toEntity(rows[0] ?? null);
+  }
+
+  /**
    * Busca vehículo por placa (normalizada a mayúsculas).
    */
   async findByPlate(plate) {
     const { rows } = await this._db.query(
-      `SELECT * FROM ${this._table} WHERE plate = $1`,
+      `${VEHICLE_SELECT} WHERE v.plate = $1`,
       [plate.toUpperCase()]
     );
     return this._toEntity(rows[0]);
@@ -51,29 +75,29 @@ class VehicleRepository extends BaseRepository {
    * @param {boolean} activeOnly  Si true, filtra is_active = true (default: true)
    */
   async findByUserId(userId, activeOnly = true) {
-    const extra = activeOnly ? 'AND is_active = true' : '';
+    const extra = activeOnly ? 'AND v.is_active = true' : '';
     const { rows } = await this._db.query(
-      `SELECT * FROM ${this._table}
-       WHERE user_id = $1 ${extra}
-       ORDER BY created_at DESC`,
+      `${VEHICLE_SELECT}
+       WHERE v.user_id = $1 ${extra}
+       ORDER BY v.created_at DESC`,
       [userId]
     );
-    return rows.map(this._toEntity);
+    return rows.map((row) => this._toEntity(row));
   }
 
   /**
    * Lista todos los vehículos (uso admin).
    */
   async findAllVehicles({ limit = 100, offset = 0, activeOnly = true } = {}) {
-    const extra = activeOnly ? 'WHERE is_active = true' : '';
+    const extra = activeOnly ? 'WHERE v.is_active = true' : '';
     const { rows } = await this._db.query(
-      `SELECT * FROM ${this._table}
+      `${VEHICLE_SELECT}
        ${extra}
-       ORDER BY created_at DESC
+       ORDER BY v.created_at DESC
        LIMIT $1 OFFSET $2`,
       [Math.min(limit, 100), offset]
     );
-    return rows.map(this._toEntity);
+    return rows.map((row) => this._toEntity(row));
   }
 
   /**
@@ -98,25 +122,30 @@ class VehicleRepository extends BaseRepository {
 
   /**
    * Crea un vehículo.
+   * Acepta brandId/modelId/fuelTypeId opcionales junto con los campos de texto.
    */
   async create(data) {
     const id = generateId('vhc');
     const { rows } = await this._db.query(
       `INSERT INTO ${this._table}
-         (id, user_id, brand, model, plate, vehicle_type, color, year, owner_name, owner_phone)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         (id, user_id, brand, model, plate, vehicle_type, color, year,
+          owner_name, owner_phone, brand_id, model_id, fuel_type_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
       [
         id,
-        data.userId ?? null,
+        data.userId      ?? null,
         data.brand,
         data.model,
         data.plate.toUpperCase(),
         data.vehicleType,
-        data.color     ?? null,
-        data.year       ?? null,
+        data.color       ?? null,
+        data.year        ?? null,
         data.ownerName,
-        data.ownerPhone ?? null,
+        data.ownerPhone  ?? null,
+        data.brandId     ?? null,
+        data.modelId     ?? null,
+        data.fuelTypeId  ?? null,
       ]
     );
     return this._toEntity(rows[0]);
@@ -211,6 +240,11 @@ class VehicleRepository extends BaseRepository {
       isActive:    row.is_active,
       createdAt:   row.created_at,
       updatedAt:   row.updated_at,
+      brandId:     row.brand_id    ?? null,
+      modelId:     row.model_id    ?? null,
+      fuelTypeId:  row.fuel_type_id ?? null,
+      brandName:   row.brand_name  ?? null,
+      modelName:   row.model_name  ?? null,
     };
   }
 }

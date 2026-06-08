@@ -26,6 +26,9 @@ let vehicleRoutes;
 let reservationRoutes, serviceRoutes, ratingRoutes, jobRoutes;
 let paymentRoutes, webhookRoutes;
 let notificationRoutes, chatRoutes, socketHandler;
+let catalogRoutes;
+let workOrderRoutes;
+let vehicleHistoryRouter, clientHistoryRouter;
 
 try {
   http        = require('node:http');
@@ -68,6 +71,13 @@ try {
   chatRoutes         = require('./modules/notifications/chat.routes');
   socketHandler      = require('./modules/notifications/socket.handler');
   console.log('[startup] ✅ Módulo notifications cargado');
+
+  catalogRoutes = require('./modules/catalog/catalog.routes');
+  console.log('[startup] ✅ Módulo catalog cargado');
+
+  workOrderRoutes = require('./modules/work-orders/work-order.routes');
+  ({ vehicleHistoryRouter, clientHistoryRouter } = require('./modules/work-orders/work-order-history.routes'));
+  console.log('[startup] ✅ Módulo work-orders cargado');
 } catch (err) {
   console.error('[startup] ❌ FALLO al cargar módulos:', err.message);
   console.error(err.stack);
@@ -181,6 +191,12 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat',          chatRoutes);
 socketHandler(io, db);
+
+// Fase 6 — Work Orders
+app.use('/api/catalog',      catalogRoutes);
+app.use('/api/work-orders',  workOrderRoutes);
+app.use('/api/vehicles/:vehicleId/work-order-history', vehicleHistoryRouter);
+app.use('/api/clients/:clientId/work-order-history',   clientHistoryRouter);
 
 // Health check extendido (opcional, para monitoreo manual con info de BD)
 app.get('/health/full', async (_req, res) => {
