@@ -22,6 +22,41 @@ const router = express.Router();
 
 const VALID_TYPES = new Set(Object.values(VEHICLE_TYPES));
 
+/**
+ * Normaliza y valida la composición opcional de un servicio.
+ * Devuelve { laborItems, partItems } solo con las claves esperadas, o
+ * lanza AppError(400) si el formato es inválido.
+ */
+function parseComposition(body) {
+  const result = {};
+
+  if (body.laborItems !== undefined) {
+    if (!Array.isArray(body.laborItems)) {
+      throw new AppError('laborItems debe ser un arreglo.', 400);
+    }
+    result.laborItems = body.laborItems.map((it) => {
+      if (!it?.laborRateId) {
+        throw new AppError('Cada mano de obra requiere laborRateId.', 400);
+      }
+      return { laborRateId: it.laborRateId, hours: Number(it.hours) || 0 };
+    });
+  }
+
+  if (body.partItems !== undefined) {
+    if (!Array.isArray(body.partItems)) {
+      throw new AppError('partItems debe ser un arreglo.', 400);
+    }
+    result.partItems = body.partItems.map((it) => {
+      if (!it?.sparePartId) {
+        throw new AppError('Cada repuesto requiere sparePartId.', 400);
+      }
+      return { sparePartId: it.sparePartId, quantity: Number(it.quantity) || 0 };
+    });
+  }
+
+  return result;
+}
+
 // ================================================================
 // GET /api/services
 // ================================================================
@@ -168,9 +203,13 @@ router.post('/',
   async (req, res, next) => {
     try {
       const { name, description, duration, price, vehicleType, isActive } = req.body;
+      const composition = parseComposition(req.body);
+      const hasComposition = composition.laborItems !== undefined || composition.partItems !== undefined;
 
-      if (!name?.trim() || !duration || price == null || !vehicleType) {
-        throw new AppError('name, duration, price y vehicleType son requeridos.', 400);
+      // El precio se autocalcula desde la composición; solo se exige cuando
+      // el servicio no tiene mano de obra/repuestos asociados.
+      if (!name?.trim() || !duration || !vehicleType || (!hasComposition && price == null)) {
+        throw new AppError('name, duration, vehicleType y price (si no hay composición) son requeridos.', 400);
       }
       if (!VALID_TYPES.has(vehicleType)) {
         throw new AppError(
@@ -180,8 +219,9 @@ router.post('/',
 
       const repo    = new ServiceRepository(req.db);
       const service = await repo.create({
-        name, description, duration, price, vehicleType,
+        name, description, duration, price: price ?? 0, vehicleType,
         isActive: isActive !== undefined ? isActive : true,
+        ...composition,
       });
 
       res.status(201).json(service);
@@ -220,8 +260,9 @@ router.put('/:id',
   roleMiddleware(USER_ROLES.ADMIN),
   async (req, res, next) => {
     try {
+      const composition = parseComposition(req.body);
       const repo    = new ServiceRepository(req.db);
-      const updated = await repo.update(req.params.id, req.body);
+      const updated = await repo.update(req.params.id, { ...req.body, ...composition });
       if (!updated) throw new AppError('Servicio no encontrado.', 404);
       res.json(updated);
     } catch (err) { next(err); }

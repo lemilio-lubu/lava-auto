@@ -514,11 +514,12 @@ class WorkOrderRepository extends BaseRepository {
     const id = generateId('wos');
     const { rows } = await this._db.query(
       `INSERT INTO ${DB_TABLES.WORK_ORDER_SERVICES}
-         (id, work_order_id, service_type_id, name, description, base_price, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+         (id, work_order_id, service_type_id, service_id, name, description, base_price, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
       [
         id, workOrderId,
         data.serviceTypeId ?? null,
+        data.serviceId     ?? null,
         data.name,
         data.description   ?? null,
         data.basePrice     ?? 0,
@@ -642,6 +643,7 @@ class WorkOrderRepository extends BaseRepository {
       id:            row.id,
       workOrderId:   row.work_order_id,
       serviceTypeId: row.service_type_id ?? null,
+      serviceId:     row.service_id ?? null,
       name:          row.name,
       description:   row.description ?? null,
       basePrice:     parseFloat(row.base_price ?? 0),

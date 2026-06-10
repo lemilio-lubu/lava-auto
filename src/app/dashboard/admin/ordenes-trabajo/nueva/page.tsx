@@ -3,37 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Trash2, Wrench, Package, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import {
   workOrderApi,
   adminApi,
-  catalogApi,
+  serviceApi,
   type User,
   type Vehicle,
-  type LaborRate,
-  type SparePart,
+  type Service,
 } from '@/lib/api-client';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 
 type Priority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 
-type DraftLabor = {
-  tempId: string;
-  laborRateId: string;
-  description: string;
-  hours: number;
-  ratePerHour: number;
-};
-
-type DraftPart = {
-  tempId: string;
-  sparePartId: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-};
+type SelectedService = { tempId: string; service: Service };
 
 const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
   { value: 'LOW', label: 'Baja' },
@@ -56,234 +41,141 @@ function newTempId() {
     : `${Date.now()}-${Math.random()}`;
 }
 
-// ─── LaborEditor ────────────────────────────────────────────────────────────
+// ─── ServiceCard ────────────────────────────────────────────────────────────
 
-function LaborEditor({
-  laborRates,
-  lines,
-  setLines,
-}: {
-  laborRates: LaborRate[];
-  lines: DraftLabor[];
-  setLines: (lines: DraftLabor[]) => void;
-}) {
-  const [draft, setDraft] = useState<DraftLabor>({
-    tempId: '',
-    laborRateId: '',
-    description: '',
-    hours: 1,
-    ratePerHour: 0,
-  });
-
-  function pickRate(id: string) {
-    const r = laborRates.find((x) => x.id === id);
-    setDraft((d) => ({
-      ...d,
-      laborRateId: id,
-      ratePerHour: r ? r.ratePerHour : d.ratePerHour,
-      description: r && !d.description ? r.name : d.description,
-    }));
-  }
-
-  function add() {
-    if (!draft.description) return;
-    setLines([...lines, { ...draft, tempId: newTempId() }]);
-    setDraft({ tempId: '', laborRateId: '', description: '', hours: 1, ratePerHour: 0 });
-  }
+function ServiceCard({ service, onRemove }: { service: Service; onRemove: () => void }) {
+  const [open, setOpen] = useState(false);
+  const laborItems = service.laborItems ?? [];
+  const partItems = service.partItems ?? [];
+  const hasDetail = laborItems.length > 0 || partItems.length > 0;
 
   return (
-    <div className="space-y-3">
-      {lines.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
-                <th className="text-left py-2 pr-3">Actividad</th>
-                <th className="text-right py-2 px-3">Horas</th>
-                <th className="text-right py-2 px-3">Tarifa/h</th>
-                <th className="text-right py-2 px-3">Subtotal</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {lines.map((l) => (
-                <tr key={l.tempId}>
-                  <td className="py-2 pr-3 text-slate-900 dark:text-white">{l.description}</td>
-                  <td className="py-2 px-3 text-right text-slate-700 dark:text-slate-300">{l.hours}</td>
-                  <td className="py-2 px-3 text-right text-slate-700 dark:text-slate-300">{fmt(l.ratePerHour)}</td>
-                  <td className="py-2 px-3 text-right font-medium text-slate-900 dark:text-white">
-                    {fmt(l.hours * l.ratePerHour)}
-                  </td>
-                  <td className="py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setLines(lines.filter((x) => x.tempId !== l.tempId))}
-                      className="p-1 rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400"
-                      aria-label="Quitar"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+      <div className="flex items-center justify-between gap-3 p-4">
+        <div className="min-w-0">
+          <p className="font-medium text-slate-900 dark:text-white truncate">{service.name}</p>
+          <div className="flex gap-3 mt-1 text-xs text-slate-400 dark:text-slate-500">
+            <span className="inline-flex items-center gap-1"><Wrench className="w-3 h-3" />{laborItems.length} m. de obra</span>
+            <span className="inline-flex items-center gap-1"><Package className="w-3 h-3" />{partItems.length} repuesto(s)</span>
+          </div>
         </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-        <div className="sm:col-span-5">
-          <label className="text-xs text-slate-500 dark:text-slate-400">Del catálogo</label>
-          <select value={draft.laborRateId} onChange={(e) => pickRate(e.target.value)} className={INPUT_CLASS}>
-            <option value="">Tarifa de mano de obra...</option>
-            {laborRates.filter((r) => r.isActive).map((r) => (
-              <option key={r.id} value={r.id}>{r.name} — {fmt(r.ratePerHour)}/h</option>
-            ))}
-          </select>
-        </div>
-        <div className="sm:col-span-3">
-          <label className="text-xs text-slate-500 dark:text-slate-400">Descripción</label>
-          <input
-            type="text"
-            value={draft.description}
-            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-            className={INPUT_CLASS}
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="text-xs text-slate-500 dark:text-slate-400">Horas</label>
-          <input
-            type="number"
-            min={0}
-            step={0.5}
-            value={draft.hours}
-            onChange={(e) => setDraft({ ...draft, hours: parseFloat(e.target.value) || 0 })}
-            className={INPUT_CLASS}
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <Button type="button" variant="secondary" fullWidth onClick={add} disabled={!draft.description}>
-            <Plus className="w-4 h-4" />
-            Agregar
-          </Button>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <span className="font-semibold text-slate-900 dark:text-white">{fmt(service.price)}</span>
+          {hasDetail && (
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              className="p-1 rounded text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400"
+              aria-label="Ver desglose"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onRemove}
+            className="p-1 rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+            aria-label="Quitar servicio"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
+
+      {open && hasDetail && (
+        <div className="px-4 pb-4 space-y-3 text-sm border-t border-slate-100 dark:border-slate-700 pt-3">
+          {laborItems.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Mano de obra</p>
+              {laborItems.map((li, idx) => (
+                <div key={li.id ?? idx} className="flex justify-between text-slate-600 dark:text-slate-300">
+                  <span>{li.laborRateName ?? 'Mano de obra'} · {li.hours}h</span>
+                  <span>{fmt((li.subtotal ?? (li.hours * (li.ratePerHour ?? 0))))}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {partItems.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Repuestos</p>
+              {partItems.map((pi, idx) => (
+                <div key={pi.id ?? idx} className="flex justify-between text-slate-600 dark:text-slate-300">
+                  <span>{pi.sparePartName ?? 'Repuesto'} · ×{pi.quantity}</span>
+                  <span>{fmt((pi.subtotal ?? (pi.quantity * (pi.unitPrice ?? 0))))}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── PartsEditor ────────────────────────────────────────────────────────────
+// ─── ServicePicker ──────────────────────────────────────────────────────────
 
-function PartsEditor({
-  spareParts,
-  lines,
-  setLines,
+function ServicePicker({
+  services,
+  selected,
+  onAdd,
+  onRemove,
 }: {
-  spareParts: SparePart[];
-  lines: DraftPart[];
-  setLines: (lines: DraftPart[]) => void;
+  services: Service[];
+  selected: SelectedService[];
+  onAdd: (serviceId: string) => Promise<void>;
+  onRemove: (tempId: string) => void;
 }) {
-  const [draft, setDraft] = useState<DraftPart>({
-    tempId: '',
-    sparePartId: '',
-    description: '',
-    quantity: 1,
-    unitPrice: 0,
-  });
+  const [pick, setPick] = useState('');
+  const [adding, setAdding] = useState(false);
 
-  function pickPart(id: string) {
-    const p = spareParts.find((x) => x.id === id);
-    setDraft((d) => ({
-      ...d,
-      sparePartId: id,
-      unitPrice: p ? p.unitPrice : d.unitPrice,
-      description: p && !d.description ? p.name : d.description,
-    }));
-  }
-
-  function add() {
-    if (!draft.description) return;
-    setLines([...lines, { ...draft, tempId: newTempId() }]);
-    setDraft({ tempId: '', sparePartId: '', description: '', quantity: 1, unitPrice: 0 });
+  async function add() {
+    if (!pick) return;
+    setAdding(true);
+    try {
+      await onAdd(pick);
+      setPick('');
+    } finally {
+      setAdding(false);
+    }
   }
 
   return (
     <div className="space-y-3">
-      {lines.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
-                <th className="text-left py-2 pr-3">Repuesto</th>
-                <th className="text-right py-2 px-3">Cant.</th>
-                <th className="text-right py-2 px-3">Precio U.</th>
-                <th className="text-right py-2 px-3">Subtotal</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {lines.map((p) => (
-                <tr key={p.tempId}>
-                  <td className="py-2 pr-3 text-slate-900 dark:text-white">{p.description}</td>
-                  <td className="py-2 px-3 text-right text-slate-700 dark:text-slate-300">{p.quantity}</td>
-                  <td className="py-2 px-3 text-right text-slate-700 dark:text-slate-300">{fmt(p.unitPrice)}</td>
-                  <td className="py-2 px-3 text-right font-medium text-slate-900 dark:text-white">
-                    {fmt(p.quantity * p.unitPrice)}
-                  </td>
-                  <td className="py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setLines(lines.filter((x) => x.tempId !== p.tempId))}
-                      className="p-1 rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400"
-                      aria-label="Quitar"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {selected.length > 0 && (
+        <div className="space-y-2">
+          {selected.map((sel) => (
+            <ServiceCard
+              key={sel.tempId}
+              service={sel.service}
+              onRemove={() => onRemove(sel.tempId)}
+            />
+          ))}
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-        <div className="sm:col-span-5">
-          <label className="text-xs text-slate-500 dark:text-slate-400">Del catálogo</label>
-          <select value={draft.sparePartId} onChange={(e) => pickPart(e.target.value)} className={INPUT_CLASS}>
-            <option value="">Repuesto...</option>
-            {spareParts.filter((p) => p.isActive).map((p) => (
-              <option key={p.id} value={p.id}>{p.name} — {fmt(p.unitPrice)}</option>
+        <div className="sm:col-span-10">
+          <label className="text-xs text-slate-500 dark:text-slate-400">Agregar servicio</label>
+          <select value={pick} onChange={(e) => setPick(e.target.value)} className={INPUT_CLASS}>
+            <option value="">Seleccionar servicio...</option>
+            {services.filter((s) => s.isActive).map((s) => (
+              <option key={s.id} value={s.id}>{s.name} — {fmt(s.price)}</option>
             ))}
           </select>
         </div>
-        <div className="sm:col-span-3">
-          <label className="text-xs text-slate-500 dark:text-slate-400">Descripción</label>
-          <input
-            type="text"
-            value={draft.description}
-            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-            className={INPUT_CLASS}
-          />
-        </div>
         <div className="sm:col-span-2">
-          <label className="text-xs text-slate-500 dark:text-slate-400">Cantidad</label>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={draft.quantity}
-            onChange={(e) => setDraft({ ...draft, quantity: parseFloat(e.target.value) || 0 })}
-            className={INPUT_CLASS}
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <Button type="button" variant="secondary" fullWidth onClick={add} disabled={!draft.description}>
+          <Button type="button" variant="secondary" fullWidth onClick={add} disabled={!pick} isLoading={adding}>
             <Plus className="w-4 h-4" />
             Agregar
           </Button>
         </div>
       </div>
+
+      {services.length === 0 && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          No hay servicios disponibles. Crea servicios en Servicios para poder usarlos aquí.
+        </p>
+      )}
     </div>
   );
 }
@@ -297,8 +189,7 @@ export default function NuevaOrdenPage() {
   const [clients, setClients] = useState<User[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
-  const [laborRates, setLaborRates] = useState<LaborRate[]>([]);
-  const [spareParts, setSpareParts] = useState<SparePart[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
 
   const [clientId, setClientId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
@@ -307,8 +198,7 @@ export default function NuevaOrdenPage() {
   const [mileage, setMileage] = useState('');
   const [problemDescription, setProblemDescription] = useState('');
 
-  const [laborLines, setLaborLines] = useState<DraftLabor[]>([]);
-  const [partLines, setPartLines] = useState<DraftPart[]>([]);
+  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState({
@@ -340,16 +230,12 @@ export default function NuevaOrdenPage() {
       setToast({ isOpen: true, title: 'Error', message: 'No se pudieron cargar los datos', type: 'error' });
     }
 
-    // Catalog is non-critical for header creation — load separately.
+    // Servicios — fuente de mano de obra y repuestos de la orden.
     try {
-      const [ratesRes, partsRes] = await Promise.all([
-        catalogApi.getLaborRates(token),
-        catalogApi.getSpareParts(token),
-      ]);
-      setLaborRates(ratesRes.data ?? []);
-      setSpareParts(partsRes.data ?? []);
+      const servicesRes = await serviceApi.getAll(token);
+      setServices(servicesRes ?? []);
     } catch {
-      // editors will show empty catalogs but custom entry still works
+      // el picker mostrará el aviso de vacío
     }
   };
 
@@ -379,8 +265,23 @@ export default function NuevaOrdenPage() {
     loadVehiclesForClient(id);
   };
 
-  const laborTotal = laborLines.reduce((s, l) => s + l.hours * l.ratePerHour, 0);
-  const partsTotal = partLines.reduce((s, p) => s + p.quantity * p.unitPrice, 0);
+  const handleAddService = async (serviceId: string) => {
+    if (!token) return;
+    try {
+      // getById trae la composición (mano de obra + repuestos) para el desglose.
+      const full = await serviceApi.getById(serviceId, token);
+      setSelectedServices((prev) => [...prev, { tempId: newTempId(), service: full }]);
+    } catch {
+      const fallback = services.find((s) => s.id === serviceId);
+      if (fallback) setSelectedServices((prev) => [...prev, { tempId: newTempId(), service: fallback }]);
+    }
+  };
+
+  const handleRemoveService = (tempId: string) => {
+    setSelectedServices((prev) => prev.filter((x) => x.tempId !== tempId));
+  };
+
+  const servicesTotal = selectedServices.reduce((s, sel) => s + sel.service.price, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -401,44 +302,22 @@ export default function NuevaOrdenPage() {
       );
       const orderId = res.data.id;
 
-      // Persist body lines using the existing per-line endpoints. Each call
-      // recalculates the order totals on the backend.
-      let linesFailed = false;
+      // Cada servicio expande su mano de obra y repuestos en el backend y
+      // recalcula los totales de la orden.
+      let servicesFailed = false;
       try {
-        for (const l of laborLines) {
-          await workOrderApi.addLaborLine(
-            orderId,
-            {
-              description: l.description,
-              hours: l.hours,
-              ratePerHour: l.ratePerHour,
-              ...(l.laborRateId && { laborRateId: l.laborRateId }),
-              ...(technicianId && { technicianId }),
-            },
-            token
-          );
-        }
-        for (const p of partLines) {
-          await workOrderApi.addPartLine(
-            orderId,
-            {
-              description: p.description,
-              quantity: p.quantity,
-              unitPrice: p.unitPrice,
-              ...(p.sparePartId && { sparePartId: p.sparePartId }),
-            },
-            token
-          );
+        for (const sel of selectedServices) {
+          await workOrderApi.addService(orderId, { serviceId: sel.service.id }, token);
         }
       } catch {
-        linesFailed = true;
+        servicesFailed = true;
       }
 
-      if (linesFailed) {
+      if (servicesFailed) {
         setToast({
           isOpen: true,
           title: 'Orden creada con avisos',
-          message: 'La orden se creó pero algunas líneas no se guardaron. Revisalas en el detalle.',
+          message: 'La orden se creó pero algunos servicios no se aplicaron. Revísalos en el detalle.',
           type: 'warning',
         });
       }
@@ -470,7 +349,7 @@ export default function NuevaOrdenPage() {
           Volver a Órdenes
         </Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Nueva Orden de Trabajo</h1>
-        <p className="text-slate-600 dark:text-slate-400">Completa los datos para abrir una nueva orden</p>
+        <p className="text-slate-600 dark:text-slate-400">Selecciona el cliente, el vehículo y los servicios a realizar</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -567,32 +446,30 @@ export default function NuevaOrdenPage() {
           </div>
         </div>
 
-        {/* Mano de obra */}
+        {/* Servicios */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Mano de Obra</h2>
-          <LaborEditor laborRates={laborRates} lines={laborLines} setLines={setLaborLines} />
-        </div>
-
-        {/* Repuestos */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Repuestos y Materiales</h2>
-          <PartsEditor spareParts={spareParts} lines={partLines} setLines={setPartLines} />
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-1">Servicios</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+            Cada servicio aporta su mano de obra y repuestos automáticamente.
+          </p>
+          <ServicePicker
+            services={services}
+            selected={selectedServices}
+            onAdd={handleAddService}
+            onRemove={handleRemoveService}
+          />
         </div>
 
         {/* Resumen + acciones */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
           <div className="space-y-2 max-w-xs ml-auto text-sm">
             <div className="flex justify-between text-slate-700 dark:text-slate-300">
-              <span>Mano de obra</span>
-              <span>{fmt(laborTotal)}</span>
-            </div>
-            <div className="flex justify-between text-slate-700 dark:text-slate-300">
-              <span>Repuestos</span>
-              <span>{fmt(partsTotal)}</span>
+              <span>Servicios ({selectedServices.length})</span>
+              <span>{fmt(servicesTotal)}</span>
             </div>
             <div className="flex justify-between font-semibold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 pt-2">
               <span>Subtotal</span>
-              <span>{fmt(laborTotal + partsTotal)}</span>
+              <span>{fmt(servicesTotal)}</span>
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">
               Descuentos e impuestos se ajustan en el detalle.

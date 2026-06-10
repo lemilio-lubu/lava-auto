@@ -11,6 +11,7 @@
 
 const WorkOrderRepository = require('./work-order.repository');
 const CatalogRepository   = require('../catalog/catalog.repository');
+const ServiceRepository   = require('../reservations/service.repository');
 const { AppError }        = require('../../middleware/error-handler');
 const { WORK_ORDER_STATUS } = require('../../config/constants');
 
@@ -31,6 +32,7 @@ class WorkOrderService {
   constructor(db) {
     this._repo        = new WorkOrderRepository(db);
     this._catalogRepo = new CatalogRepository(db);
+    this._serviceRepo = new ServiceRepository(db);
   }
 
   // ----------------------------------------------------------------
@@ -142,6 +144,54 @@ class WorkOrderService {
   async addService(workOrderId, serviceData) {
     await this._assertWorkOrderExists(workOrderId);
 
+    // Fuente actual: servicio de reservación (reservations.services) con su
+    // composición de mano de obra + repuestos ya valorizada.
+    if (serviceData.serviceId) {
+      return this._addServiceFromService(workOrderId, serviceData);
+    }
+
+    // Fuente legada: tipo de servicio del catálogo (catalog.service_types).
+    return this._addServiceFromCatalogType(workOrderId, serviceData);
+  }
+
+  /** Crea un servicio en la orden a partir de un servicio de reservación. */
+  async _addServiceFromService(workOrderId, serviceData) {
+    const src = await this._serviceRepo.findById(serviceData.serviceId);
+    if (!src) throw new AppError('Servicio no encontrado.', 404);
+
+    const service = await this._repo.addService(workOrderId, {
+      serviceId:   src.id,
+      name:        serviceData.name || src.name,
+      description: serviceData.description ?? src.description ?? null,
+      basePrice:   0, // las líneas llevan el costo → evita doble conteo
+    });
+
+    for (const li of src.laborItems ?? []) {
+      await this._repo.addLaborLine(workOrderId, {
+        laborRateId:        li.laborRateId,
+        description:        li.laborRateName,
+        hours:              li.hours,
+        ratePerHour:        li.ratePerHour,
+        workOrderServiceId: service.id,
+      });
+    }
+
+    for (const pi of src.partItems ?? []) {
+      await this._repo.addPartLine(workOrderId, {
+        sparePartId:        pi.sparePartId,
+        description:        pi.sparePartName,
+        quantity:           pi.quantity,
+        unitPrice:          pi.unitPrice,
+        workOrderServiceId: service.id,
+      });
+    }
+
+    await this._repo.recalculateTotals(workOrderId);
+    return service;
+  }
+
+  /** (Legado) Crea un servicio en la orden desde un catalog.service_type. */
+  async _addServiceFromCatalogType(workOrderId, serviceData) {
     let template = null;
     if (serviceData.serviceTypeId) {
       template = await this._catalogRepo.getServiceTemplate(serviceData.serviceTypeId);

@@ -869,8 +869,8 @@ router.post('/:id/services',
   async (req, res, next) => {
     try {
       const svc = new WorkOrderService(req.db);
-      const { serviceTypeId, name, description, basePrice } = req.body;
-      const service = await svc.addService(req.params.id, { serviceTypeId, name, description, basePrice });
+      const { serviceId, serviceTypeId, name, description, basePrice } = req.body;
+      const service = await svc.addService(req.params.id, { serviceId, serviceTypeId, name, description, basePrice });
       res.status(201).json({ data: service, message: 'Servicio agregado correctamente.' });
     } catch (err) { next(err); }
   }

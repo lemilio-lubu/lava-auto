@@ -159,10 +159,10 @@ export const serviceApi = {
   getById: (id: string, token: string) =>
     apiRequest<Service>(`/api/services/${id}`, { token }),
 
-  create: (data: { name: string; description?: string; duration: number; price: number; vehicleType: string }, token: string) =>
+  create: (data: ServiceWriteData, token: string) =>
     apiRequest<Service>('/api/services', { method: 'POST', body: data, token }),
 
-  update: (id: string, data: Partial<{ name: string; description?: string; duration: number; price: number; vehicleType: string; isActive: boolean }>, token: string) =>
+  update: (id: string, data: Partial<ServiceWriteData>, token: string) =>
     apiRequest<Service>(`/api/services/${id}`, { method: 'PUT', body: data, token }),
 
   delete: (id: string, token: string) =>
@@ -436,6 +436,24 @@ export interface CreateVehicleData {
   fuelTypeId?: string | null;
 }
 
+export interface ServiceLaborItem {
+  id?: string;
+  laborRateId: string;
+  laborRateName?: string;
+  hours: number;
+  ratePerHour?: number;
+  subtotal?: number;
+}
+
+export interface ServicePartItem {
+  id?: string;
+  sparePartId: string;
+  sparePartName?: string;
+  quantity: number;
+  unitPrice?: number;
+  subtotal?: number;
+}
+
 export interface Service {
   id: string;
   name: string;
@@ -444,6 +462,19 @@ export interface Service {
   price: number;
   vehicleType: string;
   isActive: boolean;
+  laborItems?: ServiceLaborItem[];
+  partItems?: ServicePartItem[];
+}
+
+export interface ServiceWriteData {
+  name: string;
+  description?: string;
+  duration: number;
+  price?: number;
+  vehicleType: string;
+  isActive?: boolean;
+  laborItems?: { laborRateId: string; hours: number }[];
+  partItems?: { sparePartId: string; quantity: number }[];
 }
 
 export interface Reservation {
@@ -863,7 +894,7 @@ export const workOrderApi = {
 
   addService: (
     id: string,
-    data: { serviceTypeId?: string; name?: string; description?: string; basePrice?: number },
+    data: { serviceId?: string; serviceTypeId?: string; name?: string; description?: string; basePrice?: number },
     token: string
   ) =>
     apiRequest<{ data: WorkOrderService; message: string }>(`/api/work-orders/${id}/services`, {

@@ -801,3 +801,35 @@ DO $$ BEGIN
     ALTER TABLE work_orders.work_orders
         ADD COLUMN services_amount DECIMAL(10,2) NOT NULL DEFAULT 0;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- ================================================================
+-- Service composition (labor + parts that a service "assumes")
+-- Used both for reservation pricing and to seed work order lines.
+-- ================================================================
+
+CREATE TABLE IF NOT EXISTS reservations.service_labor_items (
+    id            VARCHAR(50)  PRIMARY KEY,
+    service_id    VARCHAR(50)  NOT NULL REFERENCES reservations.services(id) ON DELETE CASCADE,
+    labor_rate_id VARCHAR(50)  NOT NULL REFERENCES catalog.labor_rates(id),
+    hours         DECIMAL(6,2) NOT NULL DEFAULT 1,
+    sort_order    INTEGER      NOT NULL DEFAULT 0,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS reservations.service_part_items (
+    id            VARCHAR(50)   PRIMARY KEY,
+    service_id    VARCHAR(50)   NOT NULL REFERENCES reservations.services(id) ON DELETE CASCADE,
+    spare_part_id VARCHAR(50)   NOT NULL REFERENCES catalog.spare_parts(id),
+    quantity      DECIMAL(10,3) NOT NULL DEFAULT 1,
+    sort_order    INTEGER       NOT NULL DEFAULT 0,
+    created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sli_service ON reservations.service_labor_items (service_id);
+CREATE INDEX IF NOT EXISTS idx_spi_service ON reservations.service_part_items (service_id);
+
+-- Link a work order service to the reservation service it was created from
+DO $$ BEGIN
+    ALTER TABLE work_orders.work_order_services
+        ADD COLUMN service_id VARCHAR(50) REFERENCES reservations.services(id);
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;

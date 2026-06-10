@@ -16,6 +16,7 @@ import {
   workOrderApi,
   adminApi,
   catalogApi,
+  serviceApi,
   type WorkOrder,
   type WorkOrderService,
   type WorkOrderLaborLine,
@@ -23,8 +24,7 @@ import {
   type WorkOrderPhoto,
   type LaborRate,
   type SparePart,
-  type ServiceType,
-  type ServiceTemplate,
+  type Service,
   type User,
 } from '@/lib/api-client';
 import Button from '@/components/ui/Button';
@@ -145,46 +145,41 @@ function TextBlock({ label, value }: { label: string; value?: string }) {
 interface ServicesSectionProps {
   workOrder: WorkOrder;
   token: string;
-  serviceTypes: ServiceType[];
+  services: Service[];
   onRefresh: () => void;
   showToast: (t: Omit<ToastState, 'isOpen'>) => void;
 }
 
-function ServicesSection({ workOrder, token, serviceTypes, onRefresh, showToast }: ServicesSectionProps) {
+function ServicesSection({ workOrder, token, services, onRefresh, showToast }: ServicesSectionProps) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [template, setTemplate] = useState<ServiceTemplate | null>(null);
-  const [loadingTemplate, setLoadingTemplate] = useState(false);
-  const [form, setForm] = useState({ serviceTypeId: '', name: '', description: '', basePrice: 0 });
+  const [serviceId, setServiceId] = useState('');
+  const [preview, setPreview] = useState<Service | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
-  const services = workOrder.services ?? [];
+  const woServices = workOrder.services ?? [];
 
-  async function handleServiceTypeChange(id: string) {
-    setForm((f) => ({ ...f, serviceTypeId: id, name: '', basePrice: 0 }));
-    setTemplate(null);
+  async function handleServiceChange(id: string) {
+    setServiceId(id);
+    setPreview(null);
     if (!id) return;
-    setLoadingTemplate(true);
+    setLoadingPreview(true);
     try {
-      const res = await catalogApi.getServiceTemplate(id, token);
-      setTemplate(res.data);
-      setForm((f) => ({ ...f, name: res.data.serviceType.name }));
+      const full = await serviceApi.getById(id, token);
+      setPreview(full);
     } catch {
-      // template unavailable — user fills manually
+      // sin preview — igual se puede agregar
     } finally {
-      setLoadingTemplate(false);
+      setLoadingPreview(false);
     }
   }
 
   async function handleAdd() {
+    if (!serviceId) return;
     setSaving(true);
     try {
-      await workOrderApi.addService(workOrder.id, {
-        serviceTypeId: form.serviceTypeId || undefined,
-        name: form.name,
-        description: form.description || undefined,
-        basePrice: form.basePrice,
-      }, token);
-      showToast({ title: 'Servicio agregado', message: 'Mano de obra y repuestos de plantilla aplicados', type: 'success' });
+      await workOrderApi.addService(workOrder.id, { serviceId }, token);
+      showToast({ title: 'Servicio agregado', message: 'Mano de obra y repuestos aplicados', type: 'success' });
       onRefresh();
       setOpen(false);
     } catch {
@@ -194,15 +189,22 @@ function ServicesSection({ workOrder, token, serviceTypes, onRefresh, showToast 
     }
   }
 
-  async function handleRemove(serviceId: string) {
+  async function handleRemove(woServiceId: string) {
     if (!confirm('¿Eliminar este servicio? Las líneas asociadas quedarán sin agrupar.')) return;
     try {
-      await workOrderApi.removeService(workOrder.id, serviceId, token);
+      await workOrderApi.removeService(workOrder.id, woServiceId, token);
       showToast({ title: 'Eliminado', message: 'Servicio eliminado', type: 'success' });
       onRefresh();
     } catch {
       showToast({ title: 'Error', message: 'No se pudo eliminar el servicio', type: 'error' });
     }
+  }
+
+  function laborTotal(svc: WorkOrderService) {
+    return (svc.labor ?? []).reduce((s, l) => s + l.subtotal, 0);
+  }
+  function partsTotal(svc: WorkOrderService) {
+    return (svc.parts ?? []).reduce((s, p) => s + p.subtotal, 0);
   }
 
   return (
@@ -211,8 +213,8 @@ function ServicesSection({ workOrder, token, serviceTypes, onRefresh, showToast 
         title="Servicios"
         action={
           <Button size="sm" onClick={() => {
-            setForm({ serviceTypeId: '', name: '', description: '', basePrice: 0 });
-            setTemplate(null);
+            setServiceId('');
+            setPreview(null);
             setOpen(true);
           }}>
             <Plus className="w-4 h-4" />
@@ -220,11 +222,11 @@ function ServicesSection({ workOrder, token, serviceTypes, onRefresh, showToast 
           </Button>
         }
       >
-        {services.length === 0 ? (
+        {woServices.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500 italic">Sin servicios asociados</p>
         ) : (
           <div className="space-y-3">
-            {services.map((svc: WorkOrderService) => (
+            {woServices.map((svc: WorkOrderService) => (
               <div key={svc.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -239,7 +241,9 @@ function ServicesSection({ workOrder, token, serviceTypes, onRefresh, showToast 
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="font-semibold text-slate-900 dark:text-white">{fmt(svc.basePrice)}</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {fmt(svc.basePrice + laborTotal(svc) + partsTotal(svc))}
+                    </span>
                     <button
                       onClick={() => handleRemove(svc.id)}
                       className="p-1 rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
@@ -260,79 +264,60 @@ function ServicesSection({ workOrder, token, serviceTypes, onRefresh, showToast 
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Agregar servicio</h3>
 
           <div>
-            <label className={LABEL_CLASS}>Tipo de servicio</label>
+            <label className={LABEL_CLASS}>Servicio</label>
             <select
-              value={form.serviceTypeId}
-              onChange={(e) => handleServiceTypeChange(e.target.value)}
+              value={serviceId}
+              onChange={(e) => handleServiceChange(e.target.value)}
               className={INPUT_CLASS}
             >
-              <option value="">Seleccionar tipo...</option>
-              {serviceTypes.map((st) => (
-                <option key={st.id} value={st.id}>{st.name}</option>
+              <option value="">Seleccionar servicio...</option>
+              {services.filter((s) => s.isActive).map((s) => (
+                <option key={s.id} value={s.id}>{s.name} — {fmt(s.price)}</option>
               ))}
             </select>
           </div>
 
-          {loadingTemplate && (
+          {loadingPreview && (
             <p className="text-sm text-slate-400 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Cargando plantilla...
+              <Loader2 className="w-4 h-4 animate-spin" /> Cargando servicio...
             </p>
           )}
 
-          {template && (template.laborTemplates.length > 0 || template.partTemplates.length > 0) && (
+          {preview && ((preview.laborItems?.length ?? 0) > 0 || (preview.partItems?.length ?? 0) > 0) && (
             <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 text-sm space-y-2">
               <p className="font-medium text-slate-700 dark:text-slate-300">Se agregarán automáticamente:</p>
-              {template.laborTemplates.length > 0 && (
+              {(preview.laborItems?.length ?? 0) > 0 && (
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Mano de obra</p>
-                  {template.laborTemplates.map((lt) => (
-                    <div key={lt.id} className="flex justify-between text-slate-600 dark:text-slate-400">
-                      <span>{lt.description}</span>
-                      <span className="text-slate-400">{lt.defaultHours}h</span>
+                  {preview.laborItems!.map((li, idx) => (
+                    <div key={li.id ?? idx} className="flex justify-between text-slate-600 dark:text-slate-400">
+                      <span>{li.laborRateName ?? 'Mano de obra'} · {li.hours}h</span>
+                      <span className="text-slate-400">{fmt(li.subtotal ?? (li.hours * (li.ratePerHour ?? 0)))}</span>
                     </div>
                   ))}
                 </div>
               )}
-              {template.partTemplates.length > 0 && (
+              {(preview.partItems?.length ?? 0) > 0 && (
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Repuestos</p>
-                  {template.partTemplates.map((pt) => (
-                    <div key={pt.id} className="flex justify-between text-slate-600 dark:text-slate-400">
-                      <span>{pt.description}</span>
-                      <span className="text-slate-400">×{pt.defaultQuantity}</span>
+                  {preview.partItems!.map((pi, idx) => (
+                    <div key={pi.id ?? idx} className="flex justify-between text-slate-600 dark:text-slate-400">
+                      <span>{pi.sparePartName ?? 'Repuesto'} · ×{pi.quantity}</span>
+                      <span className="text-slate-400">{fmt(pi.subtotal ?? (pi.quantity * (pi.unitPrice ?? 0)))}</span>
                     </div>
                   ))}
                 </div>
               )}
+              <div className="flex justify-between font-semibold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 pt-2">
+                <span>Total servicio</span>
+                <span>{fmt(preview.price)}</span>
+              </div>
             </div>
           )}
 
-          <div>
-            <label className={LABEL_CLASS}>Nombre del servicio *</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Ej. Mantenimiento 45.000 km"
-              className={INPUT_CLASS}
-            />
-          </div>
-
-          <div>
-            <label className={LABEL_CLASS}>Precio base ($)</label>
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              value={form.basePrice}
-              onChange={(e) => setForm({ ...form, basePrice: parseFloat(e.target.value) || 0 })}
-              className={INPUT_CLASS}
-            />
-          </div>
-
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleAdd} isLoading={saving} disabled={!form.name}>Agregar</Button>
+            <Button onClick={handleAdd} isLoading={saving} disabled={!serviceId}>Agregar</Button>
           </div>
         </div>
       </Modal>
@@ -1211,7 +1196,7 @@ export default function WorkOrderDetailPage() {
   const [employees, setEmployees] = useState<User[]>([]);
   const [laborRates, setLaborRates] = useState<LaborRate[]>([]);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -1271,16 +1256,16 @@ export default function WorkOrderDetailPage() {
       // Catalog data is non-critical — load separately so a catalog failure
       // doesn't prevent the work order from rendering.
       try {
-        const [employeesRes, ratesRes, partsRes, svcTypesRes] = await Promise.all([
+        const [employeesRes, ratesRes, partsRes, servicesRes] = await Promise.all([
           adminApi.getUsers(token, 'EMPLOYEE'),
           catalogApi.getLaborRates(token),
           catalogApi.getSpareParts(token),
-          catalogApi.getServiceTypes(token),
+          serviceApi.getAll(token),
         ]);
         setEmployees(Array.isArray(employeesRes) ? employeesRes : []);
         setLaborRates(ratesRes.data ?? []);
         setSpareParts(partsRes.data ?? []);
-        setServiceTypes(svcTypesRes.data ?? []);
+        setServices(servicesRes ?? []);
       } catch {
         // dropdowns will be empty but the page still works
       }
@@ -1472,7 +1457,7 @@ export default function WorkOrderDetailPage() {
       <ServicesSection
         workOrder={workOrder}
         token={token!}
-        serviceTypes={serviceTypes}
+        services={services}
         onRefresh={loadWorkOrder}
         showToast={showToast}
       />
