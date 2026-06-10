@@ -509,12 +509,17 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Especialidades de empleados
 CREATE TABLE IF NOT EXISTS catalog.employee_specialties (
-    id         VARCHAR(50)  PRIMARY KEY,
-    name       VARCHAR(100) NOT NULL,
-    is_active  BOOLEAN      NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    id          VARCHAR(50)  PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_active   BOOLEAN      NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+DO $$ BEGIN
+    ALTER TABLE catalog.employee_specialties ADD COLUMN description TEXT;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 DO $$ BEGIN
     CREATE TRIGGER trg_catalog_employee_specialties_updated_at
@@ -528,9 +533,14 @@ CREATE TABLE IF NOT EXISTS catalog.tax_rates (
     name       VARCHAR(100) NOT NULL,
     percentage DECIMAL(5,2) NOT NULL DEFAULT 0,
     is_active  BOOLEAN      NOT NULL DEFAULT true,
+    is_default BOOLEAN      NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+DO $$ BEGIN
+    ALTER TABLE catalog.tax_rates ADD COLUMN is_default BOOLEAN NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 DO $$ BEGIN
     CREATE TRIGGER trg_catalog_tax_rates_updated_at

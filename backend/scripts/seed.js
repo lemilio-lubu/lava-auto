@@ -231,6 +231,75 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 `;
 
+// ── Work order de demostración (encabezado + cuerpo completo) ─────────────────
+//
+// Orden COMPLETED lista para abrir, revisar el cuerpo (servicios, mano de obra,
+// repuestos) y generar la factura PDF. Usa un número fuera del rango del contador
+// autoincremental (OT-90001) para no colisionar con órdenes creadas desde la UI.
+//
+// Cuadre de costos:
+//   Mano de obra: 12.50 + 6.25 + 12.50 = 31.25
+//   Repuestos:    34.00 + 5.00 + 35.00 = 74.00
+//   final_cost  = 105.25   |   services_amount = 0
+//   descuento   = 5.25  → base imponible 100.00  → IVA 12% = 12.00
+//   total       = 105.25 + 0 - 5.25 + 12.00 = 112.00
+const WORK_ORDER_DEMO_SQL = `
+INSERT INTO work_orders.work_orders
+  (id, order_number, client_id, vehicle_id, technician_id, status, priority, mileage,
+   problem_description, diagnosis, recommendations, internal_notes,
+   estimated_cost, final_cost, services_amount, discount_amount, tax_amount, total_amount)
+VALUES
+  ('wo-demo-0001', 'OT-90001',
+   '550e8400-e29b-41d4-a716-446655440002',
+   '660e8400-e29b-41d4-a716-446655440001',
+   '550e8400-e29b-41d4-a716-446655440003',
+   'COMPLETED', 'NORMAL', 51000,
+   'Cliente solicita cambio de aceite y revisión de frenos por ruido al frenar.',
+   'Aceite degradado y pastillas delanteras al límite de desgaste.',
+   'Próximo cambio de aceite a los 56.000 km. Revisar discos en próxima visita.',
+   'Cliente prefiere repuestos originales.',
+   105.25, 105.25, 0.00, 5.25, 12.00, 112.00)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO work_orders.work_order_services
+  (id, work_order_id, service_type_id, name, description, base_price, sort_order)
+VALUES
+  ('wos-demo-oil',    'wo-demo-0001', 'srt-oil',    'Cambio de Aceite y Filtro', 'Mantenimiento de lubricación de motor', 0.00, 0),
+  ('wos-demo-brakes', 'wo-demo-0001', 'srt-brakes', 'Revisión de Frenos',        'Inspección y cambio de pastillas',      0.00, 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO work_orders.work_order_labor
+  (id, work_order_id, work_order_service_id, technician_id, labor_rate_id, description, hours, rate_per_hour, subtotal)
+VALUES
+  ('wol-demo-1', 'wo-demo-0001', 'wos-demo-oil',    '550e8400-e29b-41d4-a716-446655440003', 'lbr-mechanic', 'Drenaje y cambio de aceite',     0.50, 25.00, 12.50),
+  ('wol-demo-2', 'wo-demo-0001', 'wos-demo-oil',    '550e8400-e29b-41d4-a716-446655440003', 'lbr-mechanic', 'Cambio de filtro de aceite',     0.25, 25.00,  6.25),
+  ('wol-demo-3', 'wo-demo-0001', 'wos-demo-brakes', '550e8400-e29b-41d4-a716-446655440003', 'lbr-mechanic', 'Inspección y ajuste de frenos',  0.50, 25.00, 12.50)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO work_orders.work_order_parts
+  (id, work_order_id, work_order_service_id, spare_part_id, description, quantity, unit_price, subtotal)
+VALUES
+  ('wop-demo-1', 'wo-demo-0001', 'wos-demo-oil',    'spp-oil-10w30',   'Aceite Motor 10W-30 (1L)',            4.000,  8.50, 34.00),
+  ('wop-demo-2', 'wo-demo-0001', 'wos-demo-oil',    'spp-oil-filter',  'Filtro de Aceite Universal',          1.000,  5.00,  5.00),
+  ('wop-demo-3', 'wo-demo-0001', 'wos-demo-brakes', 'spp-brake-pad-f', 'Pastillas de Freno Delanteras (par)', 1.000, 35.00, 35.00)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO work_orders.work_order_status_history
+  (id, work_order_id, from_status, to_status, changed_by, notes, created_at)
+VALUES
+  ('woh-demo-1', 'wo-demo-0001', NULL,          'OPEN',       '550e8400-e29b-41d4-a716-446655440001', 'Orden creada',                     NOW() - INTERVAL '3 hours'),
+  ('woh-demo-2', 'wo-demo-0001', 'OPEN',        'DIAGNOSING', '550e8400-e29b-41d4-a716-446655440001', 'Ingresa a diagnóstico',            NOW() - INTERVAL '2 hours'),
+  ('woh-demo-3', 'wo-demo-0001', 'DIAGNOSING',  'IN_REPAIR',  '550e8400-e29b-41d4-a716-446655440001', 'Aprobado por cliente',             NOW() - INTERVAL '1 hour'),
+  ('woh-demo-4', 'wo-demo-0001', 'IN_REPAIR',   'COMPLETED',  '550e8400-e29b-41d4-a716-446655440001', 'Trabajo finalizado',               NOW())
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO work_orders.work_order_photos
+  (id, work_order_id, photo_url, photo_type, description)
+VALUES
+  ('wph-demo-1', 'wo-demo-0001', 'https://picsum.photos/seed/brakes/400/300', 'BEFORE', 'Pastillas desgastadas antes del cambio')
+ON CONFLICT (id) DO NOTHING;
+`;
+
 // ================================================================
 // Runner
 // ================================================================
@@ -250,6 +319,8 @@ const STEPS = [
   { label: 'catalog.employee_specialties',    sql: CATALOG_SPECIALTIES_SQL },
   { label: 'vehicles.vehicles',               sql: VEHICLES_SQL },
   { label: 'reservations.services',           sql: SERVICES_SQL },
+  // work order de demostración: depende de users + vehicles + catálogo completo
+  { label: 'work_orders.work_order (demo)',   sql: WORK_ORDER_DEMO_SQL },
 ];
 
 async function seed() {

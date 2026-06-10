@@ -92,7 +92,13 @@ export default function VehicleList({ vehicles: initialVehicles }: VehicleListPr
     if (token) {
       try {
         const updatedVehicles = await vehicleApi.getAll(token);
-        setVehicles(updatedVehicles);
+        setVehicles(
+          updatedVehicles.map((v) => ({
+            ...v,
+            year: v.year ?? null,
+            color: v.color ?? null,
+          })),
+        );
       } catch (error) {
         console.error('Error reloading vehicles:', error);
       }

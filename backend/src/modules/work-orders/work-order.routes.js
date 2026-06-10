@@ -77,10 +77,25 @@ const router = express.Router();
  */
 router.get('/',
   authMiddleware,
-  roleMiddleware(USER_ROLES.ADMIN),
   async (req, res, next) => {
     try {
-      const { status, technicianId, clientId, vehicleId, limit, offset } = req.query;
+      const { role, id: userId } = req.user;
+      let { status, technicianId, clientId, vehicleId, limit, offset } = req.query;
+
+      if (role === USER_ROLES.EMPLOYEE) {
+        if (technicianId && technicianId !== userId) {
+          throw new AppError('Solo podés consultar tus propias órdenes.', 403);
+        }
+        technicianId = userId;
+      } else if (role === USER_ROLES.CLIENT) {
+        if (clientId && clientId !== userId) {
+          throw new AppError('Solo podés consultar tus propias órdenes.', 403);
+        }
+        clientId = userId;
+      } else if (role !== USER_ROLES.ADMIN) {
+        throw new AppError('No tenés permiso para listar órdenes.', 403);
+      }
+
       const repo = new WorkOrderRepository(req.db);
       const data = await repo.findAll({ status, technicianId, clientId, vehicleId, limit, offset });
       res.json({ data, message: 'Órdenes obtenidas correctamente.' });
@@ -212,26 +227,40 @@ router.post('/',
  */
 router.put('/:id',
   authMiddleware,
-  roleMiddleware(USER_ROLES.ADMIN),
   async (req, res, next) => {
     try {
       const repo = new WorkOrderRepository(req.db);
       const existing = await repo.findById(req.params.id);
       if (!existing) throw new AppError('Orden de trabajo no encontrada.', 404);
 
-      const {
-        technicianId, priority, mileage, problemDescription, diagnosis,
-        recommendations, internalNotes, estimatedCost, finalCost,
-        discountAmount, taxAmount, totalAmount,
-        approvedBy, approvedAt, invoicedAt, deliveredAt,
-      } = req.body;
+      const { role, id: userId } = req.user;
+      const isAdmin      = role === USER_ROLES.ADMIN;
+      const isTechnician = existing.technician && existing.technician.id === userId;
 
-      const data = await repo.update(req.params.id, {
-        technicianId, priority, mileage, problemDescription, diagnosis,
-        recommendations, internalNotes, estimatedCost, finalCost,
-        discountAmount, taxAmount, totalAmount,
-        approvedBy, approvedAt, invoicedAt, deliveredAt,
-      });
+      if (!isAdmin && !isTechnician) {
+        throw new AppError('No tenés permiso para editar esta orden.', 403);
+      }
+
+      let fields;
+      if (isAdmin) {
+        const {
+          technicianId, priority, mileage, problemDescription, diagnosis,
+          recommendations, internalNotes, estimatedCost, finalCost,
+          discountAmount, taxAmount, totalAmount,
+          approvedBy, approvedAt, invoicedAt, deliveredAt,
+        } = req.body;
+        fields = {
+          technicianId, priority, mileage, problemDescription, diagnosis,
+          recommendations, internalNotes, estimatedCost, finalCost,
+          discountAmount, taxAmount, totalAmount,
+          approvedBy, approvedAt, invoicedAt, deliveredAt,
+        };
+      } else {
+        const { diagnosis, recommendations } = req.body;
+        fields = { diagnosis, recommendations };
+      }
+
+      const data = await repo.update(req.params.id, fields);
       res.json({ data, message: 'Orden actualizada correctamente.' });
     } catch (err) { next(err); }
   }

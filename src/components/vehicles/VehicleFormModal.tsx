@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Loader2 } from 'lucide-react';
-import { vehicleApi } from '@/lib/api-client';
+import { vehicleApi, catalogApi } from '@/lib/api-client';
+import type { Brand, Model, FuelType } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface VehicleFormModalProps {
@@ -15,25 +16,100 @@ interface VehicleFormModalProps {
     year: number | null;
     color: string | null;
     vehicleType: string;
+    brandId?: string | null;
+    modelId?: string | null;
+    fuelTypeId?: string | null;
   };
   onClose: () => void;
   onSuccess?: () => void;
 }
 
 const vehicleTypes = [
-  { value: 'SEDAN', label: 'Sedán' },
-  { value: 'SUV', label: 'SUV' },
-  { value: 'HATCHBACK', label: 'Hatchback' },
-  { value: 'PICKUP', label: 'Pickup' },
-  { value: 'VAN', label: 'Van' },
+  { value: 'SEDAN',      label: 'Sedán' },
+  { value: 'SUV',        label: 'SUV' },
+  { value: 'HATCHBACK',  label: 'Hatchback' },
+  { value: 'PICKUP',     label: 'Pickup' },
+  { value: 'VAN',        label: 'Van' },
   { value: 'MOTORCYCLE', label: 'Motocicleta' },
 ];
+
+const selectClass =
+  'w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg ' +
+  'focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white ' +
+  'disabled:opacity-50 disabled:cursor-not-allowed';
+
+const inputClass =
+  'w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg ' +
+  'focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white';
 
 export default function VehicleFormModal({ vehicle, onClose, onSuccess }: VehicleFormModalProps) {
   const router = useRouter();
   const { token, user } = useAuth();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]               = useState('');
+
+  // Catalog state
+  const [brands,    setBrands]    = useState<Brand[]>([]);
+  const [models,    setModels]    = useState<Model[]>([]);
+  const [fuelTypes, setFuelTypes] = useState<FuelType[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogEmpty,   setCatalogEmpty]   = useState(false);
+
+  // Selected FK values (controlled)
+  const [selectedBrandId,    setSelectedBrandId]    = useState<string>(vehicle?.brandId ?? '');
+  const [selectedModelId,    setSelectedModelId]    = useState<string>(vehicle?.modelId ?? '');
+  const [selectedFuelTypeId, setSelectedFuelTypeId] = useState<string>(vehicle?.fuelTypeId ?? '');
+
+  // Fallback text values (used when catalog is empty)
+  const [manualBrand, setManualBrand] = useState<string>(vehicle?.brand ?? '');
+  const [manualModel, setManualModel] = useState<string>(vehicle?.model ?? '');
+
+  // Load brands and fuel types on mount
+  useEffect(() => {
+    if (!token) return;
+
+    const load = async () => {
+      setCatalogLoading(true);
+      try {
+        const [brandsRes, fuelRes] = await Promise.all([
+          catalogApi.getBrands(token),
+          catalogApi.getFuelTypes(token),
+        ]);
+        const activeBrands = brandsRes.data.filter((b) => b.isActive);
+        setBrands(activeBrands);
+        setFuelTypes(fuelRes.data.filter((f) => f.isActive));
+        setCatalogEmpty(activeBrands.length === 0);
+      } catch {
+        setCatalogEmpty(true);
+      } finally {
+        setCatalogLoading(false);
+      }
+    };
+
+    load();
+  }, [token]);
+
+  // Load models when brand selection changes
+  useEffect(() => {
+    if (!token || !selectedBrandId) {
+      setModels([]);
+      return;
+    }
+
+    catalogApi
+      .getModels(token, selectedBrandId)
+      .then((res) => setModels(res.data.filter((m) => m.isActive)))
+      .catch(() => setModels([]));
+  }, [token, selectedBrandId]);
+
+  // When editing: if brand is set but no brandId yet, models need to stay empty
+  // (user must re-select from catalog to link the FK)
+
+  const handleBrandChange = (brandId: string) => {
+    setSelectedBrandId(brandId);
+    setSelectedModelId(''); // reset model when brand changes
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -41,15 +117,40 @@ export default function VehicleFormModal({ vehicle, onClose, onSuccess }: Vehicl
     setIsSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
+
+    // Build payload — always send both text and FK fields
+    const plate       = formData.get('plate') as string;
+    const vehicleType = formData.get('vehicleType') as string;
+    const color       = formData.get('color') as string;
+    const yearRaw     = formData.get('year') as string;
+
+    // Determine brand/model text: prefer catalog name, fall back to manual input
+    const brandObj = brands.find((b) => b.id === selectedBrandId);
+    const modelObj = models.find((m) => m.id === selectedModelId);
+
+    const brandText = catalogEmpty
+      ? manualBrand.trim()
+      : (brandObj?.name ?? manualBrand.trim());
+
+    const modelText = catalogEmpty
+      ? manualModel.trim()
+      : (modelObj?.name ?? manualModel.trim());
+
+    if (!brandText) { setError('Selecciona o ingresa una marca.'); setIsSubmitting(false); return; }
+    if (!modelText) { setError('Selecciona o ingresa un modelo.'); setIsSubmitting(false); return; }
+
     const data = {
-      brand: formData.get('brand') as string,
-      model: formData.get('model') as string,
-      plate: formData.get('plate') as string,
-      year: formData.get('year') ? parseInt(formData.get('year') as string) : null,
-      color: formData.get('color') as string,
-      vehicleType: formData.get('vehicleType') as string,
-      ownerName: user?.name || '',
-      ownerPhone: user?.phone || null,
+      brand:      brandText,
+      model:      modelText,
+      plate,
+      year:       yearRaw ? parseInt(yearRaw) : undefined,
+      color:      color || undefined,
+      vehicleType,
+      ownerName:  user?.name  ?? '',
+      ownerPhone: user?.phone ?? undefined,
+      brandId:    selectedBrandId   || null,
+      modelId:    selectedModelId   || null,
+      fuelTypeId: selectedFuelTypeId || null,
     };
 
     try {
@@ -95,34 +196,96 @@ export default function VehicleFormModal({ vehicle, onClose, onSuccess }: Vehicl
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Brand */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Marca *
               </label>
-              <input
-                type="text"
-                name="brand"
-                defaultValue={vehicle?.brand}
-                required
-                placeholder="Toyota, Honda, Ford..."
-                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white"
-              />
+              {catalogLoading ? (
+                <div className={`${selectClass} flex items-center gap-2 text-slate-400`}>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Cargando marcas...
+                </div>
+              ) : catalogEmpty ? (
+                <>
+                  <input
+                    type="text"
+                    value={manualBrand}
+                    onChange={(e) => setManualBrand(e.target.value)}
+                    placeholder="Toyota, Honda, Ford..."
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    No hay marcas en el catálogo. Ingresa manualmente.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <select
+                    value={selectedBrandId}
+                    onChange={(e) => handleBrandChange(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="">Selecciona una marca</option>
+                    {brands.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                  {vehicle && !vehicle.brandId && (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                      Antes: {vehicle.brand}. Selecciona del catálogo para actualizar.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
+            {/* Model */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Modelo *
               </label>
-              <input
-                type="text"
-                name="model"
-                defaultValue={vehicle?.model}
-                required
-                placeholder="Corolla, Civic, Focus..."
-                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white"
-              />
+              {catalogLoading ? (
+                <div className={`${selectClass} flex items-center gap-2 text-slate-400`}>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Cargando modelos...
+                </div>
+              ) : catalogEmpty ? (
+                <>
+                  <input
+                    type="text"
+                    value={manualModel}
+                    onChange={(e) => setManualModel(e.target.value)}
+                    placeholder="Corolla, Civic, Focus..."
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    No hay modelos en el catálogo. Ingresa manualmente.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <select
+                    value={selectedModelId}
+                    onChange={(e) => setSelectedModelId(e.target.value)}
+                    disabled={!selectedBrandId}
+                    className={selectClass}
+                  >
+                    <option value="">
+                      {selectedBrandId ? 'Selecciona un modelo' : 'Selecciona primero una marca'}
+                    </option>
+                    {models.map((m) => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                  {vehicle && !vehicle.modelId && (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                      Antes: {vehicle.model}. Selecciona del catálogo para actualizar.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
+            {/* Plate */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Placas *
@@ -134,10 +297,11 @@ export default function VehicleFormModal({ vehicle, onClose, onSuccess }: Vehicl
                 required
                 pattern="[A-Z]{3}-\d{4}"
                 placeholder="ABC-1234"
-                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white uppercase"
+                className={`${inputClass} uppercase`}
               />
             </div>
 
+            {/* Year */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Año
@@ -149,10 +313,11 @@ export default function VehicleFormModal({ vehicle, onClose, onSuccess }: Vehicl
                 min="1900"
                 max={new Date().getFullYear() + 1}
                 placeholder="2024"
-                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white"
+                className={inputClass}
               />
             </div>
 
+            {/* Color */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Color
@@ -162,10 +327,11 @@ export default function VehicleFormModal({ vehicle, onClose, onSuccess }: Vehicl
                 name="color"
                 defaultValue={vehicle?.color || ''}
                 placeholder="Blanco, Negro, Rojo..."
-                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white"
+                className={inputClass}
               />
             </div>
 
+            {/* Vehicle Type */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Tipo de Vehículo *
@@ -174,7 +340,7 @@ export default function VehicleFormModal({ vehicle, onClose, onSuccess }: Vehicl
                 name="vehicleType"
                 defaultValue={vehicle?.vehicleType}
                 required
-                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-slate-700 dark:text-white"
+                className={selectClass}
               >
                 <option value="">Selecciona un tipo</option>
                 {vehicleTypes.map((type) => (
@@ -184,6 +350,25 @@ export default function VehicleFormModal({ vehicle, onClose, onSuccess }: Vehicl
                 ))}
               </select>
             </div>
+
+            {/* Fuel Type (optional) */}
+            {!catalogEmpty && fuelTypes.length > 0 && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  Tipo de Combustible
+                </label>
+                <select
+                  value={selectedFuelTypeId}
+                  onChange={(e) => setSelectedFuelTypeId(e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="">Sin especificar</option>
+                  {fuelTypes.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-4 mt-8">

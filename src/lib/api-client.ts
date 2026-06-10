@@ -415,17 +415,25 @@ export interface Vehicle {
   ownerPhone?: string;
   isActive: boolean;
   createdAt: string;
+  brandId?: string | null;
+  modelId?: string | null;
+  fuelTypeId?: string | null;
+  brandName?: string | null;
+  modelName?: string | null;
 }
 
 export interface CreateVehicleData {
-  brand: string;
-  model: string;
+  brand?: string;
+  model?: string;
   plate: string;
   vehicleType: string;
   color?: string;
   year?: number;
   ownerName: string;
   ownerPhone?: string;
+  brandId?: string | null;
+  modelId?: string | null;
+  fuelTypeId?: string | null;
 }
 
 export interface Service {
@@ -536,5 +544,339 @@ export interface Employee {
 
 /** @deprecated Use Employee instead */
 export type Washer = Employee;
+
+// Catalog types
+export interface Brand { id: string; name: string; isActive: boolean; }
+export interface Model { id: string; brandId: string; name: string; yearFrom?: number; yearTo?: number; isActive: boolean; }
+export interface FuelType { id: string; name: string; isActive: boolean; }
+export interface SparePartCategory { id: string; name: string; isActive: boolean; }
+export interface SparePart { id: string; categoryId?: string; name: string; partNumber?: string; unit: string; unitPrice: number; stockQuantity: number; minStock: number; isActive: boolean; }
+export interface ServiceType { id: string; name: string; description?: string; isActive: boolean; }
+export interface LaborRate { id: string; name: string; description?: string; ratePerHour: number; isActive: boolean; }
+export interface EmployeeSpecialty { id: string; name: string; isActive: boolean; }
+export interface TaxRate { id: string; name: string; percentage: number; isActive: boolean; }
+export interface OrderNumberConfig { id: string; prefix: string; nextNumber: number; padding: number; }
+
+export const catalogApi = {
+  // Brands
+  getBrands: (token: string) =>
+    apiRequest<{ data: Brand[] }>('/api/catalog/brands', { token }),
+  createBrand: (data: Omit<Brand, 'id'>, token: string) =>
+    apiRequest<{ data: Brand }>('/api/catalog/brands', { method: 'POST', body: data, token }),
+  updateBrand: (id: string, data: Partial<Brand>, token: string) =>
+    apiRequest<{ data: Brand }>(`/api/catalog/brands/${id}`, { method: 'PUT', body: data, token }),
+  deleteBrand: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/brands/${id}`, { method: 'DELETE', token }),
+
+  // Models
+  getModels: (token: string, brandId?: string) =>
+    apiRequest<{ data: Model[] }>(`/api/catalog/models${brandId ? `?brandId=${brandId}` : ''}`, { token }),
+  createModel: (data: Omit<Model, 'id'>, token: string) =>
+    apiRequest<{ data: Model }>('/api/catalog/models', { method: 'POST', body: data, token }),
+  updateModel: (id: string, data: Partial<Model>, token: string) =>
+    apiRequest<{ data: Model }>(`/api/catalog/models/${id}`, { method: 'PUT', body: data, token }),
+  deleteModel: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/models/${id}`, { method: 'DELETE', token }),
+
+  // FuelTypes
+  getFuelTypes: (token: string) =>
+    apiRequest<{ data: FuelType[] }>('/api/catalog/fuel-types', { token }),
+  createFuelType: (data: Omit<FuelType, 'id'>, token: string) =>
+    apiRequest<{ data: FuelType }>('/api/catalog/fuel-types', { method: 'POST', body: data, token }),
+  updateFuelType: (id: string, data: Partial<FuelType>, token: string) =>
+    apiRequest<{ data: FuelType }>(`/api/catalog/fuel-types/${id}`, { method: 'PUT', body: data, token }),
+  deleteFuelType: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/fuel-types/${id}`, { method: 'DELETE', token }),
+
+  // SparePartCategories
+  getSparePartCategories: (token: string) =>
+    apiRequest<{ data: SparePartCategory[] }>('/api/catalog/spare-part-categories', { token }),
+  createSparePartCategory: (data: Omit<SparePartCategory, 'id'>, token: string) =>
+    apiRequest<{ data: SparePartCategory }>('/api/catalog/spare-part-categories', { method: 'POST', body: data, token }),
+  updateSparePartCategory: (id: string, data: Partial<SparePartCategory>, token: string) =>
+    apiRequest<{ data: SparePartCategory }>(`/api/catalog/spare-part-categories/${id}`, { method: 'PUT', body: data, token }),
+  deleteSparePartCategory: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/spare-part-categories/${id}`, { method: 'DELETE', token }),
+
+  // SpareParts
+  getSpareParts: (token: string, categoryId?: string) =>
+    apiRequest<{ data: SparePart[] }>(`/api/catalog/spare-parts${categoryId ? `?categoryId=${categoryId}` : ''}`, { token }),
+  createSparePart: (data: Omit<SparePart, 'id'>, token: string) =>
+    apiRequest<{ data: SparePart }>('/api/catalog/spare-parts', { method: 'POST', body: data, token }),
+  updateSparePart: (id: string, data: Partial<SparePart>, token: string) =>
+    apiRequest<{ data: SparePart }>(`/api/catalog/spare-parts/${id}`, { method: 'PUT', body: data, token }),
+  deleteSparePart: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/spare-parts/${id}`, { method: 'DELETE', token }),
+
+  // ServiceTypes
+  getServiceTypes: (token: string) =>
+    apiRequest<{ data: ServiceType[] }>('/api/catalog/service-types', { token }),
+  createServiceType: (data: Omit<ServiceType, 'id'>, token: string) =>
+    apiRequest<{ data: ServiceType }>('/api/catalog/service-types', { method: 'POST', body: data, token }),
+  updateServiceType: (id: string, data: Partial<ServiceType>, token: string) =>
+    apiRequest<{ data: ServiceType }>(`/api/catalog/service-types/${id}`, { method: 'PUT', body: data, token }),
+  deleteServiceType: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/service-types/${id}`, { method: 'DELETE', token }),
+
+  // LaborRates
+  getLaborRates: (token: string) =>
+    apiRequest<{ data: LaborRate[] }>('/api/catalog/labor-rates', { token }),
+  createLaborRate: (data: Omit<LaborRate, 'id'>, token: string) =>
+    apiRequest<{ data: LaborRate }>('/api/catalog/labor-rates', { method: 'POST', body: data, token }),
+  updateLaborRate: (id: string, data: Partial<LaborRate>, token: string) =>
+    apiRequest<{ data: LaborRate }>(`/api/catalog/labor-rates/${id}`, { method: 'PUT', body: data, token }),
+  deleteLaborRate: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/labor-rates/${id}`, { method: 'DELETE', token }),
+
+  // EmployeeSpecialties
+  getEmployeeSpecialties: (token: string) =>
+    apiRequest<{ data: EmployeeSpecialty[] }>('/api/catalog/employee-specialties', { token }),
+  createEmployeeSpecialty: (data: Omit<EmployeeSpecialty, 'id'>, token: string) =>
+    apiRequest<{ data: EmployeeSpecialty }>('/api/catalog/employee-specialties', { method: 'POST', body: data, token }),
+  updateEmployeeSpecialty: (id: string, data: Partial<EmployeeSpecialty>, token: string) =>
+    apiRequest<{ data: EmployeeSpecialty }>(`/api/catalog/employee-specialties/${id}`, { method: 'PUT', body: data, token }),
+  deleteEmployeeSpecialty: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/employee-specialties/${id}`, { method: 'DELETE', token }),
+
+  // TaxRates
+  getTaxRates: (token: string) =>
+    apiRequest<{ data: TaxRate[] }>('/api/catalog/tax-rates', { token }),
+  createTaxRate: (data: Omit<TaxRate, 'id'>, token: string) =>
+    apiRequest<{ data: TaxRate }>('/api/catalog/tax-rates', { method: 'POST', body: data, token }),
+  updateTaxRate: (id: string, data: Partial<TaxRate>, token: string) =>
+    apiRequest<{ data: TaxRate }>(`/api/catalog/tax-rates/${id}`, { method: 'PUT', body: data, token }),
+  deleteTaxRate: (id: string, token: string) =>
+    apiRequest<{ message: string }>(`/api/catalog/tax-rates/${id}`, { method: 'DELETE', token }),
+
+  // OrderNumberConfig (singleton)
+  getOrderNumberConfig: (token: string) =>
+    apiRequest<{ data: OrderNumberConfig }>('/api/catalog/order-number-config', { token }),
+  updateOrderNumberConfig: (data: { prefix: string; padding: number }, token: string) =>
+    apiRequest<{ data: OrderNumberConfig }>('/api/catalog/order-number-config', { method: 'PUT', body: data, token }),
+
+  // Service templates
+  getServiceTemplate: (serviceTypeId: string, token: string) =>
+    apiRequest<{ data: ServiceTemplate }>(`/api/catalog/service-types/${serviceTypeId}/template`, { token }),
+};
+
+// Work Order types
+export interface WorkOrderService {
+  id: string;
+  workOrderId: string;
+  serviceTypeId?: string;
+  name: string;
+  description?: string;
+  basePrice: number;
+  sortOrder: number;
+  labor?: WorkOrderLaborLine[];
+  parts?: WorkOrderPartLine[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceTemplate {
+  serviceType: { id: string; name: string; description?: string };
+  laborTemplates: { id: string; description: string; defaultHours: number; sortOrder: number }[];
+  partTemplates: { id: string; sparePartId?: string; sparePartName?: string; sparePartPrice?: number; description: string; defaultQuantity: number; sortOrder: number }[];
+}
+
+export interface WorkOrder {
+  id: string;
+  orderNumber: string;
+  clientId: string;
+  clientName?: string;
+  vehicleId: string;
+  vehiclePlate?: string;
+  vehicleBrand?: string;
+  vehicleModel?: string;
+  technicianId?: string;
+  technicianName?: string;
+  status: 'DRAFT' | 'OPEN' | 'DIAGNOSING' | 'PENDING_APPROVAL' | 'IN_REPAIR' | 'COMPLETED' | 'INVOICED' | 'DELIVERED' | 'CANCELLED';
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  mileage?: number;
+  problemDescription?: string;
+  diagnosis?: string;
+  recommendations?: string;
+  internalNotes?: string;
+  estimatedCost: number;
+  finalCost: number;
+  servicesAmount: number;
+  discountAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  services?: WorkOrderService[];
+  labor?: WorkOrderLaborLine[];
+  parts?: WorkOrderPartLine[];
+  photos?: WorkOrderPhoto[];
+  statusHistory?: WorkOrderStatusEvent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkOrderLaborLine {
+  id: string;
+  workOrderId: string;
+  workOrderServiceId?: string | null;
+  technicianId?: string;
+  laborRateId?: string;
+  description: string;
+  hours: number;
+  ratePerHour: number;
+  subtotal: number;
+}
+
+export interface WorkOrderPartLine {
+  id: string;
+  workOrderId: string;
+  workOrderServiceId?: string | null;
+  sparePartId?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export interface WorkOrderPhoto {
+  id: string;
+  workOrderId: string;
+  photoUrl: string;
+  photoType: 'BEFORE' | 'DURING' | 'AFTER';
+  description?: string;
+}
+
+export interface WorkOrderStatusEvent {
+  id: string;
+  fromStatus?: string;
+  toStatus: string;
+  changedBy?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface WorkOrderStats {
+  DRAFT: number;
+  OPEN: number;
+  DIAGNOSING: number;
+  PENDING_APPROVAL: number;
+  IN_REPAIR: number;
+  COMPLETED: number;
+  INVOICED: number;
+  DELIVERED: number;
+  CANCELLED: number;
+}
+
+export const workOrderApi = {
+  getAll: (
+    token: string,
+    params?: {
+      status?: string;
+      technicianId?: string;
+      clientId?: string;
+      vehicleId?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ) => {
+    const qs = params
+      ? '?' +
+        new URLSearchParams(
+          Object.entries(params)
+            .filter(([, v]) => v != null)
+            .map(([k, v]) => [k, String(v)])
+        ).toString()
+      : '';
+    return apiRequest<{ data: WorkOrder[] }>(`/api/work-orders${qs}`, { token });
+  },
+
+  getStats: (token: string) =>
+    apiRequest<{ data: WorkOrderStats }>('/api/work-orders/stats', { token }),
+
+  getById: (id: string, token: string) =>
+    apiRequest<{ data: WorkOrder }>(`/api/work-orders/${id}`, { token }),
+
+  create: (data: Partial<WorkOrder>, token: string) =>
+    apiRequest<{ data: WorkOrder }>('/api/work-orders', { method: 'POST', body: data, token }),
+
+  update: (id: string, data: Partial<WorkOrder>, token: string) =>
+    apiRequest<{ data: WorkOrder }>(`/api/work-orders/${id}`, { method: 'PUT', body: data, token }),
+
+  changeStatus: (id: string, status: string, notes: string, token: string) =>
+    apiRequest<{ data: WorkOrder }>(`/api/work-orders/${id}/status`, {
+      method: 'POST',
+      body: { status, notes },
+      token,
+    }),
+
+  addLaborLine: (id: string, data: Partial<WorkOrderLaborLine>, token: string) =>
+    apiRequest<{ data: WorkOrderLaborLine }>(`/api/work-orders/${id}/labor`, {
+      method: 'POST',
+      body: data,
+      token,
+    }),
+
+  updateLaborLine: (id: string, lineId: string, data: Partial<WorkOrderLaborLine>, token: string) =>
+    apiRequest<{ data: WorkOrderLaborLine }>(`/api/work-orders/${id}/labor/${lineId}`, {
+      method: 'PUT',
+      body: data,
+      token,
+    }),
+
+  deleteLaborLine: (id: string, lineId: string, token: string) =>
+    apiRequest<void>(`/api/work-orders/${id}/labor/${lineId}`, { method: 'DELETE', token }),
+
+  addPartLine: (id: string, data: Partial<WorkOrderPartLine>, token: string) =>
+    apiRequest<{ data: WorkOrderPartLine }>(`/api/work-orders/${id}/parts`, {
+      method: 'POST',
+      body: data,
+      token,
+    }),
+
+  updatePartLine: (id: string, lineId: string, data: Partial<WorkOrderPartLine>, token: string) =>
+    apiRequest<{ data: WorkOrderPartLine }>(`/api/work-orders/${id}/parts/${lineId}`, {
+      method: 'PUT',
+      body: data,
+      token,
+    }),
+
+  deletePartLine: (id: string, lineId: string, token: string) =>
+    apiRequest<void>(`/api/work-orders/${id}/parts/${lineId}`, { method: 'DELETE', token }),
+
+  addPhoto: (
+    id: string,
+    data: { photoUrl: string; photoType: string; description?: string },
+    token: string
+  ) =>
+    apiRequest<{ data: WorkOrderPhoto }>(`/api/work-orders/${id}/photos`, {
+      method: 'POST',
+      body: data,
+      token,
+    }),
+
+  deletePhoto: (id: string, photoId: string, token: string) =>
+    apiRequest<void>(`/api/work-orders/${id}/photos/${photoId}`, { method: 'DELETE', token }),
+
+  getVehicleHistory: (vehicleId: string, token: string) =>
+    apiRequest<{ data: WorkOrder[] }>(`/api/vehicles/${vehicleId}/work-order-history`, { token }),
+
+  getClientHistory: (clientId: string, token: string) =>
+    apiRequest<{ data: WorkOrder[] }>(`/api/clients/${clientId}/work-order-history`, { token }),
+
+  addService: (
+    id: string,
+    data: { serviceTypeId?: string; name?: string; description?: string; basePrice?: number },
+    token: string
+  ) =>
+    apiRequest<{ data: WorkOrderService; message: string }>(`/api/work-orders/${id}/services`, {
+      method: 'POST',
+      body: data,
+      token,
+    }),
+
+  removeService: (id: string, serviceId: string, token: string) =>
+    apiRequest<{ data: WorkOrderService; message: string }>(`/api/work-orders/${id}/services/${serviceId}`, {
+      method: 'DELETE',
+      token,
+    }),
+};
 
 export { ApiError };

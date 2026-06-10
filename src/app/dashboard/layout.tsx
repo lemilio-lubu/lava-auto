@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Calendar, Car, LogOut, Droplets, User, MessageCircle,
   Briefcase, Users, BarChart, Home, Bell, Loader2,
-  Menu, X, Settings
+  Menu, X, Settings, Database, ClipboardList
 } from 'lucide-react';
 import ThemeLogo from '@/components/ui/ThemeLogo';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -74,6 +74,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             description: 'Administra vehículos',
           },
           {
+            icon: ClipboardList,
+            label: 'Mis Órdenes',
+            href: '/dashboard/client/mis-ordenes',
+            description: 'Historial del taller',
+          },
+          {
             icon: MessageCircle,
             label: 'Chat',
             href: '/dashboard/chat',
@@ -101,6 +107,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             label: 'Mis Trabajos',
             href: '/dashboard/washer/trabajos',
             description: 'Trabajos asignados',
+          },
+          {
+            icon: ClipboardList,
+            label: 'Mis Órdenes',
+            href: '/dashboard/washer/mis-ordenes',
+            description: 'Órdenes asignadas',
           },
           {
             icon: BarChart,
@@ -143,10 +155,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             description: 'Todas las reservas',
           },
           {
+            icon: ClipboardList,
+            label: 'Órdenes de Trabajo',
+            href: '/dashboard/admin/ordenes-trabajo',
+            description: 'Gestión del taller',
+          },
+          {
             icon: Droplets,
             label: 'Servicios',
             href: '/dashboard/admin/servicios',
             description: 'Gestionar servicios',
+          },
+          {
+            icon: Database,
+            label: 'Catálogos',
+            href: '/dashboard/admin/catalogo',
+            description: 'Parámetros del taller',
           },
           {
             icon: MessageCircle,
