@@ -404,42 +404,50 @@ const STEPS = [
   { label: 'work_orders.work_order (demo)',   sql: WORK_ORDER_DEMO_SQL },
 ];
 
-async function seed() {
+/**
+ * runSeed — ejecuta los datos iniciales usando un pool externo (para uso desde index.js).
+ * @param {import('pg').Pool} pool
+ */
+async function runSeed(pool) {
   console.log('[seed] Iniciando carga de datos de prueba...');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const step of STEPS) {
+      console.log(`[seed]   → Insertando ${step.label}...`);
+      await client.query(step.sql);
+    }
+    await client.query('COMMIT');
+    console.log('[seed] ✅ Datos de prueba cargados.');
+    console.log('[seed]   admin@lavauto.com / admin123  (ADMIN)');
+    console.log('[seed]   cliente@test.com  / client123 (CLIENT)');
+    console.log('[seed]   empleado@test.com / employee123 (EMPLOYEE)');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 
+async function seed() {
   const poolConfig = config.db.connectionString
     ? { connectionString: config.db.connectionString, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5_000 }
     : { host: config.db.host, port: config.db.port, database: config.db.name,
         user: config.db.user, password: config.db.password, connectionTimeoutMillis: 5_000 };
 
   const pool = new Pool(poolConfig);
-
-  const client = await pool.connect();
-
   try {
-    await client.query('BEGIN');
-
-    for (const step of STEPS) {
-      console.log(`[seed]   → Insertando ${step.label}...`);
-      await client.query(step.sql);
-    }
-
-    await client.query('COMMIT');
-    console.log('[seed] ✅ Datos de prueba cargados exitosamente.');
-    console.log('[seed]');
-    console.log('[seed] Usuarios disponibles:');
-    console.log('[seed]   admin@lavauto.com   / admin123  (ADMIN)');
-    console.log('[seed]   cliente@test.com    / client123 (CLIENT)');
-    console.log('[seed]   empleado@test.com   / employee123 (EMPLOYEE)');
+    await runSeed(pool);
   } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('[seed] ❌ Error durante el seed. Se hizo ROLLBACK.', err.message);
+    console.error('[seed] ❌ Error durante el seed:', err.message);
     if (err.detail) console.error('[seed] Detalle:', err.detail);
     process.exit(1);
   } finally {
-    client.release();
     await pool.end();
   }
 }
 
-seed();
+if (require.main === module) seed();
+
+module.exports = { runSeed };

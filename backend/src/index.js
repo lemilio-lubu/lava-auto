@@ -253,6 +253,15 @@ app.use(errorHandler);
     console.log('[startup] ✅ Columnas críticas verificadas.');
   } catch (e) {
     console.error('[startup] ⚠ Columnas críticas fallaron:', e.message);
+  }
+
+  // 3. Seed — datos iniciales (idempotente via ON CONFLICT DO NOTHING)
+  try {
+    const { runSeed } = require('../scripts/seed');
+    await runSeed(p);
+    console.log('[startup] ✅ Seed completado.');
+  } catch (e) {
+    console.error('[startup] ⚠ Seed falló (continuando):', e.message);
   } finally {
     await p.end().catch(() => {});
   }
