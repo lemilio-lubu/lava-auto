@@ -46,6 +46,7 @@ jobs:
               docker compose -f docker-compose.dev.yml up -d --build
             fi
             npm run migrate
+            npm run seed
             pm2 restart lava-api || pm2 start src/index.js --name "lava-api" --cwd "$APP_DIR/backend"
 
             # 4. FRONTEND: Build y Start
