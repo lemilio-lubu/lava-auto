@@ -407,14 +407,12 @@ const STEPS = [
 async function seed() {
   console.log('[seed] Iniciando carga de datos de prueba...');
 
-  const pool = new Pool({
-    host:     config.db.host,
-    port:     config.db.port,
-    database: config.db.name,
-    user:     config.db.user,
-    password: config.db.password,
-    connectionTimeoutMillis: 5_000,
-  });
+  const poolConfig = config.db.connectionString
+    ? { connectionString: config.db.connectionString, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5_000 }
+    : { host: config.db.host, port: config.db.port, database: config.db.name,
+        user: config.db.user, password: config.db.password, connectionTimeoutMillis: 5_000 };
+
+  const pool = new Pool(poolConfig);
 
   const client = await pool.connect();
 
