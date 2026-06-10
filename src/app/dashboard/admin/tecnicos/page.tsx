@@ -86,11 +86,11 @@ export default function TécnicosAdminPage() {
       });
       setShowModal(false);
       loadWashers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setToast({
         isOpen: true,
         title: 'Error',
-        message: error.message || 'Error al registrar lavador',
+        message: error instanceof Error ? error.message : 'Error al registrar lavador',
         type: 'error',
       });
     } finally {

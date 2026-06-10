@@ -1,32 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Edit, Trash2, Car as CarIcon } from 'lucide-react';
-import Link from 'next/link';
+import { Plus, Car as CarIcon } from 'lucide-react';
+import VehicleCard, { type Vehicle } from './VehicleCard';
 import VehicleFormModal from './VehicleFormModal';
 import DeleteVehicleModal from './DeleteVehicleModal';
 import CannotDeleteModal from './CannotDeleteModal';
-import { vehicleApi } from '@/lib/api-client';
+import { vehicleApi, ApiError } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Vehicle {
-  id: string;
-  brand: string;
-  model: string;
-  plate: string;
-  year: number | null;
-  color: string | null;
-  vehicleType: string;
-  hasActiveReservations?: boolean;
-}
 
 interface VehicleListProps {
   vehicles: Vehicle[];
 }
 
 export default function VehicleList({ vehicles: initialVehicles }: VehicleListProps) {
-  const router = useRouter();
   const { token } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
   const [showModal, setShowModal] = useState(false);
@@ -62,45 +50,32 @@ export default function VehicleList({ vehicles: initialVehicles }: VehicleListPr
 
     try {
       await vehicleApi.delete(vehicleToDelete.id, token);
-      
-      // Actualizar el estado local
       setVehicles(vehicles.filter(v => v.id !== vehicleToDelete.id));
       setVehicleToDelete(null);
-    } catch (err: any) {
-      // Si el error indica que hay reservas activas, mostrar modal especial
-      if (err.data?.hasActiveReservations) {
+    } catch (err: unknown) {
+      const errorData = err instanceof ApiError ? (err.data as { hasActiveReservations?: boolean } | undefined) : undefined;
+      if (errorData?.hasActiveReservations) {
         setVehicleToDelete(null);
         setCannotDeleteVehicle(vehicleToDelete);
         setShowCannotDeleteModal(true);
       } else {
-        alert(err.message || 'Error al eliminar el vehículo');
+        alert(err instanceof Error ? err.message : 'Error al eliminar el vehículo');
       }
     } finally {
       setDeletingId(null);
     }
   };
 
-  const handleCancelDelete = () => {
-    setVehicleToDelete(null);
-  };
-
   const handleCloseModal = async () => {
     setShowModal(false);
     setEditingVehicle(undefined);
-    
-    // Recargar vehículos después de crear/editar
+
     if (token) {
       try {
-        const updatedVehicles = await vehicleApi.getAll(token);
-        setVehicles(
-          updatedVehicles.map((v) => ({
-            ...v,
-            year: v.year ?? null,
-            color: v.color ?? null,
-          })),
-        );
+        const updated = await vehicleApi.getAll(token);
+        setVehicles(updated.map(v => ({ ...v, year: v.year ?? null, color: v.color ?? null })));
       } catch (error) {
-        console.error('Error reloading vehicles:', error);
+        logger.error('Error recargando vehículos', error);
       }
     }
   };
@@ -124,13 +99,7 @@ export default function VehicleList({ vehicles: initialVehicles }: VehicleListPr
             Registrar Primer Vehículo
           </button>
         </div>
-
-        {showModal && (
-          <VehicleFormModal
-            onClose={handleCloseModal}
-            onSuccess={handleCloseModal}
-          />
-        )}
+        {showModal && <VehicleFormModal onClose={handleCloseModal} onSuccess={handleCloseModal} />}
       </>
     );
   }
@@ -149,84 +118,19 @@ export default function VehicleList({ vehicles: initialVehicles }: VehicleListPr
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {vehicles.map((vehicle) => (
-          <div
+          <VehicleCard
             key={vehicle.id}
-            className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                <CarIcon className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(vehicle)}
-                  className="p-2 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                  title="Editar vehículo"
-                >
-                  <Edit className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleDeleteClick(vehicle)}
-                  disabled={deletingId === vehicle.id}
-                  className={`p-2 rounded-lg transition-colors ${
-                    vehicle.hasActiveReservations
-                      ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                  } disabled:opacity-50`}
-                  title={
-                    vehicle.hasActiveReservations
-                      ? 'No se puede eliminar: tiene reservas activas'
-                      : 'Eliminar vehículo'
-                  }
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
-              {vehicle.brand} {vehicle.model}
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-              {vehicle.year}
-            </p>
-
-            <div className="space-y-2 border-t border-slate-200 dark:border-slate-700 pt-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Placa</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {vehicle.plate}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Color</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {vehicle.color}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Tipo</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {vehicle.vehicleType}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-              <Link
-                href={`/dashboard/client/nueva-reserva?vehicleId=${vehicle.id}`}
-                className="block w-full text-center bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                Solicitar Servicio
-              </Link>
-            </div>
-          </div>
+            vehicle={vehicle}
+            deletingId={deletingId}
+            onEdit={handleEdit}
+            onDelete={handleDeleteClick}
+          />
         ))}
       </div>
 
       {showModal && (
         <VehicleFormModal
-          vehicle={editingVehicle}
+          vehicle={editingVehicle ? { ...editingVehicle, year: editingVehicle.year ?? null, color: editingVehicle.color ?? null } : undefined}
           onClose={handleCloseModal}
           onSuccess={handleCloseModal}
         />
@@ -236,7 +140,7 @@ export default function VehicleList({ vehicles: initialVehicles }: VehicleListPr
         <DeleteVehicleModal
           vehicleName={`${vehicleToDelete.brand} ${vehicleToDelete.model} (${vehicleToDelete.plate})`}
           onConfirm={handleConfirmDelete}
-          onCancel={handleCancelDelete}
+          onCancel={() => setVehicleToDelete(null)}
           isDeleting={deletingId === vehicleToDelete.id}
         />
       )}

@@ -38,7 +38,13 @@ const WorkOrderRepository = require('./work-order.repository');
 const InvoiceService      = require('./invoice.service');
 const { authMiddleware, roleMiddleware } = require('../../middleware/auth');
 const { AppError }        = require('../../middleware/error-handler');
-const { USER_ROLES, WORK_ORDER_STATUS } = require('../../config/constants');
+const {
+  USER_ROLES,
+  WORK_ORDER_STATUS,
+  INVOICEABLE_STATUSES,
+  TERMINAL_STATUSES,
+  DOCUMENT_PREFIXES,
+} = require('../../config/constants');
 
 const router = express.Router();
 
@@ -80,7 +86,8 @@ router.get('/',
   async (req, res, next) => {
     try {
       const { role, id: userId } = req.user;
-      let { status, technicianId, clientId, vehicleId, limit, offset } = req.query;
+      const { status, vehicleId, limit, offset } = req.query;
+      let { technicianId, clientId } = req.query;
 
       if (role === USER_ROLES.EMPLOYEE) {
         if (technicianId && technicianId !== userId) {
@@ -336,8 +343,7 @@ router.delete('/:id',
       const wo = await repo.findById(req.params.id);
       if (!wo) throw new AppError('Orden de trabajo no encontrada.', 404);
 
-      const terminal = [WORK_ORDER_STATUS.DELIVERED, WORK_ORDER_STATUS.INVOICED];
-      if (terminal.includes(wo.status)) {
+      if (TERMINAL_STATUSES.includes(wo.status)) {
         throw new AppError(
           `No se puede cancelar una orden en estado ${wo.status}.`, 422
         );
@@ -387,12 +393,7 @@ router.post('/:id/invoice',
       const wo   = await repo.findById(req.params.id);
       if (!wo) throw new AppError('Orden de trabajo no encontrada.', 404);
 
-      const invoiceableStatuses = [
-        WORK_ORDER_STATUS.COMPLETED,
-        WORK_ORDER_STATUS.INVOICED,
-        WORK_ORDER_STATUS.DELIVERED,
-      ];
-      if (!invoiceableStatuses.includes(wo.status)) {
+      if (!INVOICEABLE_STATUSES.includes(wo.status)) {
         throw new AppError(
           `La orden debe estar en estado COMPLETED, INVOICED o DELIVERED para generar factura. Estado actual: ${wo.status}.`,
           422,
@@ -401,7 +402,7 @@ router.post('/:id/invoice',
 
       let invoice = await repo.findInvoiceByWorkOrder(req.params.id);
       if (!invoice) {
-        const invoiceNumber = `FAC-${wo.orderNumber.replace('OT-', '')}`;
+        const invoiceNumber = `${DOCUMENT_PREFIXES.INVOICE}-${wo.orderNumber.replace(`${DOCUMENT_PREFIXES.ORDER}-`, '')}`;
         invoice = await repo.createInvoice(req.params.id, {
           invoiceNumber,
           subtotal:       wo.finalCost,
@@ -456,12 +457,7 @@ router.get('/:id/invoice/download',
       const wo   = await repo.findById(req.params.id);
       if (!wo) throw new AppError('Orden de trabajo no encontrada.', 404);
 
-      const invoiceableStatuses = [
-        WORK_ORDER_STATUS.COMPLETED,
-        WORK_ORDER_STATUS.INVOICED,
-        WORK_ORDER_STATUS.DELIVERED,
-      ];
-      if (!invoiceableStatuses.includes(wo.status)) {
+      if (!INVOICEABLE_STATUSES.includes(wo.status)) {
         throw new AppError(
           `La orden debe estar en estado COMPLETED, INVOICED o DELIVERED para generar factura. Estado actual: ${wo.status}.`,
           422,
@@ -470,7 +466,7 @@ router.get('/:id/invoice/download',
 
       let invoice = await repo.findInvoiceByWorkOrder(req.params.id);
       if (!invoice) {
-        const invoiceNumber = `FAC-${wo.orderNumber.replace('OT-', '')}`;
+        const invoiceNumber = `${DOCUMENT_PREFIXES.INVOICE}-${wo.orderNumber.replace(`${DOCUMENT_PREFIXES.ORDER}-`, '')}`;
         invoice = await repo.createInvoice(req.params.id, {
           invoiceNumber,
           subtotal:       wo.finalCost,

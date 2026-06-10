@@ -60,6 +60,28 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
   return data as T;
 }
 
+/**
+ * Variante de apiRequest para respuestas binarias (PDF, imágenes, etc.).
+ * Centraliza el manejo de auth y errores igual que apiRequest, pero devuelve
+ * un Blob en lugar de parsear JSON.
+ */
+async function apiRequestBlob(endpoint: string, options: RequestOptions = {}): Promise<Blob> {
+  const { method = 'GET', headers = {}, token } = options;
+
+  const requestHeaders: Record<string, string> = { ...headers };
+  if (token) {
+    requestHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_GATEWAY_URL}${endpoint}`, { method, headers: requestHeaders });
+
+  if (!response.ok) {
+    throw new ApiError(`Request failed with status ${response.status}`, response.status);
+  }
+
+  return response.blob();
+}
+
 // Auth API
 export const authApi = {
   register: (data: {
@@ -131,6 +153,10 @@ export const authApi = {
 export const vehicleApi = {
   getAll: (token: string) =>
     apiRequest<Vehicle[]>('/api/vehicles', { token }),
+
+  /** Todos los vehículos del sistema (solo ADMIN). */
+  getAllForAdmin: (token: string) =>
+    apiRequest<{ data: Vehicle[] } | Vehicle[]>('/api/vehicles/all', { token }),
 
   getById: (id: string, token: string) =>
     apiRequest<Vehicle>(`/api/vehicles/${id}`, { token }),
@@ -211,10 +237,10 @@ export const reservationApi = {
 // Job API (for washers)
 export const jobApi = {
   getAvailable: (token: string) =>
-    apiRequest<Reservation[]>('/api/jobs/available', { token }),
+    apiRequest<Job[]>('/api/jobs/available', { token }),
 
   getMyJobs: (token: string, status?: string) =>
-    apiRequest<Reservation[]>(
+    apiRequest<Job[]>(
       status ? `/api/jobs/my-jobs?status=${status}` : '/api/jobs/my-jobs',
       { token }
     ),
@@ -410,7 +436,7 @@ export interface Vehicle {
   plate: string;
   vehicleType: 'SEDAN' | 'SUV' | 'HATCHBACK' | 'PICKUP' | 'VAN' | 'MOTORCYCLE';
   color?: string | null;
-  year?: number;
+  year?: number | null;
   ownerName: string;
   ownerPhone?: string;
   isActive: boolean;
@@ -497,6 +523,15 @@ export interface Reservation {
   completedAt?: string;
   estimatedArrival?: string;
   createdAt: string;
+  updatedAt?: string;
+}
+
+/**
+ * Reserva enriquecida con datos del vehículo, tal como la devuelven los
+ * endpoints `/api/jobs/*` (JOIN a vehicles.vehicles).
+ */
+export interface Job extends Reservation {
+  vehicle?: Partial<Vehicle> | null;
 }
 
 export interface CreateReservationData {
@@ -824,6 +859,10 @@ export const workOrderApi = {
 
   getById: (id: string, token: string) =>
     apiRequest<{ data: WorkOrder }>(`/api/work-orders/${id}`, { token }),
+
+  /** Descarga la factura de la orden como PDF (Blob). */
+  downloadInvoice: (id: string, token: string) =>
+    apiRequestBlob(`/api/work-orders/${id}/invoice/download`, { token }),
 
   create: (data: Partial<WorkOrder>, token: string) =>
     apiRequest<{ data: WorkOrder }>('/api/work-orders', { method: 'POST', body: data, token }),

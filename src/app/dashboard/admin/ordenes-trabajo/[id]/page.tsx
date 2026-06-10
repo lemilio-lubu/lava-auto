@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Loader2,
@@ -11,6 +11,7 @@ import {
   Trash2,
   Clock,
   FileText,
+  Check,
 } from 'lucide-react';
 import {
   workOrderApi,
@@ -31,6 +32,12 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import Toast from '@/components/ui/Toast';
+import {
+  WORK_ORDER_STATUS_LABELS,
+  WORK_ORDER_STATUS_VARIANTS,
+  PRIORITY_LABELS,
+  PRIORITY_VARIANTS,
+} from '@/lib/constants';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,44 +53,6 @@ type ToastState = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<StatusKey, string> = {
-  DRAFT: 'Borrador',
-  OPEN: 'Abierta',
-  DIAGNOSING: 'Diagnóstico',
-  PENDING_APPROVAL: 'Pend. Aprobación',
-  IN_REPAIR: 'En Reparación',
-  COMPLETED: 'Completada',
-  INVOICED: 'Facturada',
-  DELIVERED: 'Entregada',
-  CANCELLED: 'Cancelada',
-};
-
-const STATUS_VARIANT: Record<StatusKey, 'neutral' | 'info' | 'warning' | 'error' | 'primary' | 'success'> = {
-  DRAFT: 'neutral',
-  OPEN: 'info',
-  DIAGNOSING: 'warning',
-  PENDING_APPROVAL: 'warning',
-  IN_REPAIR: 'primary',
-  COMPLETED: 'success',
-  INVOICED: 'success',
-  DELIVERED: 'success',
-  CANCELLED: 'error',
-};
-
-const PRIORITY_LABELS: Record<PriorityKey, string> = {
-  LOW: 'Baja',
-  NORMAL: 'Normal',
-  HIGH: 'Alta',
-  URGENT: 'Urgente',
-};
-
-const PRIORITY_VARIANT: Record<PriorityKey, 'neutral' | 'info' | 'warning' | 'error'> = {
-  LOW: 'neutral',
-  NORMAL: 'info',
-  HIGH: 'warning',
-  URGENT: 'error',
-};
-
 const NEXT_STATUSES: Partial<Record<StatusKey, StatusKey[]>> = {
   DRAFT: ['OPEN', 'CANCELLED'],
   OPEN: ['DIAGNOSING', 'CANCELLED'],
@@ -92,6 +61,27 @@ const NEXT_STATUSES: Partial<Record<StatusKey, StatusKey[]>> = {
   IN_REPAIR: ['COMPLETED', 'CANCELLED'],
   COMPLETED: ['INVOICED'],
   INVOICED: ['DELIVERED'],
+};
+
+const STATUS_STEPS: StatusKey[] = [
+  'DRAFT', 'OPEN', 'DIAGNOSING', 'PENDING_APPROVAL',
+  'IN_REPAIR', 'COMPLETED', 'INVOICED', 'DELIVERED',
+];
+
+const STEP_LABELS: Record<string, string> = {
+  DRAFT: 'Borrador', OPEN: 'Abierta', DIAGNOSING: 'Diagnóst.',
+  PENDING_APPROVAL: 'Aprobac.', IN_REPAIR: 'Reparac.',
+  COMPLETED: 'Lista', INVOICED: 'Facturada', DELIVERED: 'Entregada', CANCELLED: 'Cancelada',
+};
+
+const ADVANCE_LABELS: Partial<Record<StatusKey, string>> = {
+  OPEN: 'Abrir orden',
+  DIAGNOSING: 'Iniciar diagnóstico',
+  PENDING_APPROVAL: 'Enviar a aprobación',
+  IN_REPAIR: 'Iniciar reparación',
+  COMPLETED: 'Marcar completada',
+  INVOICED: 'Facturar',
+  DELIVERED: 'Marcar entregada',
 };
 
 const INPUT_CLASS =
@@ -140,6 +130,71 @@ function TextBlock({ label, value }: { label: string; value?: string }) {
   );
 }
 
+// ─── StatusStepper ────────────────────────────────────────────────────────────
+
+function StatusStepper({ currentStatus }: { currentStatus: StatusKey }) {
+  if (currentStatus === 'CANCELLED') {
+    return (
+      <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700">
+        <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+          <span className="text-sm font-medium text-red-700 dark:text-red-400">Orden cancelada — estado terminal</span>
+        </div>
+      </div>
+    );
+  }
+
+  const currentIdx = STATUS_STEPS.indexOf(currentStatus);
+
+  return (
+    <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700 overflow-x-auto">
+      <div className="flex items-start" style={{ minWidth: 480 }}>
+        {STATUS_STEPS.map((step, idx) => {
+          const isDone   = idx < currentIdx;
+          const isActive = idx === currentIdx;
+          const isNext   = idx === currentIdx + 1;
+
+          return (
+            <div key={step} className="flex-1 flex flex-col items-center relative">
+              {idx < STATUS_STEPS.length - 1 && (
+                <div
+                  className={`absolute top-3 left-1/2 w-full h-0.5 ${
+                    isDone ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-700'
+                  }`}
+                />
+              )}
+              <div
+                className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                  isDone
+                    ? 'bg-teal-500 text-white'
+                    : isActive
+                    ? 'bg-blue-600 text-white'
+                    : isNext
+                    ? 'bg-white dark:bg-slate-800 text-blue-500 border-2 border-blue-400 border-dashed'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
+                }`}
+              >
+                {isDone ? <Check className="w-3 h-3" /> : idx + 1}
+              </div>
+              <span
+                className={`mt-1.5 text-center leading-tight ${
+                  isActive
+                    ? 'text-xs font-semibold text-blue-600 dark:text-blue-400'
+                    : isDone
+                    ? 'text-xs text-teal-600 dark:text-teal-400'
+                    : 'text-xs text-slate-400 dark:text-slate-500'
+                }`}
+                style={{ maxWidth: 56 }}
+              >
+                {STEP_LABELS[step]}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── ServicesSection ──────────────────────────────────────────────────────────
 
 interface ServicesSectionProps {
@@ -156,6 +211,7 @@ function ServicesSection({ workOrder, token, services, onRefresh, showToast }: S
   const [serviceId, setServiceId] = useState('');
   const [preview, setPreview] = useState<Service | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const woServices = workOrder.services ?? [];
 
@@ -189,10 +245,12 @@ function ServicesSection({ workOrder, token, services, onRefresh, showToast }: S
     }
   }
 
-  async function handleRemove(woServiceId: string) {
-    if (!confirm('¿Eliminar este servicio? Las líneas asociadas quedarán sin agrupar.')) return;
+  async function handleRemove() {
+    if (!confirmDeleteId) return;
+    const idToDelete = confirmDeleteId;
+    setConfirmDeleteId(null);
     try {
-      await workOrderApi.removeService(workOrder.id, woServiceId, token);
+      await workOrderApi.removeService(workOrder.id, idToDelete, token);
       showToast({ title: 'Eliminado', message: 'Servicio eliminado', type: 'success' });
       onRefresh();
     } catch {
@@ -245,7 +303,8 @@ function ServicesSection({ workOrder, token, services, onRefresh, showToast }: S
                       {fmt(svc.basePrice + laborTotal(svc) + partsTotal(svc))}
                     </span>
                     <button
-                      onClick={() => handleRemove(svc.id)}
+                      type="button"
+                      onClick={() => setConfirmDeleteId(svc.id)}
                       className="p-1 rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                       aria-label="Eliminar servicio"
                     >
@@ -258,6 +317,19 @@ function ServicesSection({ workOrder, token, services, onRefresh, showToast }: S
           </div>
         )}
       </SectionCard>
+
+      <Modal isOpen={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)}>
+        <div className="p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">¿Eliminar servicio?</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Las líneas de mano de obra y repuestos asociadas quedarán sin agrupar.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>Cancelar</Button>
+            <Button onClick={handleRemove}>Eliminar</Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={open} onClose={() => setOpen(false)}>
         <div className="p-6 space-y-4">
@@ -1161,17 +1233,17 @@ function StatusHistorySection({ workOrder }: { workOrder: WorkOrder }) {
               <p className="text-sm font-medium text-slate-900 dark:text-white">
                 {ev.fromStatus ? (
                   <>
-                    <span className="text-slate-500 dark:text-slate-400">{STATUS_LABELS[ev.fromStatus as StatusKey] ?? ev.fromStatus}</span>
+                    <span className="text-slate-500 dark:text-slate-400">{WORK_ORDER_STATUS_LABELS[ev.fromStatus as StatusKey] ?? ev.fromStatus}</span>
                     {' → '}
                   </>
                 ) : null}
-                <span>{STATUS_LABELS[ev.toStatus as StatusKey] ?? ev.toStatus}</span>
+                <span>{WORK_ORDER_STATUS_LABELS[ev.toStatus as StatusKey] ?? ev.toStatus}</span>
               </p>
               {ev.changedBy && (
                 <p className="text-xs text-slate-500 dark:text-slate-400">Por: {ev.changedBy}</p>
               )}
               {ev.notes && (
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 italic">"{ev.notes}"</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 italic">&ldquo;{ev.notes}&rdquo;</p>
               )}
               <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -1191,6 +1263,7 @@ export default function WorkOrderDetailPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
 
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [employees, setEmployees] = useState<User[]>([]);
@@ -1253,6 +1326,16 @@ export default function WorkOrderDetailPage() {
         setIsLoading(false);
       }
 
+      const warnings = searchParams.get('warnings');
+      if (warnings) {
+        showToast({
+          title: 'Algunos servicios no se aplicaron',
+          message: `No se pudieron agregar: ${decodeURIComponent(warnings)}. Agrégalos manualmente desde esta pantalla.`,
+          type: 'warning',
+        });
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+
       // Catalog data is non-critical — load separately so a catalog failure
       // doesn't prevent the work order from rendering.
       try {
@@ -1272,20 +1355,14 @@ export default function WorkOrderDetailPage() {
     };
 
     init();
-  }, [user, token, authLoading, router, params.id, showToast]);
+  }, [user, token, authLoading, router, params.id, showToast, searchParams]);
 
   // ── Invoice download ──
 
   const handleDownloadInvoice = async () => {
     if (!workOrder || !token) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-      const response = await fetch(
-        `${apiUrl}/api/work-orders/${workOrder.id}/invoice/download`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!response.ok) throw new Error('Error al generar la factura');
-      const blob = await response.blob();
+      const blob = await workOrderApi.downloadInvoice(workOrder.id, token);
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
@@ -1303,9 +1380,8 @@ export default function WorkOrderDetailPage() {
 
   // ── Status modal ──
 
-  function openStatusModal() {
-    const nextOptions = workOrder ? (NEXT_STATUSES[workOrder.status] ?? []) : [];
-    setStatusForm({ status: nextOptions[0] ?? '', notes: '' });
+  function handleInitiateStatusChange(status: StatusKey) {
+    setStatusForm({ status, notes: '' });
     setShowStatusModal(true);
   }
 
@@ -1314,7 +1390,7 @@ export default function WorkOrderDetailPage() {
     setSavingStatus(true);
     try {
       await workOrderApi.changeStatus(workOrder.id, statusForm.status, statusForm.notes, token!);
-      showToast({ title: 'Estado actualizado', message: `La orden pasó a ${STATUS_LABELS[statusForm.status as StatusKey]}`, type: 'success' });
+      showToast({ title: 'Estado actualizado', message: `La orden pasó a ${WORK_ORDER_STATUS_LABELS[statusForm.status as StatusKey]}`, type: 'success' });
       await loadWorkOrder();
       setShowStatusModal(false);
     } catch {
@@ -1376,8 +1452,9 @@ export default function WorkOrderDetailPage() {
     );
   }
 
-  const nextOptions = NEXT_STATUSES[workOrder.status] ?? [];
-  const canChangeStatus = nextOptions.length > 0;
+  const nextOptions   = NEXT_STATUSES[workOrder.status] ?? [];
+  const forwardOptions = nextOptions.filter((s) => s !== 'CANCELLED');
+  const canCancel      = nextOptions.includes('CANCELLED');
 
   return (
     <div className="space-y-6">
@@ -1398,8 +1475,8 @@ export default function WorkOrderDetailPage() {
                 <h1 className="text-2xl font-bold font-mono text-slate-900 dark:text-white">
                   {workOrder.orderNumber}
                 </h1>
-                <Badge variant={STATUS_VARIANT[workOrder.status]}>{STATUS_LABELS[workOrder.status]}</Badge>
-                <Badge variant={PRIORITY_VARIANT[workOrder.priority]} size="sm">{PRIORITY_LABELS[workOrder.priority]}</Badge>
+                <Badge variant={WORK_ORDER_STATUS_VARIANTS[workOrder.status]}>{WORK_ORDER_STATUS_LABELS[workOrder.status]}</Badge>
+                <Badge variant={PRIORITY_VARIANTS[workOrder.priority]} size="sm">{PRIORITY_LABELS[workOrder.priority]}</Badge>
               </div>
 
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
@@ -1430,10 +1507,25 @@ export default function WorkOrderDetailPage() {
             </div>
 
             {/* Action bar */}
-            <div className="flex gap-2 flex-shrink-0 flex-wrap">
-              {canChangeStatus && (
-                <Button variant="secondary" size="sm" onClick={openStatusModal}>
-                  Cambiar Estado
+            <div className="flex gap-2 flex-shrink-0 flex-wrap items-start">
+              {forwardOptions.map((s, i) => (
+                <Button
+                  key={s}
+                  variant={i === 0 ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => handleInitiateStatusChange(s)}
+                >
+                  {ADVANCE_LABELS[s] ?? WORK_ORDER_STATUS_LABELS[s]}
+                </Button>
+              ))}
+              {canCancel && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 border-red-300 hover:bg-red-50 dark:border-red-700 dark:hover:bg-red-950/20"
+                  onClick={() => handleInitiateStatusChange('CANCELLED')}
+                >
+                  Cancelar orden
                 </Button>
               )}
               {(workOrder.status === 'COMPLETED' ||
@@ -1450,6 +1542,8 @@ export default function WorkOrderDetailPage() {
               </Button>
             </div>
           </div>
+
+          <StatusStepper currentStatus={workOrder.status} />
         </div>
       </div>
 
@@ -1505,23 +1599,26 @@ export default function WorkOrderDetailPage() {
       {/* StatusModal */}
       <Modal isOpen={showStatusModal} onClose={() => setShowStatusModal(false)}>
         <div className="p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Cambiar estado</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Estado actual: <span className="font-medium text-slate-700 dark:text-slate-300">{STATUS_LABELS[workOrder.status]}</span>
-          </p>
-
-          <div>
-            <label className={LABEL_CLASS}>Nuevo estado</label>
-            <select
-              value={statusForm.status}
-              onChange={(e) => setStatusForm({ ...statusForm, status: e.target.value as StatusKey })}
-              className={INPUT_CLASS}
-            >
-              {nextOptions.map((s) => (
-                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-              ))}
-            </select>
-          </div>
+          {statusForm.status === 'CANCELLED' ? (
+            <>
+              <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">Cancelar orden</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Esta acción es irreversible. La orden quedará en estado cancelado.
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {ADVANCE_LABELS[statusForm.status as StatusKey] ?? WORK_ORDER_STATUS_LABELS[statusForm.status as StatusKey]}
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                La orden pasará de{' '}
+                <span className="font-medium text-slate-700 dark:text-slate-300">{WORK_ORDER_STATUS_LABELS[workOrder.status]}</span>
+                {' '}a{' '}
+                <span className="font-medium text-slate-700 dark:text-slate-300">{WORK_ORDER_STATUS_LABELS[statusForm.status as StatusKey]}</span>.
+              </p>
+            </>
+          )}
 
           <div>
             <label className={LABEL_CLASS}>Notas (opcional)</label>
@@ -1530,13 +1627,21 @@ export default function WorkOrderDetailPage() {
               value={statusForm.notes}
               onChange={(e) => setStatusForm({ ...statusForm, notes: e.target.value })}
               className={INPUT_CLASS}
-              placeholder="Motivo del cambio..."
+              placeholder="Ej: diagnóstico completado, esperando repuestos..."
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => setShowStatusModal(false)}>Cancelar</Button>
-            <Button onClick={handleChangeStatus} isLoading={savingStatus} disabled={!statusForm.status}>
+            <Button variant="outline" onClick={() => setShowStatusModal(false)}>
+              {statusForm.status === 'CANCELLED' ? 'Volver' : 'Cancelar'}
+            </Button>
+            <Button
+              onClick={handleChangeStatus}
+              isLoading={savingStatus}
+              {...(statusForm.status === 'CANCELLED' && {
+                className: 'bg-red-600 hover:bg-red-700 text-white border-red-600',
+              })}
+            >
               Confirmar
             </Button>
           </div>

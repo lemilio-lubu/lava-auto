@@ -13,6 +13,7 @@
 
 const { Pool } = require('pg');
 const config = require('./env');
+const logger = require('../shared/logger');
 
 // Si DATABASE_URL está disponible (Railway Postgres plugin) se usa connectionString
 // directamente; libpq (pg) ignora el resto de las opciones en ese caso.
@@ -40,7 +41,7 @@ const pool = new Pool(poolConfig);
 
 // Log de errores en clientes idle (no termina el proceso)
 pool.on('error', (err) => {
-  console.error('[db] Error inesperado en cliente idle:', err.message);
+  logger.error('[db] Error inesperado en cliente idle:', err.message);
 });
 
 /**
@@ -56,11 +57,11 @@ async function query(text, params) {
     const result = await pool.query(text, params);
     if (!config.isProduction) {
       const duration = Date.now() - start;
-      console.debug(`[db] query (${duration}ms) rows=${result.rowCount} — ${text.slice(0, 60)}`);
+      logger.debug(`[db] query (${duration}ms) rows=${result.rowCount} — ${text.slice(0, 60)}`);
     }
     return result;
   } catch (err) {
-    console.error('[db] Error en query:', { sql: text.slice(0, 80), error: err.message });
+    logger.error('[db] Error en query:', { sql: text.slice(0, 80), error: err.message });
     throw err;
   }
 }

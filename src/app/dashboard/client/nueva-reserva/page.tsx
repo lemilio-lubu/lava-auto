@@ -6,13 +6,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import ReservationForm from '@/components/reservas/ReservationForm';
-import { vehicleApi, serviceApi } from '@/lib/api-client';
+import { vehicleApi, serviceApi, type Vehicle, type Service } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function NuevaReservaPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [services, setServices] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -30,9 +31,9 @@ export default function NuevaReservaPage() {
       ])
         .then(([vehiclesData, servicesData]) => {
           setVehicles(vehiclesData);
-          setServices(servicesData.filter((s: any) => s.isActive));
+          setServices(servicesData.filter((service) => service.isActive));
         })
-        .catch(console.error)
+        .catch((error) => logger.error('Error cargando datos de nueva reserva', error))
         .finally(() => setIsLoading(false));
     }
   }, [user, token, authLoading, router]);

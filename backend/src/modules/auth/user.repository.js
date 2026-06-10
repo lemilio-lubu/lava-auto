@@ -74,11 +74,11 @@ class UserRepository extends BaseRepository {
    */
   async findWashers({ available, limit = 50 } = {}) {
     const safeLimit = Math.min(parseInt(limit, 10) || 50, 100);
-    const params = [safeLimit];
+    const params = [USER_ROLES.EMPLOYEE, safeLimit];
     let availableClause = '';
 
     if (available !== undefined) {
-      availableClause = `AND is_available = $2`;
+      availableClause = `AND is_available = $3`;
       params.push(available);
     }
 
@@ -87,9 +87,9 @@ class UserRepository extends BaseRepository {
               is_available, rating, completed_services,
               address, latitude, longitude
        FROM ${this._table}
-       WHERE role = '${USER_ROLES.EMPLOYEE}' ${availableClause}
+       WHERE role = $1 ${availableClause}
        ORDER BY rating DESC
-       LIMIT $1`,
+       LIMIT $2`,
       params
     );
     return rows;

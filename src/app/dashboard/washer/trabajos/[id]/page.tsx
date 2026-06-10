@@ -5,7 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, MapPin, Clock, Car, Play, CheckCircle, ArrowLeft, User, Banknote, CreditCard, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { jobApi, paymentApi } from '@/lib/api-client';
+import { jobApi, paymentApi, type Job, type Payment } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function JobDetailPage() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -13,8 +14,8 @@ export default function JobDetailPage() {
   const params = useParams();
   const jobId = params.id as string;
   
-  const [job, setJob] = useState<any>(null);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [job, setJob] = useState<Job | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [cashConfirming, setCashConfirming] = useState(false);
@@ -35,9 +36,9 @@ export default function JobDetailPage() {
     try {
       const [jobs, paymentsData] = await Promise.all([
         jobApi.getMyJobs(token),
-        paymentApi.getByReservation(jobId, token).catch(() => [] as any[]),
+        paymentApi.getByReservation(jobId, token).catch(() => [] as Payment[]),
       ]);
-      const foundJob = jobs.find((j: any) => j.id === jobId);
+      const foundJob = jobs.find((j) => j.id === jobId);
       if (foundJob) {
         setJob(foundJob);
       } else {
@@ -45,7 +46,7 @@ export default function JobDetailPage() {
       }
       setPayments(paymentsData);
     } catch (error) {
-      console.error('Error loading job:', error);
+      logger.error('Error cargando el trabajo', error);
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +59,7 @@ export default function JobDetailPage() {
       await jobApi.start(jobId, token);
       await loadAll();
     } catch (error) {
-      console.error('Error starting job:', error);
+      logger.error('Error iniciando el trabajo', error);
       alert('Error al iniciar el trabajo');
     } finally {
       setActionLoading(false);
@@ -72,7 +73,7 @@ export default function JobDetailPage() {
       await jobApi.complete(jobId, proofImages, token);
       router.push('/dashboard/washer/trabajos');
     } catch (error) {
-      console.error('Error completing job:', error);
+      logger.error('Error completando el trabajo', error);
       alert('Error al completar el trabajo');
     } finally {
       setActionLoading(false);
@@ -88,8 +89,8 @@ export default function JobDetailPage() {
     try {
       const updated = await paymentApi.confirmCash(pendingCash.id, token);
       setPayments(payments.map(p => p.id === updated.id ? updated : p));
-    } catch (err: any) {
-      setCashError(err.message || 'Error al confirmar el pago');
+    } catch (err: unknown) {
+      setCashError(err instanceof Error ? err.message : 'Error al confirmar el pago');
     } finally {
       setCashConfirming(false);
     }

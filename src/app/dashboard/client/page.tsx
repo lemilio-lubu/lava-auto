@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Car, Calendar, Star, Bell, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { vehicleApi, reservationApi, notificationApi } from '@/lib/api-client';
+import { vehicleApi, reservationApi, notificationApi, type Vehicle, type Reservation, type Notification } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function ClientDashboard() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [reservations, setReservations] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -32,10 +33,10 @@ export default function ClientDashboard() {
         .then(([vehiclesData, reservationsData, notificationsData]) => {
           setVehicles(vehiclesData);
           // Filtrar reservas canceladas de las recientes
-          setReservations(reservationsData.filter((r: any) => r.status !== 'CANCELLED').slice(0, 5)); // Last 5 no canceladas
-          setNotifications(notificationsData.filter((n: any) => !n.isRead).slice(0, 5));
+          setReservations(reservationsData.filter((reservation) => reservation.status !== 'CANCELLED').slice(0, 5)); // Last 5 no canceladas
+          setNotifications(notificationsData.filter((notification) => !notification.isRead).slice(0, 5));
         })
-        .catch(console.error)
+        .catch((error) => logger.error('Error cargando panel del cliente', error))
         .finally(() => setIsLoading(false));
     }
   }, [user, token, authLoading, router]);

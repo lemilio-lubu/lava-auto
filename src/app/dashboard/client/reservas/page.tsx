@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import ReservationsTable from '@/components/reservas/ReservationsTable';
-import { reservationApi, vehicleApi, serviceApi, paymentApi, Vehicle, Service } from '@/lib/api-client';
+import { reservationApi, vehicleApi, serviceApi, paymentApi, type Vehicle, type Service, type Reservation, type Payment } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function ReservasPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [reservations, setReservations] = useState<any[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [paymentsMap, setPaymentsMap] = useState<Map<string, any>>(new Map());
+  const [paymentsMap, setPaymentsMap] = useState<Map<string, Payment>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -40,17 +41,17 @@ export default function ReservasPage() {
       setVehicles(vehiclesData);
       setServices(servicesData);
       // Build map: reservationId → most relevant payment
-      const map = new Map<string, any>();
-      (paymentsData as any[]).forEach((p: any) => {
-        const existing = map.get(p.reservationId);
+      const map = new Map<string, Payment>();
+      (paymentsData as Payment[]).forEach((payment) => {
+        const existing = map.get(payment.reservationId);
         // Prefer COMPLETED over any other status
-        if (!existing || p.status === 'COMPLETED') {
-          map.set(p.reservationId, p);
+        if (!existing || payment.status === 'COMPLETED') {
+          map.set(payment.reservationId, payment);
         }
       });
       setPaymentsMap(map);
     } catch (error) {
-      console.error('Error loading data:', error);
+      logger.error('Error cargando reservas del cliente', error);
     } finally {
       setIsLoading(false);
     }

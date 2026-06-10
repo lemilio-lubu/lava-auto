@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { reservationApi, paymentApi } from '@/lib/api-client';
+import { reservationApi, paymentApi, type Reservation, type Payment, type Vehicle } from '@/lib/api-client';
+
+/** Reserva con el vehículo embebido que muestra la pantalla de pago. */
+type ReservationDetail = Reservation & { vehicle?: Partial<Vehicle> | null };
 import { ArrowLeft, CreditCard, Banknote, Loader2, Check, Clock, Car, Calendar, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import PaymentModal from '@/components/payment/PaymentModal';
@@ -12,8 +15,8 @@ export default function PaymentPage() {
   const params = useParams();
   const router = useRouter();
   const { user, token, isLoading: authLoading } = useAuth();
-  const [reservation, setReservation] = useState<any>(null);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [reservation, setReservation] = useState<ReservationDetail | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -38,8 +41,8 @@ export default function PaymentPage() {
         ]);
         setReservation(reservationData);
         setPayments(paymentsData);
-      } catch (err: any) {
-        setError(err.message || 'Error al cargar la información');
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Error al cargar la información');
       } finally {
         setIsLoading(false);
       }
@@ -48,7 +51,7 @@ export default function PaymentPage() {
     fetchData();
   }, [user, token, authLoading, router, reservationId]);
 
-  const handlePaymentSuccess = (payment: any) => {
+  const handlePaymentSuccess = (payment: Payment) => {
     setPayments([payment, ...payments]);
     setShowPaymentModal(false);
     // Refresh reservation data
@@ -64,8 +67,8 @@ export default function PaymentPage() {
     try {
       const payment = await paymentApi.cashPayment(reservationId, token);
       setPayments([payment, ...payments]);
-    } catch (err: any) {
-      setCashError(err.message || 'Error al registrar el pago en efectivo');
+    } catch (err: unknown) {
+      setCashError(err instanceof Error ? err.message : 'Error al registrar el pago en efectivo');
     } finally {
       setIsCashSubmitting(false);
     }

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, Loader2, UserCog, Shield, Lock, Eye, EyeOff, X } from 'lucide-react';
-import { adminApi } from '@/lib/api-client';
+import { adminApi, type User } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 interface PasswordModalState {
   userId: string;
@@ -14,7 +15,7 @@ interface PasswordModalState {
 export default function UsuariosPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'CLIENT' | 'EMPLOYEE' | 'ADMIN'>('ALL');
 
@@ -40,7 +41,7 @@ export default function UsuariosPage() {
       const data = await adminApi.getUsers(token);
       setUsers(data);
     } catch (error) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error);
     } finally {
       setIsLoading(false);
     }
@@ -69,8 +70,8 @@ export default function UsuariosPage() {
       setSuccessMsg(`Contraseña de ${pwModal.userName} actualizada. El usuario deberá cambiarla al iniciar sesión.`);
       setPwModal(null);
       setTimeout(() => setSuccessMsg(''), 5000);
-    } catch (err: any) {
-      setPwError(err.message ?? 'Error al cambiar la contraseña.');
+    } catch (err: unknown) {
+      setPwError(err instanceof Error ? err.message : 'Error al cambiar la contraseña.');
     } finally {
       setPwLoading(false);
     }
@@ -183,7 +184,7 @@ export default function UsuariosPage() {
 
       {/* Password Modal */}
       {pwModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -214,7 +215,7 @@ export default function UsuariosPage() {
                     className="w-full px-4 py-2.5 pr-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     placeholder="Mínimo 6 caracteres"
                   />
-                  <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <button type="button" onClick={() => setShowPassword(prev => !prev)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>

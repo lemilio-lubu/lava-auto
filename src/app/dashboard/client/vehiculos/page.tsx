@@ -6,12 +6,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import VehicleList from '@/components/vehicles/VehicleList';
-import { vehicleApi } from '@/lib/api-client';
+import { vehicleApi, type Vehicle } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function VehiculosPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function VehiculosPage() {
     if (token) {
       vehicleApi.getAll(token)
         .then(setVehicles)
-        .catch(console.error)
+        .catch((error) => logger.error('Error cargando vehículos', error))
         .finally(() => setIsLoading(false));
     }
   }, [user, token, authLoading, router]);
@@ -57,7 +58,7 @@ export default function VehiculosPage() {
         </div>
       </div>
 
-      <VehicleList vehicles={vehicles} />
+      <VehicleList vehicles={vehicles.map(v => ({ ...v, year: v.year ?? null, color: v.color ?? null }))} />
 
       <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
         <h3 className="font-bold text-slate-900 dark:text-white mb-4">

@@ -9,6 +9,7 @@ import {
   workOrderApi,
   adminApi,
   serviceApi,
+  vehicleApi,
   type User,
   type Vehicle,
   type Service,
@@ -117,11 +118,13 @@ function ServiceCard({ service, onRemove }: { service: Service; onRemove: () => 
 function ServicePicker({
   services,
   selected,
+  vehicleSelected,
   onAdd,
   onRemove,
 }: {
   services: Service[];
   selected: SelectedService[];
+  vehicleSelected: boolean;
   onAdd: (serviceId: string) => Promise<void>;
   onRemove: (tempId: string) => void;
 }) {
@@ -158,7 +161,9 @@ function ServicePicker({
           <label className="text-xs text-slate-500 dark:text-slate-400">Agregar servicio</label>
           <select value={pick} onChange={(e) => setPick(e.target.value)} className={INPUT_CLASS}>
             <option value="">Seleccionar servicio...</option>
-            {services.filter((s) => s.isActive).map((s) => (
+            {services
+              .filter((s) => s.isActive && !selected.some((sel) => sel.service.id === s.id))
+              .map((s) => (
               <option key={s.id} value={s.id}>{s.name} — {fmt(s.price)}</option>
             ))}
           </select>
@@ -171,9 +176,14 @@ function ServicePicker({
         </div>
       </div>
 
-      {services.length === 0 && (
+      {!vehicleSelected && (
         <p className="text-xs text-amber-600 dark:text-amber-400">
-          No hay servicios disponibles. Crea servicios en Servicios para poder usarlos aquí.
+          Selecciona un vehículo para ver sus servicios disponibles.
+        </p>
+      )}
+      {vehicleSelected && services.length === 0 && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          No hay servicios disponibles para este tipo de vehículo.
         </p>
       )}
     </div>
@@ -229,11 +239,14 @@ export default function NuevaOrdenPage() {
     } catch {
       setToast({ isOpen: true, title: 'Error', message: 'No se pudieron cargar los datos', type: 'error' });
     }
+  };
 
-    // Servicios — fuente de mano de obra y repuestos de la orden.
+  const loadServicesForVehicle = async (id: string) => {
+    if (!token) return;
+    const vehicleType = vehicles.find((v) => v.id === id)?.vehicleType;
     try {
-      const servicesRes = await serviceApi.getAll(token);
-      setServices(servicesRes ?? []);
+      const res = await serviceApi.getAll(token, vehicleType);
+      setServices(res ?? []);
     } catch {
       // el picker mostrará el aviso de vacío
     }
@@ -246,12 +259,8 @@ export default function NuevaOrdenPage() {
       return;
     }
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/vehicles/all`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const json = await res.json();
-      const allVehicles: Vehicle[] = json.data ?? json ?? [];
+      const res = await vehicleApi.getAllForAdmin(token);
+      const allVehicles: Vehicle[] = Array.isArray(res) ? res : res.data ?? [];
       const clientVehicles = allVehicles.filter((v) => v.userId === selectedClientId);
       setVehicles(clientVehicles);
       setVehicleId('');
@@ -262,7 +271,17 @@ export default function NuevaOrdenPage() {
 
   const handleClientChange = (id: string) => {
     setClientId(id);
+    setVehicleId('');
+    setServices([]);
+    setSelectedServices([]);
     loadVehiclesForClient(id);
+  };
+
+  const handleVehicleChange = (id: string) => {
+    setVehicleId(id);
+    setSelectedServices([]);
+    if (id) loadServicesForVehicle(id);
+    else setServices([]);
   };
 
   const handleAddService = async (serviceId: string) => {
@@ -304,25 +323,21 @@ export default function NuevaOrdenPage() {
 
       // Cada servicio expande su mano de obra y repuestos en el backend y
       // recalcula los totales de la orden.
-      let servicesFailed = false;
-      try {
-        for (const sel of selectedServices) {
+      const failedNames: string[] = [];
+      for (const sel of selectedServices) {
+        try {
           await workOrderApi.addService(orderId, { serviceId: sel.service.id }, token);
+        } catch {
+          failedNames.push(sel.service.name);
         }
-      } catch {
-        servicesFailed = true;
       }
 
-      if (servicesFailed) {
-        setToast({
-          isOpen: true,
-          title: 'Orden creada con avisos',
-          message: 'La orden se creó pero algunos servicios no se aplicaron. Revísalos en el detalle.',
-          type: 'warning',
-        });
+      const dest = `/dashboard/admin/ordenes-trabajo/${orderId}`;
+      if (failedNames.length > 0) {
+        router.push(`${dest}?warnings=${encodeURIComponent(failedNames.join(', '))}`);
+      } else {
+        router.push(dest);
       }
-
-      router.push(`/dashboard/admin/ordenes-trabajo/${orderId}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al crear la orden';
       setToast({ isOpen: true, title: 'Error', message, type: 'error' });
@@ -375,7 +390,7 @@ export default function NuevaOrdenPage() {
             <select
               required
               value={vehicleId}
-              onChange={(e) => setVehicleId(e.target.value)}
+              onChange={(e) => handleVehicleChange(e.target.value)}
               disabled={!clientId}
               className={INPUT_CLASS}
             >
@@ -455,6 +470,7 @@ export default function NuevaOrdenPage() {
           <ServicePicker
             services={services}
             selected={selectedServices}
+            vehicleSelected={!!vehicleId}
             onAdd={handleAddService}
             onRemove={handleRemoveService}
           />

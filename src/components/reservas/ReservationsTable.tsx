@@ -2,181 +2,79 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Edit, DollarSign, Calendar, Clock, Car, User, Filter, Search, CheckCircle, Banknote } from 'lucide-react';
-import Badge from '@/components/ui/Badge';
+import { Plus, Calendar, Filter, Search } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import EditReservationModal from '@/components/reservas/EditReservationModal';
-import { reservationApi, Vehicle, Service } from '@/lib/api-client';
+import ReservationCard from '@/components/reservas/ReservationCard';
+import { reservationApi, type Reservation, type Vehicle, type Service, type Payment } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 import { useAuth } from '@/contexts/AuthContext';
 
-type Reservation = {
-  id: string;
-  scheduledDate: string;
-  scheduledTime: string;
-  totalAmount: number;
-  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  vehicleId: string;
-  serviceId: string;
-  serviceName?: string;
-  userId: string;
-  address?: string;
-  latitude?: number;
-  longitude?: number;
-  notes?: string;
-};
 
-// Nielsen: Reconocer antes que recordar - Estados con colores semánticos
-const statusConfig = {
-  PENDING: {
-    variant: 'warning' as const,
-    label: 'Pendiente',
-    description: 'En espera de lavador',
-  },
-  CONFIRMED: {
-    variant: 'info' as const,
-    label: 'Agendado',
-    description: 'Lavador asignado',
-  },
-  IN_PROGRESS: {
-    variant: 'primary' as const,
-    label: 'En curso',
-    description: 'Servicio en progreso',
-  },
-  COMPLETED: {
-    variant: 'success' as const,
-    label: 'Finalizado',
-    description: 'Servicio completado',
-  },
-  CANCELLED: {
-    variant: 'error' as const,
-    label: 'Cancelada',
-    description: 'Reserva cancelada',
-  },
-};
-
-export default function ReservationsTable({ 
-  reservations: initialReservations, 
+export default function ReservationsTable({
+  reservations: initialReservations,
   vehicles = [],
   services = [],
   paymentsMap,
   onUpdate,
-  showHeader = true
-}: { 
-  reservations: any[]; 
+  showHeader = true,
+}: {
+  reservations: Reservation[];
   vehicles?: Vehicle[];
   services?: Service[];
-  paymentsMap?: Map<string, any>;
+  paymentsMap?: Map<string, Payment>;
   onUpdate?: () => void;
   showHeader?: boolean;
 }) {
-  const router = useRouter();
   const { token } = useAuth();
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
-  const [toast, setToast] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    type: 'info' as 'success' | 'error' | 'warning' | 'info',
-  });
-  const [confirmModal, setConfirmModal] = useState({
-    isOpen: false,
-    reservationId: '',
-    vehicleInfo: '',
-  });
-  const [editModal, setEditModal] = useState<{
-    isOpen: boolean;
-    reservation: Reservation | null;
-  }>({
-    isOpen: false,
-    reservation: null,
-  });
+  const [toast, setToast] = useState({ isOpen: false, title: '', message: '', type: 'info' as 'success' | 'error' | 'warning' | 'info' });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, reservationId: '', vehicleInfo: '' });
+  const [editModal, setEditModal] = useState<{ isOpen: boolean; reservation: Reservation | null }>({ isOpen: false, reservation: null });
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Sincronizar estado cuando cambian las reservaciones externas
   useEffect(() => {
     setReservations(initialReservations || []);
   }, [initialReservations]);
 
-  // Nielsen: Flexibilidad y eficiencia - Filtros y búsqueda
-  const filteredReservations = (reservations || []).filter((reservation) => {
+  const filteredReservations = (reservations || []).filter((r) => {
     const matchesSearch =
-      (reservation.serviceName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (reservation.vehicleId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (reservation.address?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = filterStatus === 'ALL' || reservation.status === filterStatus;
-    
-    return matchesSearch && matchesFilter;
+      (r.serviceName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (r.vehicleId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (r.address?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    return matchesSearch && (filterStatus === 'ALL' || r.status === filterStatus);
   });
 
-  // Nielsen: Prevención de errores - Confirmación antes de eliminar
   const handleDeleteClick = (id: string, vehicleInfo: string) => {
-    setConfirmModal({
-      isOpen: true,
-      reservationId: id,
-      vehicleInfo,
-    });
+    setConfirmModal({ isOpen: true, reservationId: id, vehicleInfo });
   };
 
-  // Manejar clic en editar
   const handleEditClick = (reservation: Reservation) => {
-    setEditModal({
-      isOpen: true,
-      reservation,
-    });
+    setEditModal({ isOpen: true, reservation });
   };
 
-  // Manejar éxito de edición
   const handleEditSuccess = () => {
-    setToast({
-      isOpen: true,
-      title: 'Reserva actualizada',
-      message: 'La reserva ha sido actualizada exitosamente',
-      type: 'success',
-    });
-    if (onUpdate) {
-      onUpdate();
-    }
+    setToast({ isOpen: true, title: 'Reserva actualizada', message: 'La reserva ha sido actualizada exitosamente', type: 'success' });
+    onUpdate?.();
   };
 
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     const { reservationId: id } = confirmModal;
-
     try {
       if (!token) throw new Error('No token');
-      
       await reservationApi.cancel(id, token);
-      
       setReservations(reservations.filter(r => r.id !== id));
-      
-      // Llamar onUpdate si existe
-      if (onUpdate) {
-        onUpdate();
-      }
-      
-      // Nielsen: Visibilidad del estado del sistema
-      setToast({
-        isOpen: true,
-        title: 'Reserva eliminada',
-        message: 'La reserva ha sido eliminada exitosamente',
-        type: 'success',
-      });
-    } catch (error: any) {
-      // Nielsen: Ayudar a reconocer y corregir errores
-      console.error('Error:', error);
-      setToast({
-        isOpen: true,
-        title: 'Error al eliminar',
-        message: error.message || 'No se pudo eliminar la reserva. Intenta de nuevo.',
-        type: 'error',
-      });
+      onUpdate?.();
+      setToast({ isOpen: true, title: 'Reserva eliminada', message: 'La reserva ha sido eliminada exitosamente', type: 'success' });
+    } catch (error: unknown) {
+      logger.error('Error eliminando la reserva', error);
+      setToast({ isOpen: true, title: 'Error al eliminar', message: error instanceof Error ? error.message : 'No se pudo eliminar la reserva. Intenta de nuevo.', type: 'error' });
     } finally {
       setIsDeleting(false);
       setConfirmModal({ isOpen: false, reservationId: '', vehicleInfo: '' });
@@ -185,30 +83,23 @@ export default function ReservationsTable({
 
   return (
     <section className="space-y-6">
-      {/* Header con acción principal - Solo mostrar si showHeader es true */}
       {showHeader && (
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Mis Reservas</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Gestiona y consulta todas tus reservas de servicio
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Mis Reservas</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Gestiona y consulta todas tus reservas de servicio</p>
+          </div>
+          <Link href="/dashboard/reservas/nueva">
+            <Button size="lg" className="shadow-lg">
+              <Plus className="w-5 h-5" />
+              Nueva Reserva
+            </Button>
+          </Link>
         </div>
-        
-        {/* Nielsen: Consistencia - Acción primaria destacada */}
-        <Link href="/dashboard/reservas/nueva">
-          <Button size="lg" className="shadow-lg">
-            <Plus className="w-5 h-5" />
-            Nueva Reserva
-          </Button>
-        </Link>
-      </div>
       )}
 
-      {/* Nielsen: Flexibilidad y eficiencia - Filtros */}
       <Card>
         <div className="flex flex-col lg:flex-row gap-4">
-          {/* Búsqueda */}
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
@@ -221,8 +112,6 @@ export default function ReservationsTable({
               />
             </div>
           </div>
-
-          {/* Filtro por estado */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             <select
@@ -239,8 +128,6 @@ export default function ReservationsTable({
             </select>
           </div>
         </div>
-        
-        {/* Nielsen: Visibilidad del estado - Contador de resultados */}
         <div className="mt-4 pt-4 border-t border-cyan-100 dark:border-slate-600">
           <p className="text-sm text-slate-600 dark:text-slate-400">
             Mostrando <span className="font-semibold text-cyan-600 dark:text-cyan-400">{filteredReservations.length}</span> de {reservations.length} reservas
@@ -248,136 +135,27 @@ export default function ReservationsTable({
         </div>
       </Card>
 
-      {/* Nielsen: Diseño estético y minimalista - Vista de tarjetas en lugar de tabla */}
       {filteredReservations.length === 0 ? (
         <Card className="text-center py-12">
           <Calendar className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-            {searchTerm || filterStatus !== 'ALL' 
-              ? 'No se encontraron reservas'
-              : 'No tienes reservas registradas'}
+            {searchTerm || filterStatus !== 'ALL' ? 'No se encontraron reservas' : 'No tienes reservas registradas'}
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-6">
-            {searchTerm || filterStatus !== 'ALL'
-              ? 'Intenta con otros criterios de búsqueda'
-              : 'No tienes reservas registradas'}
+            {searchTerm || filterStatus !== 'ALL' ? 'Intenta con otros criterios de búsqueda' : 'No tienes reservas registradas'}
           </p>
         </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {filteredReservations.map((reservation) => {
-            const config = statusConfig[reservation.status];
-            const payment = paymentsMap?.get(reservation.id);
-            const isPaid = payment?.status === 'COMPLETED';
-            const isCashPending = payment?.status === 'PENDING' && payment?.paymentMethod === 'CASH';
-            return (
-              <Card key={reservation.id} hover className="group">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <Badge variant={config.variant} size="md">
-                        {config.label}
-                      </Badge>
-                      {isPaid && (
-                        <Badge variant="success" size="md">
-                          <CheckCircle className="w-3 h-3 mr-1 inline" />
-                          Pagado
-                        </Badge>
-                      )}
-                      {isCashPending && (
-                        <Badge variant="warning" size="md">
-                          <Banknote className="w-3 h-3 mr-1 inline" />
-                          Pago en efectivo pendiente
-                        </Badge>
-                      )}
-                      {!isPaid && !isCashPending && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">{config.description}</span>
-                      )}
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      {reservation.serviceName || 'Servicio'}
-                    </h3>
-                  </div>
-                  
-                  {/* Nielsen: Diseño estético - Monto destacado */}
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
-                      ${Number(reservation.totalAmount).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Información de la reserva */}
-                <div className="space-y-3 mb-4 bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
-                  {reservation.address && (
-                    <div className="flex items-start gap-3 text-sm">
-                      <User className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5" />
-                      <span className="text-slate-600 dark:text-slate-400">
-                        {reservation.address}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                      <span className="text-slate-600 dark:text-slate-400">
-                        {new Date(reservation.scheduledDate).toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                      <span className="text-slate-600 dark:text-slate-400 font-medium">
-                        {reservation.scheduledTime}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Nielsen: Control y libertad - Acciones claramente visibles */}
-                <div className="flex gap-2 pt-4 border-t border-cyan-100 dark:border-slate-600">
-                  <Link href={`/dashboard/pagos/${reservation.id}`} className="flex-1">
-                    <Button variant={isPaid ? 'ghost' : 'secondary'} fullWidth size="sm">
-                      {isPaid ? (
-                        <><CheckCircle className="w-4 h-4 text-green-500" /> Ver comprobante</>
-                      ) : (
-                        <><DollarSign className="w-4 h-4" /> {isCashPending ? 'Ver pago' : 'Pagar'}</>
-                      )}
-                    </Button>
-                  </Link>
-                  
-                  {reservation.status === 'PENDING' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditClick(reservation)}
-                        title="Editar reserva"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteClick(
-                          reservation.id,
-                          `${reservation.serviceName}`
-                        )}
-                        title="Cancelar reserva"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
+          {filteredReservations.map((reservation) => (
+            <ReservationCard
+              key={reservation.id}
+              reservation={reservation}
+              payment={paymentsMap?.get(reservation.id)}
+              onEdit={handleEditClick}
+              onDelete={handleDeleteClick}
+            />
+          ))}
         </div>
       )}
 

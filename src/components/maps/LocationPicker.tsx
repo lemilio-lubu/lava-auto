@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { MapPin, Search, Crosshair, AlertCircle } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
-// Declaración de tipos para Google Maps
+// Declaración de tipos para Google Maps. El SDK se carga por <script> y no
+// trae tipos; usamos `any` deliberadamente para su superficie dinámica.
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     google: any;
   }
 }
@@ -34,7 +37,10 @@ export default function LocationPicker({
   } | null>(
     defaultLat && defaultLng ? { lat: defaultLat, lng: defaultLng } : null
   );
+  // Instancias del SDK de Google Maps (sin tipos disponibles).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [map, setMap] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [marker, setMarker] = useState<any>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [error, setError] = useState<string>('');
@@ -107,7 +113,8 @@ export default function LocationPicker({
       }
     });
 
-    // Listener para clicks en el mapa
+    // Listener para clicks en el mapa (evento del SDK de Google Maps, sin tipos)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mapInstance.addListener('click', (e: any) => {
       if (e.latLng) {
         const newCoords = {
@@ -143,7 +150,7 @@ export default function LocationPicker({
         }
       }
     } catch (error) {
-      console.error('Error en geocodificación inversa:', error);
+      logger.error('Error en geocodificación inversa:', error);
     }
   };
 
@@ -184,7 +191,7 @@ export default function LocationPicker({
       }
     } catch (error) {
       setError('Error al buscar la dirección. Intenta nuevamente.');
-      console.error('Error en búsqueda:', error);
+      logger.error('Error en búsqueda:', error);
     } finally {
       setIsLoadingLocation(false);
     }
@@ -221,7 +228,7 @@ export default function LocationPicker({
       (error) => {
         setError('No se pudo obtener tu ubicación. Verifica los permisos.');
         setIsLoadingLocation(false);
-        console.error('Error de geolocalización:', error);
+        logger.error('Error de geolocalización:', error);
       }
     );
   };

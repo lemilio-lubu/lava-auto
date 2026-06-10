@@ -36,7 +36,7 @@ const PaymentRepository     = require('./payment.repository');
 const ReservationRepository = require('../reservations/reservation.repository');
 const { authMiddleware, roleMiddleware } = require('../../middleware/auth');
 const { AppError } = require('../../middleware/error-handler');
-const { USER_ROLES, PAYMENT_METHODS, RESERVATION_STATUS } = require('../../config/constants');
+const { USER_ROLES, PAYMENT_METHODS, RESERVATION_STATUS, STRIPE_PLACEHOLDER_KEYS, PAYMENT_CONFIG } = require('../../config/constants');
 
 const router = express.Router();
 
@@ -44,8 +44,7 @@ const router = express.Router();
 // Las claves reales tienen más de 30 caracteres; el placeholder es inválido.
 const _stripeKey = process.env.STRIPE_SECRET_KEY;
 const _isRealKey = _stripeKey &&
-  _stripeKey !== 'sk_test_placeholder' &&
-  _stripeKey !== 'sk_live_placeholder' &&
+  !STRIPE_PLACEHOLDER_KEYS.includes(_stripeKey) &&
   _stripeKey.length > 30;
 
 const stripe = _isRealKey ? require('stripe')(_stripeKey) : null;
@@ -278,7 +277,7 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
     if (stripe) {
       const intent = await stripe.paymentIntents.create({
         amount:   Math.round(amount * 100), // Stripe maneja centavos
-        currency: process.env.STRIPE_CURRENCY || 'usd',
+        currency: process.env.STRIPE_CURRENCY || PAYMENT_CONFIG.DEFAULT_CURRENCY,
         metadata: { reservationId, userId: req.user.id },
       });
       paymentIntentId = intent.id;

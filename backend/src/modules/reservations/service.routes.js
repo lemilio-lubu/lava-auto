@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * service.routes.js — Catálogo de servicios de lavado.
+ * service.routes.js — Catálogo de servicios.
  *
  * GET    /api/services                     → listar servicios
  * GET    /api/services/type/:vehicleType   → filtrar por tipo de vehículo
@@ -66,7 +66,7 @@ function parseComposition(body) {
  * /api/services:
  *   get:
  *     tags: [Services]
- *     summary: Lista el catálogo de servicios de lavado
+ *     summary: Lista el catálogo de servicios
  *     description: ADMIN ve todos (activos e inactivos). Otros roles solo ven los activos.
  *     parameters:
  *       - in: query

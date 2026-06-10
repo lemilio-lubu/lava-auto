@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Briefcase, DollarSign, Clock, Loader2, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
-import { jobApi, reservationApi } from '@/lib/api-client';
+import { jobApi, type Job } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function WasherDashboard() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -15,7 +16,7 @@ export default function WasherDashboard() {
     completedToday: 0,
     totalEarnings: 0,
   });
-  const [recentJobs, setRecentJobs] = useState<any[]>([]);
+  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -31,23 +32,27 @@ export default function WasherDashboard() {
         jobApi.getMyJobs(token),
       ])
         .then(([jobs]) => {
-          const activeJobs = jobs.filter((j: any) => 
-            j.status === 'CONFIRMED' || j.status === 'IN_PROGRESS'
+          const activeJobs = jobs.filter(
+            (job) => job.status === 'CONFIRMED' || job.status === 'IN_PROGRESS'
           );
-          const completedToday = jobs.filter((j: any) => {
-            const today = new Date().toDateString();
-            return j.status === 'COMPLETED' && new Date(j.completedAt).toDateString() === today;
-          });
-          
+          const today = new Date().toDateString();
+          const completedToday = jobs.filter(
+            (job) =>
+              job.status === 'COMPLETED' &&
+              job.completedAt &&
+              new Date(job.completedAt).toDateString() === today
+          );
+
           setStats({
             activeJobs: activeJobs.length,
             completedToday: completedToday.length,
-            totalEarnings: jobs.filter((j: any) => j.status === 'COMPLETED')
-              .reduce((sum: number, j: any) => sum + (j.totalAmount || 0), 0),
+            totalEarnings: jobs
+              .filter((job) => job.status === 'COMPLETED')
+              .reduce((sum, job) => sum + (job.totalAmount || 0), 0),
           });
           setRecentJobs(jobs.slice(0, 5));
         })
-        .catch(console.error)
+        .catch((error) => logger.error('Error cargando trabajos del lavador', error))
         .finally(() => setIsLoading(false));
     }
   }, [user, token, authLoading, router]);
@@ -71,7 +76,7 @@ export default function WasherDashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div>

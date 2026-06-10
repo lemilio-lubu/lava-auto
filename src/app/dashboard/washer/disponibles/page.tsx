@@ -4,14 +4,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, MapPin, Clock, DollarSign, Car } from 'lucide-react';
-import { jobApi } from '@/lib/api-client';
+import { jobApi, type Job } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function DisponiblesPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [accepting, setAccepting] = useState<string | null>(null);
+  const [acceptingJobId, setAcceptingJobId] = useState<string | null>(null);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -27,10 +29,10 @@ export default function DisponiblesPage() {
   const loadJobs = async () => {
     if (!token) return;
     try {
-      const data = await jobApi.getAvailable(token);
-      setJobs(data);
+      const availableJobs = await jobApi.getAvailable(token);
+      setJobs(availableJobs);
     } catch (error) {
-      console.error('Error loading jobs:', error);
+      logger.error('Error cargando trabajos disponibles', error);
     } finally {
       setIsLoading(false);
     }
@@ -38,15 +40,16 @@ export default function DisponiblesPage() {
 
   const handleAccept = async (jobId: string) => {
     if (!token) return;
-    setAccepting(jobId);
+    setAcceptingJobId(jobId);
+    setAcceptError(null);
     try {
       await jobApi.accept(jobId, token);
       router.push('/dashboard/washer/trabajos');
     } catch (error) {
-      console.error('Error accepting job:', error);
-      alert('Error al aceptar el trabajo');
+      logger.error('Error aceptando el trabajo', error);
+      setAcceptError('No se pudo aceptar el trabajo. Intenta de nuevo.');
     } finally {
-      setAccepting(null);
+      setAcceptingJobId(null);
     }
   };
 
@@ -66,6 +69,12 @@ export default function DisponiblesPage() {
           Acepta trabajos cercanos para comenzar a ganar
         </p>
       </div>
+
+      {acceptError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 rounded-lg px-4 py-3 text-sm">
+          {acceptError}
+        </div>
+      )}
 
       {jobs.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
@@ -117,10 +126,10 @@ export default function DisponiblesPage() {
 
               <button
                 onClick={() => handleAccept(job.id)}
-                disabled={accepting === job.id}
+                disabled={acceptingJobId === job.id}
                 className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {accepting === job.id ? (
+                {acceptingJobId === job.id ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Aceptando...

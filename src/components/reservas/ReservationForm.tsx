@@ -3,26 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, Car as CarIcon } from 'lucide-react';
-import { reservationApi } from '@/lib/api-client';
+import { reservationApi, type Vehicle, type Service } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Vehicle {
-  id: string;
-  brand: string;
-  model: string;
-  plate: string;
-  color: string | null;
-  vehicleType: string;
-}
-
-interface Service {
-  id: string;
-  name: string;
-  description: string | null;
-  duration: number;
-  price: number;
-  vehicleType: string;
-}
 
 interface ReservationFormProps {
   vehicles: Vehicle[];

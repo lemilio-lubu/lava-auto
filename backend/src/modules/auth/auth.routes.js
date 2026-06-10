@@ -24,7 +24,8 @@ const { generateToken }      = require('../../middleware/auth');
 const { authMiddleware }     = require('../../middleware/auth');
 const { authRateLimiter }    = require('../../middleware/rate-limiter');
 const { AppError }           = require('../../middleware/error-handler');
-const { USER_ROLES }         = require('../../config/constants');
+const { USER_ROLES, AUTH_RULES } = require('../../config/constants');
+const logger                 = require('../../shared/logger');
 
 const router = express.Router();
 
@@ -93,8 +94,8 @@ router.post('/register', authRateLimiter, async (req, res, next) => {
       throw new AppError('Nombre, email y contraseña son requeridos.', 400);
     }
 
-    if (password.length < 6) {
-      throw new AppError('La contraseña debe tener al menos 6 caracteres.', 400);
+    if (password.length < AUTH_RULES.MIN_PASSWORD_LENGTH) {
+      throw new AppError(`La contraseña debe tener al menos ${AUTH_RULES.MIN_PASSWORD_LENGTH} caracteres.`, 400);
     }
 
     // Solo se permite registrar CLIENT; WASHER/ADMIN los crea un admin
@@ -294,10 +295,10 @@ router.post('/reset-password/request', authRateLimiter, async (req, res, next) =
 
     if (user) {
       const resetToken = crypto.randomBytes(32).toString('hex');
-      const expiry     = new Date(Date.now() + 3_600_000); // 1 hora
+      const expiry     = new Date(Date.now() + AUTH_RULES.RESET_TOKEN_EXPIRY_MS);
       await userRepo.setResetToken(user.id, resetToken, expiry);
       // En producción: enviar email con el token
-      console.info(`[reset-password] Token para ${email}: ${resetToken}`);
+      logger.debug(`[reset-password] Token generado para ${email}`);
     }
 
     // Respuesta idéntica independientemente de si el email existe
@@ -341,8 +342,8 @@ router.post('/reset-password/confirm', authRateLimiter, async (req, res, next) =
     if (!token || !password) {
       throw new AppError('Token y nueva contraseña son requeridos.', 400);
     }
-    if (password.length < 6) {
-      throw new AppError('La contraseña debe tener al menos 6 caracteres.', 400);
+    if (password.length < AUTH_RULES.MIN_PASSWORD_LENGTH) {
+      throw new AppError(`La contraseña debe tener al menos ${AUTH_RULES.MIN_PASSWORD_LENGTH} caracteres.`, 400);
     }
 
     const userRepo = new UserRepository(req.db);

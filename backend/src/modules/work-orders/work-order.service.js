@@ -13,7 +13,7 @@ const WorkOrderRepository = require('./work-order.repository');
 const CatalogRepository   = require('../catalog/catalog.repository');
 const ServiceRepository   = require('../reservations/service.repository');
 const { AppError }        = require('../../middleware/error-handler');
-const { WORK_ORDER_STATUS } = require('../../config/constants');
+const { WORK_ORDER_STATUS, DOCUMENT_PREFIXES } = require('../../config/constants');
 
 /** Transiciones de estado permitidas */
 const VALID_TRANSITIONS = Object.freeze({
@@ -46,8 +46,8 @@ class WorkOrderService {
     }
 
     const config = await this._catalogRepo.getOrderNumberConfig();
-    const prefix  = config ? config.prefix  : 'OT';
-    const padding = config ? config.padding : 5;
+    const prefix  = config?.prefix  ?? DOCUMENT_PREFIXES.ORDER;
+    const padding = config?.padding ?? DOCUMENT_PREFIXES.DEFAULT_ORDER_PADDING;
     const orderNumber = `${prefix}-${String(issuedNumber).padStart(padding, '0')}`;
 
     const workOrder = await this._repo.create({
@@ -233,6 +233,8 @@ class WorkOrderService {
 
   async removeService(serviceId, workOrderId) {
     await this._assertWorkOrderExists(workOrderId);
+    await this._repo.deleteLaborByServiceId(serviceId);
+    await this._repo.deletePartsByServiceId(serviceId);
     const removed = await this._repo.removeService(serviceId);
     await this._repo.recalculateTotals(workOrderId);
     return removed;

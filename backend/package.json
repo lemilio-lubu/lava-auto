@@ -14,7 +14,7 @@
     "db:up": "docker-compose -f docker-compose.dev.yml up -d",
     "db:down": "docker-compose -f docker-compose.dev.yml down",
     "db:reset": "docker-compose -f docker-compose.dev.yml down -v && docker-compose -f docker-compose.dev.yml up -d",
-    "lint": "eslint src/ --ext .js"
+    "lint": "eslint src/"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -40,7 +40,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "eslint": "^10.0.1",
+    "eslint": "^9.37.0",
     "nodemon": "^3.1.4",
     "xlsx": "^0.18.5"
   }

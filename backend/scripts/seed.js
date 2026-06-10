@@ -212,22 +212,102 @@ INSERT INTO catalog.employee_specialties (id, name, description, is_active) VALU
 ON CONFLICT (id) DO NOTHING;
 `;
 
+// Precios autocalculados:
+//   Mano de obra: tarifa×horas  |  Repuestos: precio×cantidad
+//   svc-sedan-oil:    lbr-mechanic 0.5h($12.50) + 4L 10W-30($34.00) + filtro($5.00)      = $51.50
+//   svc-sedan-brakes: lbr-mechanic 1.0h($25.00) + pastillas del.($35.00)                  = $60.00
+//   svc-sedan-diag:   lbr-diagnostic 1.0h($15.00)                                         = $15.00
+//   svc-sedan-align:  lbr-alignment  1.0h($20.00)                                         = $20.00
+//   svc-sedan-maint:  lbr-mechanic 1.5h($37.50) + 4L 5W-30($36.00) + 2 filtros($17.00)  = $90.50
+//   svc-sedan-ac:     lbr-ac 1.0h($28.00)                                                 = $28.00
+//   svc-sedan-elec:   lbr-electrician 1.0h($30.00) + 4 bujías($18.00)                    = $48.00
+//   svc-suv-oil:      lbr-mechanic 0.5h($12.50) + 6L 10W-30($51.00) + filtro($5.00)      = $68.50
+//   svc-suv-brakes:   lbr-mechanic 1.5h($37.50) + past.del($35)+past.tr($30)             = $102.50
+//   svc-suv-maint:    lbr-mechanic 2.0h($50.00) + 6L 5W-30($54.00) + 2 filtros($17.00)  = $121.00
+//   svc-suv-align:    lbr-alignment  1.0h($20.00)                                         = $20.00
+//   svc-pickup-oil:   igual que svc-suv-oil                                               = $68.50
+//   svc-pickup-maint: igual que svc-suv-maint                                             = $121.00
+//   svc-van-oil:      igual que svc-suv-oil                                               = $68.50
+//   svc-moto-oil:     lbr-mechanic 0.25h($6.25) + 1L 10W-30($8.50) + filtro($5.00)       = $19.75
+//   svc-moto-brakes:  lbr-mechanic 0.5h($12.50)                                           = $12.50
 const SERVICES_SQL = `
 INSERT INTO reservations.services
   (id, name, description, duration, price, vehicle_type, is_active)
 VALUES
-  ('svc_sedan_basic',    'Lavado Básico Sedán',    'Lavado exterior con agua a presión, jabón especial y secado',       30,  150.00, 'SEDAN',      true),
-  ('svc_sedan_complete', 'Lavado Completo Sedán',  'Lavado exterior e interior, aspirado y limpieza de vidrios',         60,  250.00, 'SEDAN',      true),
-  ('svc_sedan_premium',  'Lavado Premium Sedán',   'Lavado completo más encerado y acondicionador de llantas',           90,  400.00, 'SEDAN',      true),
-  ('svc_suv_basic',      'Lavado Básico SUV',      'Lavado exterior con agua a presión, jabón especial y secado',        45,  200.00, 'SUV',        true),
-  ('svc_suv_complete',   'Lavado Completo SUV',    'Lavado exterior e interior, aspirado y limpieza de vidrios',         75,  350.00, 'SUV',        true),
-  ('svc_suv_premium',    'Lavado Premium SUV',     'Lavado completo más encerado y acondicionador de llantas',          120,  500.00, 'SUV',        true),
-  ('svc_pickup_basic',   'Lavado Básico Pickup',   'Lavado exterior con agua a presión, jabón especial y secado',        45,  200.00, 'PICKUP',     true),
-  ('svc_pickup_complete','Lavado Completo Pickup', 'Lavado exterior e interior, aspirado y limpieza de vidrios',         75,  350.00, 'PICKUP',     true),
-  ('svc_van_basic',      'Lavado Básico Van',      'Lavado exterior con agua a presión, jabón especial y secado',        60,  250.00, 'VAN',        true),
-  ('svc_van_complete',   'Lavado Completo Van',    'Lavado exterior e interior, aspirado y limpieza de vidrios',         90,  450.00, 'VAN',        true),
-  ('svc_moto_basic',     'Lavado Básico Moto',     'Lavado completo de motocicleta',                                     20,   80.00, 'MOTORCYCLE', true),
-  ('svc_moto_premium',   'Lavado Premium Moto',    'Lavado completo con cera y brillo especial',                         40,  150.00, 'MOTORCYCLE', true)
+  ('svc-sedan-oil',    'Cambio de Aceite Sedán',           'Cambio de aceite 10W-30 y filtro de aceite',                    45,  51.50, 'SEDAN',      true),
+  ('svc-sedan-brakes', 'Revisión de Frenos Sedán',         'Inspección y cambio de pastillas delanteras',                   60,  60.00, 'SEDAN',      true),
+  ('svc-sedan-diag',   'Diagnóstico General Sedán',        'Diagnóstico computarizado del vehículo con escáner',             30,  15.00, 'SEDAN',      true),
+  ('svc-sedan-align',  'Alineación y Balanceo Sedán',      'Alineación computarizada y balanceo de 4 ruedas',               45,  20.00, 'SEDAN',      true),
+  ('svc-sedan-maint',  'Mantenimiento Preventivo Sedán',   'Cambio de aceite 5W-30, filtro de aceite y filtro de aire',     90,  90.50, 'SEDAN',      true),
+  ('svc-sedan-ac',     'Revisión A/C Sedán',               'Revisión y carga del sistema de aire acondicionado',            60,  28.00, 'SEDAN',      true),
+  ('svc-sedan-elec',   'Sistema Eléctrico Sedán',          'Revisión eléctrica y cambio de bujías',                         60,  48.00, 'SEDAN',      true),
+  ('svc-suv-oil',      'Cambio de Aceite SUV',             'Cambio de aceite 10W-30 y filtro (motor grande)',               45,  68.50, 'SUV',        true),
+  ('svc-suv-brakes',   'Revisión de Frenos SUV',           'Inspección y cambio de pastillas delanteras y traseras',        75, 102.50, 'SUV',        true),
+  ('svc-suv-maint',    'Mantenimiento Preventivo SUV',     'Cambio de aceite 5W-30, filtro de aceite y filtro de aire',    120, 121.00, 'SUV',        true),
+  ('svc-suv-align',    'Alineación y Balanceo SUV',        'Alineación computarizada y balanceo de 4 ruedas',               45,  20.00, 'SUV',        true),
+  ('svc-pickup-oil',   'Cambio de Aceite Pickup',          'Cambio de aceite 10W-30 y filtro (motor diésel/gasolina)',      45,  68.50, 'PICKUP',     true),
+  ('svc-pickup-maint', 'Mantenimiento Preventivo Pickup',  'Cambio de aceite 5W-30, filtro de aceite y filtro de aire',    120, 121.00, 'PICKUP',     true),
+  ('svc-van-oil',      'Cambio de Aceite Van',             'Cambio de aceite 10W-30 y filtro de aceite',                    45,  68.50, 'VAN',        true),
+  ('svc-moto-oil',     'Cambio de Aceite Moto',            'Cambio de aceite de motor 1L y filtro',                         20,  19.75, 'MOTORCYCLE', true),
+  ('svc-moto-brakes',  'Revisión de Frenos Moto',          'Inspección y ajuste del sistema de frenos',                     30,  12.50, 'MOTORCYCLE', true)
+ON CONFLICT (id) DO NOTHING;
+`;
+
+const SERVICE_ITEMS_SQL = `
+INSERT INTO reservations.service_labor_items (id, service_id, labor_rate_id, hours, sort_order) VALUES
+  ('sli-sedan-oil-1',   'svc-sedan-oil',   'lbr-mechanic',    0.50, 0),
+  ('sli-sedan-brk-1',   'svc-sedan-brakes','lbr-mechanic',    1.00, 0),
+  ('sli-sedan-diag-1',  'svc-sedan-diag',  'lbr-diagnostic',  1.00, 0),
+  ('sli-sedan-aln-1',   'svc-sedan-align', 'lbr-alignment',   1.00, 0),
+  ('sli-sedan-mnt-1',   'svc-sedan-maint', 'lbr-mechanic',    1.50, 0),
+  ('sli-sedan-ac-1',    'svc-sedan-ac',    'lbr-ac',          1.00, 0),
+  ('sli-sedan-elc-1',   'svc-sedan-elec',  'lbr-electrician', 1.00, 0),
+  ('sli-suv-oil-1',     'svc-suv-oil',     'lbr-mechanic',    0.50, 0),
+  ('sli-suv-brk-1',     'svc-suv-brakes',  'lbr-mechanic',    1.50, 0),
+  ('sli-suv-mnt-1',     'svc-suv-maint',   'lbr-mechanic',    2.00, 0),
+  ('sli-suv-aln-1',     'svc-suv-align',   'lbr-alignment',   1.00, 0),
+  ('sli-pck-oil-1',     'svc-pickup-oil',  'lbr-mechanic',    0.50, 0),
+  ('sli-pck-mnt-1',     'svc-pickup-maint','lbr-mechanic',    2.00, 0),
+  ('sli-van-oil-1',     'svc-van-oil',     'lbr-mechanic',    0.50, 0),
+  ('sli-moto-oil-1',    'svc-moto-oil',    'lbr-mechanic',    0.25, 0),
+  ('sli-moto-brk-1',    'svc-moto-brakes', 'lbr-mechanic',    0.50, 0)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO reservations.service_part_items (id, service_id, spare_part_id, quantity, sort_order) VALUES
+  -- svc-sedan-oil: 4L aceite + filtro
+  ('spi-sedan-oil-1',  'svc-sedan-oil',   'spp-oil-10w30',   4.0, 0),
+  ('spi-sedan-oil-2',  'svc-sedan-oil',   'spp-oil-filter',  1.0, 1),
+  -- svc-sedan-brakes: pastillas delanteras
+  ('spi-sedan-brk-1',  'svc-sedan-brakes','spp-brake-pad-f', 1.0, 0),
+  -- svc-sedan-elec: 4 bujías
+  ('spi-sedan-elc-1',  'svc-sedan-elec',  'spp-spark-plug',  4.0, 0),
+  -- svc-sedan-maint: 4L aceite + filtro aceite + filtro aire
+  ('spi-sedan-mnt-1',  'svc-sedan-maint', 'spp-oil-5w30',    4.0, 0),
+  ('spi-sedan-mnt-2',  'svc-sedan-maint', 'spp-oil-filter',  1.0, 1),
+  ('spi-sedan-mnt-3',  'svc-sedan-maint', 'spp-air-filter',  1.0, 2),
+  -- svc-suv-oil: 6L aceite + filtro
+  ('spi-suv-oil-1',    'svc-suv-oil',     'spp-oil-10w30',   6.0, 0),
+  ('spi-suv-oil-2',    'svc-suv-oil',     'spp-oil-filter',  1.0, 1),
+  -- svc-suv-brakes: pastillas del. + traseras
+  ('spi-suv-brk-1',    'svc-suv-brakes',  'spp-brake-pad-f', 1.0, 0),
+  ('spi-suv-brk-2',    'svc-suv-brakes',  'spp-brake-pad-r', 1.0, 1),
+  -- svc-suv-maint: 6L aceite + filtro aceite + filtro aire
+  ('spi-suv-mnt-1',    'svc-suv-maint',   'spp-oil-5w30',    6.0, 0),
+  ('spi-suv-mnt-2',    'svc-suv-maint',   'spp-oil-filter',  1.0, 1),
+  ('spi-suv-mnt-3',    'svc-suv-maint',   'spp-air-filter',  1.0, 2),
+  -- svc-pickup-oil: 6L aceite + filtro
+  ('spi-pck-oil-1',    'svc-pickup-oil',  'spp-oil-10w30',   6.0, 0),
+  ('spi-pck-oil-2',    'svc-pickup-oil',  'spp-oil-filter',  1.0, 1),
+  -- svc-pickup-maint: 6L aceite + filtro aceite + filtro aire
+  ('spi-pck-mnt-1',    'svc-pickup-maint','spp-oil-5w30',    6.0, 0),
+  ('spi-pck-mnt-2',    'svc-pickup-maint','spp-oil-filter',  1.0, 1),
+  ('spi-pck-mnt-3',    'svc-pickup-maint','spp-air-filter',  1.0, 2),
+  -- svc-van-oil: 6L aceite + filtro
+  ('spi-van-oil-1',    'svc-van-oil',     'spp-oil-10w30',   6.0, 0),
+  ('spi-van-oil-2',    'svc-van-oil',     'spp-oil-filter',  1.0, 1),
+  -- svc-moto-oil: 1L aceite + filtro
+  ('spi-moto-oil-1',   'svc-moto-oil',    'spp-oil-10w30',   1.0, 0),
+  ('spi-moto-oil-2',   'svc-moto-oil',    'spp-oil-filter',  1.0, 1)
 ON CONFLICT (id) DO NOTHING;
 `;
 
@@ -319,6 +399,7 @@ const STEPS = [
   { label: 'catalog.employee_specialties',    sql: CATALOG_SPECIALTIES_SQL },
   { label: 'vehicles.vehicles',               sql: VEHICLES_SQL },
   { label: 'reservations.services',           sql: SERVICES_SQL },
+  { label: 'reservations.service_items',      sql: SERVICE_ITEMS_SQL },
   // work order de demostración: depende de users + vehicles + catálogo completo
   { label: 'work_orders.work_order (demo)',   sql: WORK_ORDER_DEMO_SQL },
 ];

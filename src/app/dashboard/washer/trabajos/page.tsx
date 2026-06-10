@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, MapPin, Clock, Car, Play, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import { jobApi } from '@/lib/api-client';
+import { jobApi, type Job } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function TrabajosPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -27,10 +28,10 @@ export default function TrabajosPage() {
   const loadJobs = async () => {
     if (!token) return;
     try {
-      const data = await jobApi.getMyJobs(token);
-      setJobs(data);
+      const myJobs = await jobApi.getMyJobs(token);
+      setJobs(myJobs);
     } catch (error) {
-      console.error('Error loading jobs:', error);
+      logger.error('Error cargando mis trabajos', error);
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +151,7 @@ export default function TrabajosPage() {
                     </h3>
                   </div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {job.vehicle?.brand} {job.vehicle?.model} - {new Date(job.completedAt || job.updatedAt).toLocaleDateString('es-ES')}
+                    {job.vehicle?.brand} {job.vehicle?.model} - {new Date(job.completedAt || job.updatedAt || job.createdAt).toLocaleDateString('es-ES')}
                   </p>
                 </div>
                 <p className="font-bold text-green-600 dark:text-green-400">

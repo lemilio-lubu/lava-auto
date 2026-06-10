@@ -20,6 +20,7 @@
 const jwt            = require('jsonwebtoken');
 const { SOCKET_EVENTS } = require('../../config/constants');
 const NotificationRepository = require('./notification.repository');
+const logger = require('../../shared/logger');
 
 /**
  * Inicializa todos los listeners de Socket.IO.
@@ -50,7 +51,7 @@ function socketHandler(io, db) {
 
     // Unirse a la sala personal → permite enviar eventos directos
     socket.join(`room:${userId}`);
-    console.log(`[socket] ${role} ${userId} conectado (${socket.id})`);
+    logger.info(`[socket] ${role} ${userId} conectado (${socket.id})`);
 
     // ── Chat: enviar mensaje ────────────────────────────────────────
     socket.on(SOCKET_EVENTS.SEND_MESSAGE, async (data) => {
@@ -70,7 +71,7 @@ function socketHandler(io, db) {
         io.to(`room:${receiverId}`).emit(SOCKET_EVENTS.NEW_MESSAGE, msg);
         socket.emit(SOCKET_EVENTS.NEW_MESSAGE, { ...msg, _own: true });
       } catch (err) {
-        console.error('[socket] send-message error:', err.message);
+        logger.error('[socket] send-message error:', err.message);
       }
     });
 
@@ -100,7 +101,7 @@ function socketHandler(io, db) {
 
     // ── Desconexión ───────────────────────────────────────────────
     socket.on(SOCKET_EVENTS.DISCONNECT, () => {
-      console.log(`[socket] ${role} ${userId} desconectado`);
+      logger.info(`[socket] ${role} ${userId} desconectado`);
     });
   });
 }

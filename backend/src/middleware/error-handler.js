@@ -12,6 +12,7 @@
  */
 
 const config = require('../config/env');
+const logger = require('../shared/logger');
 
 // ------------------------------------------------------------------
 // Clase de error enriquecida (opcional, para lanzar errores con status)
@@ -58,7 +59,7 @@ function notFoundHandler(req, res) {
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
   // Log siempre, independiente del tipo de error
-  console.error(`[error] ${req.method} ${req.originalUrl} — ${err.message}`, {
+  logger.error(`[error] ${req.method} ${req.originalUrl} — ${err.message}`, {
     stack: err.stack,
     code: err.code,
   });

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, DollarSign, TrendingUp, Calendar } from 'lucide-react';
 import { jobApi } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 
 export default function EstadisticasPage() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -28,20 +29,20 @@ export default function EstadisticasPage() {
     if (token) {
       jobApi.getMyJobs(token)
         .then((jobs) => {
-          const completed = jobs.filter((j: any) => j.status === 'COMPLETED');
+          const completed = jobs.filter((job) => job.status === 'COMPLETED');
           const thisMonth = new Date().getMonth();
-          const thisMonthJobs = completed.filter((j: any) => 
-            new Date(j.completedAt || j.updatedAt).getMonth() === thisMonth
+          const thisMonthJobs = completed.filter(
+            (job) => new Date(job.completedAt || job.updatedAt || job.createdAt).getMonth() === thisMonth
           );
-          
+
           setStats({
             totalJobs: completed.length,
-            totalEarnings: completed.reduce((sum: number, j: any) => sum + (j.totalAmount || 0), 0),
+            totalEarnings: completed.reduce((sum, job) => sum + (job.totalAmount || 0), 0),
             thisMonthJobs: thisMonthJobs.length,
-            thisMonthEarnings: thisMonthJobs.reduce((sum: number, j: any) => sum + (j.totalAmount || 0), 0),
+            thisMonthEarnings: thisMonthJobs.reduce((sum, job) => sum + (job.totalAmount || 0), 0),
           });
         })
-        .catch(console.error)
+        .catch((error) => logger.error('Error cargando estadísticas', error))
         .finally(() => setIsLoading(false));
     }
   }, [user, token, authLoading, router]);

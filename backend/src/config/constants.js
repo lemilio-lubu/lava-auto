@@ -162,6 +162,40 @@ const PAGINATION = Object.freeze({
   MAX_LIMIT: 100,
 });
 
+/** Validaciones de autenticación */
+const AUTH_RULES = Object.freeze({
+  MIN_PASSWORD_LENGTH: 6,
+  RESET_TOKEN_EXPIRY_MS: 3_600_000, // 1 hora
+});
+
+/** Claves Stripe de placeholder (modo sin integración real) */
+const STRIPE_PLACEHOLDER_KEYS = Object.freeze(['sk_test_placeholder', 'sk_live_placeholder']);
+
+/** Configuración de pagos */
+const PAYMENT_CONFIG = Object.freeze({
+  DEFAULT_CURRENCY: 'usd',
+});
+
+/** Prefijos y configuración de numeración de documentos */
+const DOCUMENT_PREFIXES = Object.freeze({
+  INVOICE: 'FAC',
+  ORDER:   'OT',
+  DEFAULT_ORDER_PADDING: 5,
+});
+
+/** Estados de orden de trabajo que permiten generar factura */
+const INVOICEABLE_STATUSES = Object.freeze([
+  'COMPLETED',
+  'INVOICED',
+  'DELIVERED',
+]);
+
+/** Estados terminales de una orden de trabajo (no cancelables) */
+const TERMINAL_STATUSES = Object.freeze([
+  'DELIVERED',
+  'INVOICED',
+]);
+
 module.exports = {
   USER_ROLES,
   RESERVATION_STATUS,
@@ -176,4 +210,10 @@ module.exports = {
   DB_TABLES,
   SOCKET_EVENTS,
   PAGINATION,
+  AUTH_RULES,
+  STRIPE_PLACEHOLDER_KEYS,
+  PAYMENT_CONFIG,
+  DOCUMENT_PREFIXES,
+  INVOICEABLE_STATUSES,
+  TERMINAL_STATUSES,
 };

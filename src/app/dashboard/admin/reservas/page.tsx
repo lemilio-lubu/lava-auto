@@ -4,20 +4,29 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Calendar, User, Car, UserCheck, X } from 'lucide-react';
-import { reservationApi, employeeApi, adminApi } from '@/lib/api-client';
+import { reservationApi, employeeApi, adminApi, type Reservation, type Employee } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Toast from '@/components/ui/Toast';
 
+/** Reserva enriquecida en el panel admin con nombres resueltos. */
+type AdminReservation = Reservation & {
+  washerId?: string;
+  userName?: string;
+  clientName: string | null;
+  washerName: string | null;
+};
+
 export default function ReservasAdminPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [reservations, setReservations] = useState<any[]>([]);
-  const [washers, setWashers] = useState<any[]>([]);
+  const [reservations, setReservations] = useState<AdminReservation[]>([]);
+  const [washers, setWashers] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'>('ALL');
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedReservation, setSelectedReservation] = useState<any>(null);
+  const [selectedReservation, setSelectedReservation] = useState<AdminReservation | null>(null);
   const [selectedWasher, setSelectedWasher] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [toast, setToast] = useState({
@@ -49,33 +58,33 @@ export default function ReservasAdminPage() {
       
       // Create a map of client IDs to names for quick lookup
       const clientMap = new Map<string, string>();
-      clientsData?.forEach((client: any) => {
+      clientsData?.forEach((client) => {
         clientMap.set(client.id, client.name);
       });
-      
+
       // Also create a map of washer IDs to names
       const washerMap = new Map<string, string>();
-      washersData?.forEach((washer: any) => {
+      washersData?.forEach((washer) => {
         washerMap.set(washer.id, washer.name);
       });
-      
+
       // Enrich reservations with client names
-      const enrichedReservations = reservationsData.map((res: any) => ({
-        ...res,
-        clientName: clientMap.get(res.userId) || null,
-        washerName: washerMap.get(res.washerId) || null
+      const enrichedReservations: AdminReservation[] = reservationsData.map((reservation) => ({
+        ...reservation,
+        clientName: clientMap.get(reservation.userId) || null,
+        washerName: washerMap.get((reservation as AdminReservation).washerId ?? '') || null,
       }));
-      
+
       setReservations(enrichedReservations);
       setWashers(washersData);
     } catch (error) {
-      console.error('Error loading data:', error);
+      logger.error('Error cargando reservas', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOpenAssignModal = (reservation: any) => {
+  const handleOpenAssignModal = (reservation: AdminReservation) => {
     setSelectedReservation(reservation);
     setSelectedWasher('');
     setShowAssignModal(true);
@@ -95,11 +104,11 @@ export default function ReservasAdminPage() {
       });
       setShowAssignModal(false);
       loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setToast({
         isOpen: true,
         title: 'Error',
-        message: error.message || 'Error al asignar lavador',
+        message: error instanceof Error ? error.message : 'Error al asignar lavador',
         type: 'error',
       });
     } finally {
@@ -120,7 +129,7 @@ export default function ReservasAdminPage() {
     : reservations.filter(r => r.status === filter);
 
   // Filtrar washers disponibles para la fecha/hora de la reserva
-  const getAvailableWashers = (reservation: any) => {
+  const getAvailableWashers = (_reservation: AdminReservation) => {
     // Por ahora mostrar todos los washers disponibles
     // TODO: Verificar disponibilidad en fecha/hora específica
     return washers.filter(w => w.isAvailable);

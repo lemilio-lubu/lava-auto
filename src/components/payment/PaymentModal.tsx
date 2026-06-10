@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { CreditCard, Lock, X, Check, AlertCircle, Loader2 } from 'lucide-react';
-import { paymentApi } from '@/lib/api-client';
+import { paymentApi, type Payment } from '@/lib/api-client';
+
+const PAYMENT_STEPS = ['form', 'processing', 'success', 'error'] as const;
+type PaymentStep = typeof PAYMENT_STEPS[number];
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (payment: any) => void;
+  onSuccess: (payment: Payment) => void;
   reservationId: string;
   amount: number;
   serviceName: string;
@@ -23,7 +26,7 @@ export default function PaymentModal({
   serviceName,
   token,
 }: PaymentModalProps) {
-  const [step, setStep] = useState<'form' | 'processing' | 'success' | 'error'>('form');
+  const [step, setStep] = useState<PaymentStep>('form');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvc, setCardCvc] = useState('');
@@ -88,8 +91,8 @@ export default function PaymentModal({
       setTimeout(() => {
         onSuccess(confirmResponse.payment);
       }, 2000);
-    } catch (err: any) {
-      setError(err.message || 'Error procesando el pago');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error procesando el pago');
       setStep('error');
     }
   };
@@ -107,7 +110,7 @@ export default function PaymentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-cyan-500 to-emerald-500 p-6 text-white relative">

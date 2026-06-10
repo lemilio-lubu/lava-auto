@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, Briefcase, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { adminApi, reservationApi, paymentApi } from '@/lib/api-client';
+import { adminApi, reservationApi, paymentApi, type Reservation } from '@/lib/api-client';
+import { logger } from '@/lib/logger';
+
+type RecentActivity = Reservation & { clientName: string };
 
 export default function AdminDashboard() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -15,7 +18,7 @@ export default function AdminDashboard() {
     totalReservations: 0,
     totalRevenue: 0,
   });
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -35,12 +38,12 @@ export default function AdminDashboard() {
         .then(([users, reservations, payments]) => {
           // Build userId → name lookup map
           const userMap = new Map<string, string>();
-          users.forEach((u: any) => userMap.set(u.id, u.name || u.email || 'Cliente'));
+          users.forEach((u) => userMap.set(u.id, u.name || u.email || 'Cliente'));
 
           // Calculate revenue from confirmed payments only
-          const confirmedPayments = payments.filter((p: any) => p.status === 'COMPLETED');
-          const totalRevenue = confirmedPayments.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
-          
+          const confirmedPayments = payments.filter((payment) => payment.status === 'COMPLETED');
+          const totalRevenue = confirmedPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
           setStats({
             totalUsers: users.length,
             totalReservations: reservations.length,
@@ -48,13 +51,13 @@ export default function AdminDashboard() {
           });
 
           // Enrich each reservation with resolved client name
-          const enriched = reservations.slice(0, 5).map((r: any) => ({
-            ...r,
-            clientName: userMap.get(r.userId) || 'Cliente',
+          const reservationsWithDetails: RecentActivity[] = reservations.slice(0, 5).map((reservation) => ({
+            ...reservation,
+            clientName: userMap.get(reservation.userId) || 'Cliente',
           }));
-          setRecentActivity(enriched);
+          setRecentActivity(reservationsWithDetails);
         })
-        .catch(console.error)
+        .catch((error) => logger.error('Error cargando panel admin', error))
         .finally(() => setIsLoading(false));
     }
   }, [user, token, authLoading, router]);

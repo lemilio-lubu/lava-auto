@@ -489,7 +489,7 @@ class WorkOrderRepository extends BaseRepository {
         `UPDATE ${DB_TABLES.WORK_ORDERS}
          SET final_cost      = $1,
              services_amount = $2,
-             total_amount    = $1 + $2 - discount_amount + tax_amount,
+             total_amount    = $1::numeric + $2::numeric - discount_amount + tax_amount,
              updated_at      = NOW()
          WHERE id = $3`,
         [finalCost, servicesSum, workOrderId]
@@ -535,6 +535,20 @@ class WorkOrderRepository extends BaseRepository {
       [serviceId]
     );
     return this._serviceToEntity(rows[0]);
+  }
+
+  async deleteLaborByServiceId(workOrderServiceId) {
+    await this._db.query(
+      `DELETE FROM ${DB_TABLES.WORK_ORDER_LABOR} WHERE work_order_service_id = $1`,
+      [workOrderServiceId]
+    );
+  }
+
+  async deletePartsByServiceId(workOrderServiceId) {
+    await this._db.query(
+      `DELETE FROM ${DB_TABLES.WORK_ORDER_PARTS} WHERE work_order_service_id = $1`,
+      [workOrderServiceId]
+    );
   }
 
   // ----------------------------------------------------------------
