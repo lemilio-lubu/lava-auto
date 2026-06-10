@@ -219,11 +219,26 @@ app.use(errorHandler);
 
 (async () => {
   const { Pool } = require('pg');
+  const fs   = require('node:fs');
+  const path = require('node:path');
+
   const poolCfg = config.db.connectionString
-    ? { connectionString: config.db.connectionString, ssl: { rejectUnauthorized: false } }
+    ? { connectionString: config.db.connectionString, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 8000 }
     : { host: config.db.host, port: config.db.port, database: config.db.name,
-        user: config.db.user, password: config.db.password };
-  const p = new Pool({ ...poolCfg, connectionTimeoutMillis: 8000 });
+        user: config.db.user, password: config.db.password, connectionTimeoutMillis: 8000 };
+  const p = new Pool({ ...poolCfg, max: 1 });
+
+  // 1. Schema completo (idempotente) — crea work_orders, catalog y demás tablas nuevas
+  try {
+    const schemaPath = path.join(__dirname, 'database/schema.sql');
+    const schemaSql  = fs.readFileSync(schemaPath, 'utf8');
+    await p.query(schemaSql);
+    console.log('[startup] ✅ schema.sql ejecutado.');
+  } catch (e) {
+    console.error('[startup] ⚠ schema.sql falló (continuando):', e.message);
+  }
+
+  // 2. Columnas críticas — siempre se intentan aunque el schema falle
   const cols = [
     `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS identification       VARCHAR(20)`,
     `ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS city                VARCHAR(100)`,
@@ -237,7 +252,7 @@ app.use(errorHandler);
     for (const sql of cols) await p.query(sql);
     console.log('[startup] ✅ Columnas críticas verificadas.');
   } catch (e) {
-    console.error('[startup] ⚠ Migración inline falló:', e.message);
+    console.error('[startup] ⚠ Columnas críticas fallaron:', e.message);
   } finally {
     await p.end().catch(() => {});
   }
